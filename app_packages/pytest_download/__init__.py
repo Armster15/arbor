@@ -6,7 +6,7 @@ import tempfile
 version = "1.0.0"
 
 
-def download():
+def download(url: str):
     # Configuration options matching the command line flags
     ydl_opts = {
         "format": "bestaudio[ext=m4a]/bestaudio",
@@ -35,11 +35,9 @@ def download():
         }
     )
 
-    # The video URL
-    url = "https://www.youtube.com/watch?v=J4kj6Ds4mrA"
-
     # Download the video
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        print(f"Downloading video from: {url}")
         print(f"Downloading video to: {output_dir}")
         print(f"Using cache dir: {yt_cache_dir}")
         info = ydl.extract_info(url, download=True)
