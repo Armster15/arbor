@@ -1,5 +1,7 @@
 # Python in Swift
 
+Most of this is me learning and playing around at the same time.
+
 ## Folder Structure
 
 ```
