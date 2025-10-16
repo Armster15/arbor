@@ -31,9 +31,23 @@
 		08C4FFF72EA1455D00F9F26C /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Python.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		08C4003E2EA156D300F9F26C /* Exceptions for "pytest" folder in "pytest" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				app_packages/nslog.py,
+				app/__main__.py,
+			);
+			target = 08C4FFE52EA1436F00F9F26C /* pytest */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		08C4FFE82EA1436F00F9F26C /* pytest */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				08C4003E2EA156D300F9F26C /* Exceptions for "pytest" folder in "pytest" target */,
+			);
 			path = pytest;
 			sourceTree = "<group>";
 		};
