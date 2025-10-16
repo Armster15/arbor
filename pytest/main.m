@@ -27,9 +27,11 @@ int start_python_runtime(int argc, char *argv[]) {
     NSString *traceback_str;
     wchar_t *wtmp_str;
     wchar_t *app_packages_path_str;
+    wchar_t *python_modules_path_str;
     const char* app_module_str;
     const char* nslog_script;
     PyObject *app_packages_path;
+    PyObject *python_modules_path;
     PyObject *app_module;
     PyObject *module;
     PyObject *module_attr;
@@ -227,6 +229,33 @@ int start_python_runtime(int argc, char *argv[]) {
             result = PyObject_CallObject(module_attr, method_args);
             if (result == NULL) {
                 crash_dialog(@"Could not add app_packages directory using site.addsitedir");
+                exit(-15);
+            }
+
+
+            // Adding the python_modules as site directory.
+            // This adds python_modules to sys.path and executes any .pth files in that directory.
+            path = [NSString stringWithFormat:@"%@/python_modules", resourcePath, nil];
+            python_modules_path_str = Py_DecodeLocale([path UTF8String], NULL);
+
+            NSLog(@"Adding python_modules as site directory: %@", path);
+
+            python_modules_path = PyUnicode_FromWideChar(python_modules_path_str, wcslen(python_modules_path_str));
+            if (python_modules_path == NULL) {
+                crash_dialog(@"Could not convert python_modules path to unicode");
+                exit(-13);
+            }
+            PyMem_RawFree(python_modules_path_str);
+
+            method_args = Py_BuildValue("(O)", python_modules_path);
+            if (method_args == NULL) {
+                crash_dialog(@"Could not create arguments for site.addsitedir");
+                exit(-14);
+            }
+
+            result = PyObject_CallObject(module_attr, method_args);
+            if (result == NULL) {
+                crash_dialog(@"Could not add python_modules directory using site.addsitedir");
                 exit(-15);
             }
 

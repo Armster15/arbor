@@ -1,3 +1,9 @@
+# Installing a Python package:
+
+Add dependency to `requirements.txt` and then run `pip3 install --target=./pytest/python_modules -r requirements.txt`.
+
+This installs packages to the `python_modules` dir
+
 # Useful links
 
 - https://docs.python.org/3/using/ios.html#adding-python-to-an-ios-project

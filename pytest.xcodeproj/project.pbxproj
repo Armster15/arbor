@@ -37,6 +37,26 @@
 			membershipExceptions = (
 				app_packages/nslog.py,
 				app/__main__.py,
+				python_modules/bin/sample,
+				"python_modules/peppercorn-0.6.dist-info/INSTALLER",
+				"python_modules/peppercorn-0.6.dist-info/METADATA",
+				"python_modules/peppercorn-0.6.dist-info/RECORD",
+				"python_modules/peppercorn-0.6.dist-info/top_level.txt",
+				"python_modules/peppercorn-0.6.dist-info/WHEEL",
+				python_modules/peppercorn/__init__.py,
+				python_modules/peppercorn/compat.py,
+				python_modules/peppercorn/tests.py,
+				python_modules/sample/__init__.py,
+				python_modules/sample/package_data.dat,
+				python_modules/sample/simple.py,
+				"python_modules/sampleproject-4.0.0.dist-info/entry_points.txt",
+				"python_modules/sampleproject-4.0.0.dist-info/INSTALLER",
+				"python_modules/sampleproject-4.0.0.dist-info/LICENSE.txt",
+				"python_modules/sampleproject-4.0.0.dist-info/METADATA",
+				"python_modules/sampleproject-4.0.0.dist-info/RECORD",
+				"python_modules/sampleproject-4.0.0.dist-info/REQUESTED",
+				"python_modules/sampleproject-4.0.0.dist-info/top_level.txt",
+				"python_modules/sampleproject-4.0.0.dist-info/WHEEL",
 			);
 			target = 08C4FFE52EA1436F00F9F26C /* pytest */;
 		};
