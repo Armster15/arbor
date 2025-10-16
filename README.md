@@ -1,10 +1,32 @@
-# Installing a Python package:
+# Python in Swift
+
+## Folder Structure
+
+```
+-> pytest (root source code)
+
+    -> app (where python code should go. __main__.py is the entrypoint)
+
+    -> app_packages (configured as a site packages dir. feel free to make your own packages and put them here)
+
+    -> python_modules (gitignored. also configured as a site packages dir. this is where pip will install packages provided you follow the readme)
+
+    -> main.m (bootstraps the python interpreter)
+
+    -> pytest-Bridging-Header.h (exposes the `start_python_runtime` method to swift)
+
+-> pytest.xcodeproj
+
+-> Python.xcframework (gitignored you have to download this manually)
+```
+
+## Installing a Python package:
 
 Add dependency to `requirements.txt` and then run `pip3 install --target=./pytest/python_modules -r requirements.txt`.
 
-This installs packages to the `python_modules` dir
+This installs packages to the `pytest/python_modules` dir
 
-# Useful links
+## Useful links
 
 - https://docs.python.org/3/using/ios.html#adding-python-to-an-ios-project
   - Follow this to add the Python.xcframework
