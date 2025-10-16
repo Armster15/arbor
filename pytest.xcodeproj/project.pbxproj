@@ -177,7 +177,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nset -e\nsource $PROJECT_DIR/Python.xcframework/build/utils.sh\ninstall_python Python.xcframework app app_packages\n\n";
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nset -e\n\n# Copying up to date Python app resources into the app bundle. Required for \"cache busting\"\n@\nrsync -au --delete $PROJECT_DIR/pytest/app/ $CODESIGNING_FOLDER_PATH/app/\nrsync -au --delete $PROJECT_DIR/pytest/app_packages/ $CODESIGNING_FOLDER_PATH/app_packages/\nrsync -au --delete $PROJECT_DIR/pytest/python_modules/ $CODESIGNING_FOLDER_PATH/python_modules/\n\nsource $PROJECT_DIR/Python.xcframework/build/utils.sh\ninstall_python Python.xcframework app app_packages python_modules\n\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
