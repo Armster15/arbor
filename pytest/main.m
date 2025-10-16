@@ -1,4 +1,7 @@
 //
+//  NOT MINE. Source: https://github.com/beeware/briefcase-iOS-Xcode-template/blob/main/%7B%7B%20cookiecutter.format%20%7D%7D/%7B%7B%20cookiecutter.class_name%20%7D%7D/main.m
+//  See for more info: https://github.com/beeware/Python-Apple-support/blob/main/USAGE.md
+
 //  main.m
 //  A main module for starting Python projects under iOS.
 //
