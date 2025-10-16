@@ -13,11 +13,16 @@ def download(url: str):
         "nopostoverwrites": True,
         "postprocessors": [],  # No post-processors at all
         "verbose": True,  # Shows detailed output including ffmpeg usage'
+        #
+        # NOTE:
+        # The video appears longer because without ffmpeg (and with --fixup never, which is required for no ffmpeg/ffprobe), yt-dlp can't correct
+        # YouTube's mismatched duration metadata, so it keeps the raw stream length-this option is needed
+        # since ffmpeg isn't available to fix it automatically.
         "fixup": "never",  # Disable all fixup post-processors
+        #
         # Ensure only single videos are downloaded, no playlists
         "playlistend": 1,  # Only download the first item (single video)
         "noplaylist": True,  # Do not download playlists
-        "extract_flat": False,  # Extract full info, not just playlist info
     }
 
     # Select iOS-writable locations
