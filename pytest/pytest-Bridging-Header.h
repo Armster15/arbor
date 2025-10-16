@@ -12,7 +12,6 @@ int start_python_runtime(int argc, char *argv[]);
 
 // Python bridge API exposed to Swift
 void finalize_python_runtime(void);
-NSString * pythonGetModuleAttrString(NSString *moduleName, NSString *attrName);
 int pythonRunSimpleString(NSString *code);
 NSString * pythonExecAndGetString(NSString *code, NSString *variableName);
 

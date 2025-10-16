@@ -444,62 +444,6 @@ void finalize_python_runtime(void) {
     Py_Finalize();
 }
 
-// Import a Python module and return the string value of an attribute.
-// Returns nil on error.
-NSString *pythonGetModuleAttrString(NSString *moduleName, NSString *attrName) {
-    if (moduleName == nil || attrName == nil) {
-        return nil;
-    }
-
-    NSString *resultString = nil;
-    PyGILState_STATE gstate = PyGILState_Ensure();
-
-    @try {
-        PyObject *module = PyImport_ImportModule([moduleName UTF8String]);
-        if (module == NULL) {
-            PyErr_Print();
-            @throw [NSException exceptionWithName:@"PythonError"
-                                           reason:[NSString stringWithFormat:@"Failed to import module %@", moduleName]
-                                         userInfo:nil];
-        }
-
-        PyObject *attr = PyObject_GetAttrString(module, [attrName UTF8String]);
-        if (attr == NULL) {
-            Py_DECREF(module);
-            PyErr_Print();
-            @throw [NSException exceptionWithName:@"PythonError"
-                                           reason:[NSString stringWithFormat:@"Module %@ has no attribute %@", moduleName, attrName]
-                                         userInfo:nil];
-        }
-
-        // Ensure we convert any object to a readable Unicode string
-        PyObject *asUnicode = PyObject_Str(attr);
-        if (asUnicode == NULL) {
-            Py_DECREF(attr);
-            Py_DECREF(module);
-            PyErr_Print();
-            @throw [NSException exceptionWithName:@"PythonError"
-                                           reason:@"Failed to stringify Python object"
-                                         userInfo:nil];
-        }
-
-        const char *utf8 = PyUnicode_AsUTF8(asUnicode);
-        if (utf8 != NULL) {
-            resultString = [NSString stringWithUTF8String:utf8];
-        }
-
-        Py_DECREF(asUnicode);
-        Py_DECREF(attr);
-        Py_DECREF(module);
-    } @catch (NSException *exception) {
-        NSLog(@"pythonGetModuleAttrString error: %@", exception.reason);
-        resultString = nil;
-    }
-
-    PyGILState_Release(gstate);
-    return resultString;
-}
-
 // Execute a block of Python code. Returns 0 on success, non-zero on error.
 int pythonRunSimpleString(NSString *code) {
     if (code == nil) {
