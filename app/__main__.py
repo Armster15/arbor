@@ -9,7 +9,7 @@ import tempfile
 
 # Configuration options matching the command line flags
 ydl_opts = {
-    "format": "worst",  # Download the worst quality available
+    "format": "best",  # Download the worst quality available
     "nopostoverwrites": True,
     "postprocessors": [],  # No post-processors at all
     "verbose": True,  # Shows detailed output including ffmpeg usage'
