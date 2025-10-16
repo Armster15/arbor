@@ -24,7 +24,11 @@ Most of this is me learning and playing around at the same time.
 
 ## Installing a Python package:
 
-Add dependency to `requirements.txt` and then run `pip3 install --target=./pytest/python_modules -r requirements.txt`.
+Add dependency to `requirements.txt` and then run:
+
+```
+pip3 install --target=./pytest/python_modules --platform=any --only-binary=:all: -r requirements.txt
+```
 
 This installs packages to the `pytest/python_modules` dir
 
