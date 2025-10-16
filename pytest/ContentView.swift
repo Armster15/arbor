@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+
 struct ContentView: View {
     var body: some View {
         VStack {
@@ -20,11 +21,12 @@ struct ContentView: View {
             }
             
             Button("Click for Python") {
-                if let version = pythonGetModuleAttrString("yt_dlp.version", "__version__") {
-                    print("yt_dlp version: \(version)")
-                } else {
-                    print("Failed to get yt_dlp version")
-                }
+                let code = """
+from pytest_download import download
+print(download)
+"""
+
+                _ = pythonRunSimpleString(code.trimmingCharacters(in: .whitespacesAndNewlines))
             }
         }
         .padding()
