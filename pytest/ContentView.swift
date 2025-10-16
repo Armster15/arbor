@@ -121,6 +121,10 @@ struct ContentView: View {
         
         isLoading = true
         
+        // this is not the best way to do this but it works for now
+        // how we should actually do it: see https://docs.python.org/3/extending/embedding.html
+        // tldr: import module and invoke function with args directly via obj-c. they have utils
+        // for importing, invoking methods, passing args, etc.
         let code = """
 from pytest_download import download
 audio_fp = download('\(youtubeURL)')
