@@ -14,4 +14,5 @@ int start_python_runtime(int argc, char *argv[]);
 void finalize_python_runtime(void);
 NSString * pythonGetModuleAttrString(NSString *moduleName, NSString *attrName);
 int pythonRunSimpleString(NSString *code);
+NSString * pythonExecAndGetString(NSString *code, NSString *variableName);
 

@@ -23,10 +23,18 @@ struct ContentView: View {
             Button("Click for Python") {
                 let code = """
 from pytest_download import download
-download()
+audio_fp = download()
 """
 
-                _ = pythonRunSimpleString(code.trimmingCharacters(in: .whitespacesAndNewlines))
+                if let audioPath = pythonExecAndGetString(
+                    code.trimmingCharacters(in: .whitespacesAndNewlines), 
+                    // string variable to return the value of to swift
+                    "audio_fp"
+                ) {
+                    print("Downloaded file: \(audioPath)")
+                } else {
+                    print("Failed to fetch audio_fp from Python")
+                }
             }
         }
         .padding()

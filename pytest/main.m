@@ -511,3 +511,66 @@ int pythonRunSimpleString(NSString *code) {
     PyGILState_Release(gstate);
     return rc;
 }
+
+// Execute Python code and then read a variable from __main__ as a string.
+// Returns nil on error or if the variable doesn't exist.
+NSString *pythonExecAndGetString(NSString *code, NSString *variableName) {
+    if (code == nil || variableName == nil) {
+        return nil;
+    }
+
+    NSString *resultString = nil;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+
+    @try {
+        // Execute the provided code in the __main__ module's namespace
+        PyObject *mainModule = PyImport_AddModule("__main__");
+        if (mainModule == NULL) {
+            PyErr_Print();
+            @throw [NSException exceptionWithName:@"PythonError" reason:@"Failed to get __main__ module" userInfo:nil];
+        }
+        PyObject *globalsDict = PyModule_GetDict(mainModule);
+        if (globalsDict == NULL) {
+            PyErr_Print();
+            @throw [NSException exceptionWithName:@"PythonError" reason:@"Failed to get __main__.__dict__" userInfo:nil];
+        }
+
+        PyObject *compiled = Py_CompileString([[code description] UTF8String], "<swift>", Py_file_input);
+        if (compiled == NULL) {
+            PyErr_Print();
+            @throw [NSException exceptionWithName:@"PythonError" reason:@"Failed to compile code" userInfo:nil];
+        }
+
+        PyObject *execResult = PyEval_EvalCode(compiled, globalsDict, globalsDict);
+        Py_DECREF(compiled);
+        if (execResult == NULL) {
+            PyErr_Print();
+            @throw [NSException exceptionWithName:@"PythonError" reason:@"Failed to execute code" userInfo:nil];
+        }
+        Py_DECREF(execResult);
+
+        // Fetch the variable from __main__
+        PyObject *value = PyDict_GetItemString(globalsDict, [variableName UTF8String]);
+        if (value == NULL) {
+            // Variable not set
+            resultString = nil;
+        } else {
+            PyObject *asUnicode = PyObject_Str(value);
+            if (asUnicode == NULL) {
+                PyErr_Print();
+                @throw [NSException exceptionWithName:@"PythonError" reason:@"Failed to stringify variable" userInfo:nil];
+            }
+            const char *utf8 = PyUnicode_AsUTF8(asUnicode);
+            if (utf8 != NULL) {
+                resultString = [NSString stringWithUTF8String:utf8];
+            }
+            Py_DECREF(asUnicode);
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"pythonExecAndGetString error: %@", exception.reason);
+        resultString = nil;
+    }
+
+    PyGILState_Release(gstate);
+    return resultString;
+}

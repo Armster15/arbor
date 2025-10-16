@@ -46,3 +46,5 @@ def download():
         filename = ydl.prepare_filename(info)
         full_path = os.path.abspath(filename)
         print(f"Downloaded file: {full_path}")
+
+        return full_path
