@@ -16,7 +16,6 @@ struct ContentView: View {
     @State private var errorMessage: String = ""
     @State private var audioPlayer: AVPlayer?
     @State private var audioFilePath: String?
-    @State private var showPlayer: Bool = false
     
     var body: some View {
         NavigationView {
@@ -72,33 +71,28 @@ struct ContentView: View {
                 .disabled(isLoading)
                 
                 // Audio Player Section
-                if let audioPath = audioFilePath {
+                if let audioPath = audioFilePath, let player = audioPlayer {
                     VStack(spacing: 15) {
                         Divider()
                         
-                        Text("Downloaded Audio")
+                        Text("Audio Player")
                             .font(.headline)
                         
-                        HStack(spacing: 20) {
-                            Button(action: { showPlayer = true }) {
-                                Image(systemName: "play.circle.fill")
-                                    .font(.system(size: 50))
-                                    .foregroundColor(.blue)
-                            }
-                            
-                            VStack(alignment: .leading) {
-                                Text("Audio File")
-                                    .font(.headline)
-                                Text(audioPath.components(separatedBy: "/").last ?? "Unknown")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
+                        // Embed AVPlayerViewController directly
+                        AVPlayerViewControllerRepresentable(player: player)
+                            .frame(height: 100)
+                            .cornerRadius(10)
+                        
+                        // File info
+                        VStack(spacing: 4) {
+                            Text("Audio File")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Text(audioPath.components(separatedBy: "/").last ?? "Unknown")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
                         }
-                        .padding()
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(10)
                     }
                 }
                 
@@ -110,11 +104,6 @@ struct ContentView: View {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
-            }
-            .fullScreenCover(isPresented: $showPlayer) {
-                if let player = audioPlayer {
-                    AVPlayerViewControllerRepresentable(player: player)
-                }
             }
         }
     }
@@ -171,11 +160,19 @@ struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = AVPlayerViewController()
         controller.player = player
+        
+        // Configure for audio-only playback
+        controller.showsPlaybackControls = true
+        controller.allowsPictureInPicturePlayback = false
+        
+        // Hide video content area for audio-only
+        controller.videoGravity = .resizeAspect
+        
         return controller
     }
     
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
-        // No updates needed
+        uiViewController.player = player
     }
 }
 
