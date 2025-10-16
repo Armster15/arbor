@@ -31,43 +31,9 @@
 		08C4FFF72EA1455D00F9F26C /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Python.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		08C4003E2EA156D300F9F26C /* Exceptions for "pytest" folder in "pytest" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				app_packages/nslog.py,
-				app/__main__.py,
-				python_modules/bin/sample,
-				"python_modules/peppercorn-0.6.dist-info/INSTALLER",
-				"python_modules/peppercorn-0.6.dist-info/METADATA",
-				"python_modules/peppercorn-0.6.dist-info/RECORD",
-				"python_modules/peppercorn-0.6.dist-info/top_level.txt",
-				"python_modules/peppercorn-0.6.dist-info/WHEEL",
-				python_modules/peppercorn/__init__.py,
-				python_modules/peppercorn/compat.py,
-				python_modules/peppercorn/tests.py,
-				python_modules/sample/__init__.py,
-				python_modules/sample/package_data.dat,
-				python_modules/sample/simple.py,
-				"python_modules/sampleproject-4.0.0.dist-info/entry_points.txt",
-				"python_modules/sampleproject-4.0.0.dist-info/INSTALLER",
-				"python_modules/sampleproject-4.0.0.dist-info/LICENSE.txt",
-				"python_modules/sampleproject-4.0.0.dist-info/METADATA",
-				"python_modules/sampleproject-4.0.0.dist-info/RECORD",
-				"python_modules/sampleproject-4.0.0.dist-info/REQUESTED",
-				"python_modules/sampleproject-4.0.0.dist-info/top_level.txt",
-				"python_modules/sampleproject-4.0.0.dist-info/WHEEL",
-			);
-			target = 08C4FFE52EA1436F00F9F26C /* pytest */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		08C4FFE82EA1436F00F9F26C /* pytest */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				08C4003E2EA156D300F9F26C /* Exceptions for "pytest" folder in "pytest" target */,
-			);
 			path = pytest;
 			sourceTree = "<group>";
 		};
@@ -197,7 +163,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nset -e\n\n# Copying up to date Python app resources into the app bundle. Required for \"cache busting\"\nrsync -au --delete $PROJECT_DIR/pytest/app/ $CODESIGNING_FOLDER_PATH/app/\nrsync -au --delete $PROJECT_DIR/pytest/app_packages/ $CODESIGNING_FOLDER_PATH/app_packages/\nrsync -au --delete $PROJECT_DIR/pytest/python_modules/ $CODESIGNING_FOLDER_PATH/python_modules/\n\nsource $PROJECT_DIR/Python.xcframework/build/utils.sh\ninstall_python Python.xcframework app app_packages python_modules\n\n";
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nset -e\n\n# Copying up to date Python app resources into the app bundle. Required for \"cache busting\"\nrsync -au --delete $PROJECT_DIR/app/ $CODESIGNING_FOLDER_PATH/app/\nrsync -au --delete $PROJECT_DIR/app_packages/ $CODESIGNING_FOLDER_PATH/app_packages/\nrsync -au --delete $PROJECT_DIR/python_modules/ $CODESIGNING_FOLDER_PATH/python_modules/\n\nsource $PROJECT_DIR/Python.xcframework/build/utils.sh\ninstall_python Python.xcframework app app_packages python_modules\n\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -5,19 +5,19 @@ Most of this is me learning and playing around at the same time.
 ## Folder Structure
 
 ```
--> pytest (root source code)
+-> app (where python code should go. __main__.py is the entrypoint)
 
-    -> app (where python code should go. __main__.py is the entrypoint)
+-> app_packages (configured as a site packages dir. feel free to make your own packages and put them here)
 
-    -> app_packages (configured as a site packages dir. feel free to make your own packages and put them here)
-
-    -> python_modules (gitignored. also configured as a site packages dir. this is where pip will install packages provided you follow the readme)
+-> pytest (root xcode app source code)
 
     -> main.m (bootstraps the python interpreter)
 
     -> pytest-Bridging-Header.h (exposes the `start_python_runtime` method to swift)
 
 -> pytest.xcodeproj
+
+-> python_modules (gitignored. also configured as a site packages dir. this is where pip will install packages provided you follow the readme)
 
 -> Python.xcframework (gitignored you have to download this manually)
 ```
