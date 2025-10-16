@@ -14,6 +14,10 @@ def download(url: str):
         "postprocessors": [],  # No post-processors at all
         "verbose": True,  # Shows detailed output including ffmpeg usage'
         "fixup": "never",  # Disable all fixup post-processors
+        # Ensure only single videos are downloaded, no playlists
+        "playlistend": 1,  # Only download the first item (single video)
+        "noplaylist": True,  # Do not download playlists
+        "extract_flat": False,  # Extract full info, not just playlist info
     }
 
     # Select iOS-writable locations
