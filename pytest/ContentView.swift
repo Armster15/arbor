@@ -7,15 +7,16 @@
 
 import SwiftUI
 import AVFoundation
+import AVKit
 
 struct ContentView: View {
     @State private var youtubeURL: String = "https://www.youtube.com/watch?v=J4kj6Ds4mrA"
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
-    @State private var audioPlayer: AVAudioPlayer?
+    @State private var audioPlayer: AVPlayer?
     @State private var audioFilePath: String?
-    @State private var isPlaying: Bool = false
+    @State private var showPlayer: Bool = false
     
     var body: some View {
         NavigationView {
@@ -79,8 +80,8 @@ struct ContentView: View {
                             .font(.headline)
                         
                         HStack(spacing: 20) {
-                            Button(action: togglePlayback) {
-                                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            Button(action: { showPlayer = true }) {
+                                Image(systemName: "play.circle.fill")
                                     .font(.system(size: 50))
                                     .foregroundColor(.blue)
                             }
@@ -109,6 +110,11 @@ struct ContentView: View {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
+            }
+            .fullScreenCover(isPresented: $showPlayer) {
+                if let player = audioPlayer {
+                    AVPlayerViewControllerRepresentable(player: player)
+                }
             }
         }
     }
@@ -150,31 +156,26 @@ audio_fp = download('\(youtubeURL)')
     
     private func setupAudioPlayer(filePath: String) {
         let url = URL(fileURLWithPath: filePath)
-        
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
-            audioPlayer?.prepareToPlay()
-        } catch {
-            print("Error setting up audio player: \(error)")
-            showError(message: "Failed to load audio file for playback")
-        }
-    }
-    
-    private func togglePlayback() {
-        guard let player = audioPlayer else { return }
-        
-        if isPlaying {
-            player.pause()
-        } else {
-            player.play()
-        }
-        
-        isPlaying.toggle()
+        audioPlayer = AVPlayer(url: url)
     }
     
     private func showError(message: String) {
         errorMessage = message
         showError = true
+    }
+}
+
+struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
+    let player: AVPlayer
+    
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = player
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        // No updates needed
     }
 }
 
