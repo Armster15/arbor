@@ -23,7 +23,7 @@ struct ContentView: View {
             Button("Click for Python") {
                 let code = """
 from pytest_download import download
-print(download)
+download()
 """
 
                 _ = pythonRunSimpleString(code.trimmingCharacters(in: .whitespacesAndNewlines))
