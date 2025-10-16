@@ -16,11 +16,11 @@ struct ContentView: View {
                 .foregroundStyle(.tint)
             Text("Hello, world!")
             
-            Button("Tap me") {
-                print("Hello World!")
+            Button("Click for Swift") {
+                print("Pure native logs")
             }
             
-            Button("Python") {
+            Button("Click for Python") {
                 let sys = Python.import("sys")
                 print("Python \(sys.version_info.major).\(sys.version_info.minor)")
                 print("Python Version: \(sys.version)")
