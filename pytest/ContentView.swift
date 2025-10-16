@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PythonKit
 
 struct ContentView: View {
     var body: some View {
@@ -21,9 +20,11 @@ struct ContentView: View {
             }
             
             Button("Click for Python") {
-                let sys = Python.import("sys")
-                print("Python \(sys.version_info.major).\(sys.version_info.minor)")
-                print("Python Version: \(sys.version)")
+                if let version = pythonGetModuleAttrString("yt_dlp.version", "__version__") {
+                    print("yt_dlp version: \(version)")
+                } else {
+                    print("Failed to get yt_dlp version")
+                }
             }
         }
         .padding()

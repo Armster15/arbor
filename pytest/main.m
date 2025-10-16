@@ -351,7 +351,7 @@ int start_python_runtime(int argc, char *argv[]) {
             ret = -7;
         }
         @finally {
-            Py_Finalize();
+            // Intentionally keep the Python interpreter alive for future Swift calls.
         }
     }
 
@@ -437,4 +437,77 @@ NSString *format_traceback(PyObject *type, PyObject *value, PyObject *traceback)
                                                withTemplate:@"  File \"$1.app/Library"];
 
     return traceback_str;
+}
+
+// Keep a separate explicit finalizer for Python, if the app ever needs to shut it down.
+void finalize_python_runtime(void) {
+    Py_Finalize();
+}
+
+// Import a Python module and return the string value of an attribute.
+// Returns nil on error.
+NSString *pythonGetModuleAttrString(NSString *moduleName, NSString *attrName) {
+    if (moduleName == nil || attrName == nil) {
+        return nil;
+    }
+
+    NSString *resultString = nil;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+
+    @try {
+        PyObject *module = PyImport_ImportModule([moduleName UTF8String]);
+        if (module == NULL) {
+            PyErr_Print();
+            @throw [NSException exceptionWithName:@"PythonError"
+                                           reason:[NSString stringWithFormat:@"Failed to import module %@", moduleName]
+                                         userInfo:nil];
+        }
+
+        PyObject *attr = PyObject_GetAttrString(module, [attrName UTF8String]);
+        if (attr == NULL) {
+            Py_DECREF(module);
+            PyErr_Print();
+            @throw [NSException exceptionWithName:@"PythonError"
+                                           reason:[NSString stringWithFormat:@"Module %@ has no attribute %@", moduleName, attrName]
+                                         userInfo:nil];
+        }
+
+        // Ensure we convert any object to a readable Unicode string
+        PyObject *asUnicode = PyObject_Str(attr);
+        if (asUnicode == NULL) {
+            Py_DECREF(attr);
+            Py_DECREF(module);
+            PyErr_Print();
+            @throw [NSException exceptionWithName:@"PythonError"
+                                           reason:@"Failed to stringify Python object"
+                                         userInfo:nil];
+        }
+
+        const char *utf8 = PyUnicode_AsUTF8(asUnicode);
+        if (utf8 != NULL) {
+            resultString = [NSString stringWithUTF8String:utf8];
+        }
+
+        Py_DECREF(asUnicode);
+        Py_DECREF(attr);
+        Py_DECREF(module);
+    } @catch (NSException *exception) {
+        NSLog(@"pythonGetModuleAttrString error: %@", exception.reason);
+        resultString = nil;
+    }
+
+    PyGILState_Release(gstate);
+    return resultString;
+}
+
+// Execute a block of Python code. Returns 0 on success, non-zero on error.
+int pythonRunSimpleString(NSString *code) {
+    if (code == nil) {
+        return -1;
+    }
+    int rc = -1;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    rc = PyRun_SimpleString([[code description] UTF8String]);
+    PyGILState_Release(gstate);
+    return rc;
 }

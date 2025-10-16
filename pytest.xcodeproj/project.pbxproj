@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		08C400082EA14CFE00F9F26C /* PythonKit in Frameworks */ = {isa = PBXBuildFile; productRef = 08C400072EA14CFE00F9F26C /* PythonKit */; };
 		08C4FFF92EA1461C00F9F26C /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08C4FFF72EA1455D00F9F26C /* Python.xcframework */; };
 		08C4FFFA2EA1461C00F9F26C /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 08C4FFF72EA1455D00F9F26C /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -45,7 +44,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				08C4FFF92EA1461C00F9F26C /* Python.xcframework in Frameworks */,
-				08C400082EA14CFE00F9F26C /* PythonKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,7 +89,6 @@
 			);
 			name = pytest;
 			packageProductDependencies = (
-				08C400072EA14CFE00F9F26C /* PythonKit */,
 			);
 			productName = pytest;
 			productReference = 08C4FFE62EA1436F00F9F26C /* pytest.app */;
@@ -123,7 +120,6 @@
 			mainGroup = 08C4FFDD2EA1436F00F9F26C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				08C400062EA14CFE00F9F26C /* XCRemoteSwiftPackageReference "PythonKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 08C4FFE72EA1436F00F9F26C /* Products */;
@@ -386,25 +382,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		08C400062EA14CFE00F9F26C /* XCRemoteSwiftPackageReference "PythonKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pvieito/PythonKit.git";
-			requirement = {
-				branch = master;
-				kind = branch;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		08C400072EA14CFE00F9F26C /* PythonKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 08C400062EA14CFE00F9F26C /* XCRemoteSwiftPackageReference "PythonKit" */;
-			productName = PythonKit;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 08C4FFDE2EA1436F00F9F26C /* Project object */;
 }
