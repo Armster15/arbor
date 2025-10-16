@@ -177,7 +177,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nset -e\n# Copy Python app sources into bundle for runtime\nrsync -au \"$PROJECT_DIR/pytest/app/\" \"$CODESIGNING_FOLDER_PATH/app/\"\nrsync -au \"$PROJECT_DIR/pytest/app_packages/\" \"$CODESIGNING_FOLDER_PATH/app_packages/\"\nsource $PROJECT_DIR/Python.xcframework/build/utils.sh\ninstall_python Python.xcframework app app_packages\n\n";
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nset -e\nsource $PROJECT_DIR/Python.xcframework/build/utils.sh\ninstall_python Python.xcframework app app_packages\n\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
