@@ -1,2 +1,5 @@
 Python.xcframework
 python_modules
+
+ffmpeg/build
+ffmpeg/installed
