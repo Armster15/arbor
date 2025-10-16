@@ -9,6 +9,9 @@ import SwiftUI
 
 @main
 struct pytestApp: App {
+    init() {
+        _ = start_python_runtime(CommandLine.argc, CommandLine.unsafeArgv)
+    }
     var body: some Scene {
         WindowGroup {
             ContentView()
