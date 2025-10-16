@@ -31,9 +31,9 @@ audio_fp = download()
                     // string variable to return the value of to swift
                     "audio_fp"
                 ) {
-                    print("Downloaded file: \(audioPath)")
+                    print("[Swift] Downloaded file: \(audioPath)")
                 } else {
-                    print("Failed to fetch audio_fp from Python")
+                    print("[Swift] Failed to fetch audio_fp from Python")
                 }
             }
         }
