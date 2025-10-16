@@ -137,8 +137,8 @@ int start_python_runtime(int argc, char *argv[]) {
         }
         PyMem_RawFree(wtmp_str);
 
-        // Add the app path
-        path = [NSString stringWithFormat:@"%@/app", resourcePath, nil];
+		// Add the bundle root to sys.path (contains the 'app' package)
+		path = [NSString stringWithFormat:@"%@", resourcePath, nil];
         NSLog(@"- %@", path);
         wtmp_str = Py_DecodeLocale([path UTF8String], NULL);
         status = PyWideStringList_Append(&config.module_search_paths, wtmp_str);
