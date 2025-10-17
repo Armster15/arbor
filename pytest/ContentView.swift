@@ -84,16 +84,14 @@ struct ContentView: View {
                 .disabled(isLoading)
                 
                 // Audio Player Section
-                if let audioPath = audioFilePath {
-                    VStack(spacing: 15) {
-                        Divider()
-                                                
-                        PlayerView(viewModel: saViewModel)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
-                    }
+                VStack(spacing: 15) {
+                    Divider()
+                                            
+                    PlayerView(viewModel: saViewModel)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
                 }
-                
+
                 }
                 .padding()
             }
