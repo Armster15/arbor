@@ -9,6 +9,7 @@ import SwiftUI
 import AVFoundation
 import AVKit
 import SwiftAudioPlayer
+import Foundation
 
 struct ContentView: View {
     @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
@@ -17,6 +18,13 @@ struct ContentView: View {
     @State private var errorMessage: String = ""
     @State private var audioFilePath: String?
     @StateObject private var saViewModel = SAPlayerViewModel()
+	
+	private struct DownloadMeta: Decodable {
+		let path: String
+		let title: String?
+		let artist: String?
+		let thumbnail_url: String?
+	}
     
     var body: some View {
         NavigationView {
@@ -125,26 +133,34 @@ struct ContentView: View {
         // for importing, invoking methods, passing args, etc.
         let code = """
 from pytest_download import download
-audio_fp = download('\(youtubeURL)')
+result = download('\(youtubeURL)')
 """
         
         print("[Swift] Button tapped - starting Python execution (async)")
 
-        pythonExecAndGetStringAsync(
+		pythonExecAndGetStringAsync(
             code.trimmingCharacters(in: .whitespacesAndNewlines),
-            "audio_fp"
-        ) { result in
-            if let audioPath = result, !audioPath.isEmpty {
-                print("[Swift] Downloaded file: \(audioPath)")
-                audioFilePath = audioPath
-                setupAudioPlayer(filePath: audioPath)
-            } else {
-                print("[Swift] Failed to fetch audio_fp from Python")
-                showError(message: "Failed to download audio. Please check the URL and try again.")
-            }
-
-            isLoading = false
-        }
+            "result"
+		) { result in
+			defer { isLoading = false }
+			guard let output = result, !output.isEmpty else {
+				print("[Swift] Failed to fetch audio_fp from Python")
+				showError(message: "Failed to download audio. Please check the URL and try again.")
+				return
+			}
+			// Decode JSON metadata
+			guard let data = output.data(using: .utf8),
+					let meta = try? JSONDecoder().decode(DownloadMeta.self, from: data) else {
+				print("[Swift] Failed to decode JSON metadata")
+				showError(message: "Invalid response from downloader.")
+				return
+			}
+			print("[Swift] Downloaded file (JSON): \(meta.path)")
+			audioFilePath = meta.path
+			setupAudioPlayer(filePath: meta.path)
+			let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
+			saViewModel.setMetadata(title: meta.title, artist: meta.artist, artworkURL: artworkURL)
+		}
     }
     
     private func setupAudioPlayer(filePath: String) {

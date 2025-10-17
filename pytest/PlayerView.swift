@@ -7,6 +7,7 @@ import SwiftUI
 import AVFoundation
 import SwiftAudioPlayer
 import MediaPlayer
+import UIKit
 
 final class SAPlayerViewModel: ObservableObject {
     @Published var isPlaying: Bool = false
@@ -24,6 +25,8 @@ final class SAPlayerViewModel: ObservableObject {
 
     private var remoteCommandsConfigured: Bool = false
     private var nowPlayingTitle: String = "Audio"
+    private var nowPlayingArtist: String? = nil
+    private var nowPlayingArtwork: MPMediaItemArtwork? = nil
 
     func startSavedAudio(filePath: String) {
         let url = URL(fileURLWithPath: filePath)
@@ -32,6 +35,19 @@ final class SAPlayerViewModel: ObservableObject {
         configureRemoteCommandsIfNeeded()
         subscribeUpdates()
         updateNowPlayingInfo()
+    }
+
+    func setMetadata(title: String?, artist: String?, artworkURL: URL?) {
+        if let t = title, !t.isEmpty {
+            nowPlayingTitle = t
+        }
+        nowPlayingArtist = artist
+        if let url = artworkURL {
+            fetchArtwork(from: url)
+        } else {
+            nowPlayingArtwork = nil
+            updateNowPlayingInfo()
+        }
     }
 
     func play() {
@@ -226,6 +242,12 @@ final class SAPlayerViewModel: ObservableObject {
     private func updateNowPlayingInfo() {
         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
         info[MPMediaItemPropertyTitle] = nowPlayingTitle
+        if let artist = nowPlayingArtist {
+            info[MPMediaItemPropertyArtist] = artist
+        }
+        if let artwork = nowPlayingArtwork {
+            info[MPMediaItemPropertyArtwork] = artwork
+        }
         if duration.isFinite && duration > 0 {
             info[MPMediaItemPropertyPlaybackDuration] = duration
         }
@@ -239,6 +261,21 @@ final class SAPlayerViewModel: ObservableObject {
             info[MPNowPlayingInfoPropertyIsLiveStream] = false
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    private func fetchArtwork(from url: URL) {
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            guard let self = self else { return }
+            guard let data = data, let image = UIImage(data: data) else {
+                DispatchQueue.main.async { self.nowPlayingArtwork = nil; self.updateNowPlayingInfo() }
+                return
+            }
+            let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            DispatchQueue.main.async {
+                self.nowPlayingArtwork = artwork
+                self.updateNowPlayingInfo()
+            }
+        }.resume()
     }
 }
 

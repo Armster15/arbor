@@ -2,6 +2,7 @@ import yt_dlp
 import os
 from pathlib import Path
 import tempfile
+import json
 
 version = "1.0.0"
 
@@ -56,4 +57,30 @@ def download(url: str):
         full_path = os.path.abspath(filename)
         print(f"Downloaded file: {full_path}")
 
-        return full_path
+        title = info.get("title") or Path(full_path).stem
+        # Prefer artist, then uploader/channel, then None
+        artist = (
+            info.get("artist") or info.get("uploader") or info.get("channel") or None
+        )
+        # Prefer top-level thumbnail, else first in thumbnails list
+        thumbnail_url = info.get("thumbnail")
+        if not thumbnail_url:
+            thumbnails = info.get("thumbnails") or []
+            if isinstance(thumbnails, list) and thumbnails:
+                # Pick the highest resolution if available, else first
+                try:
+                    thumbnail_url = max(
+                        thumbnails,
+                        key=lambda t: (t.get("height") or 0) * (t.get("width") or 0),
+                    ).get("url")
+                except Exception:
+                    thumbnail_url = thumbnails[0].get("url")
+
+        meta = {
+            "path": full_path,
+            "title": title,
+            "artist": artist,
+            "thumbnail_url": thumbnail_url,
+        }
+
+        return json.dumps(meta)
