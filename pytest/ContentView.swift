@@ -179,28 +179,6 @@ result = download('\(youtubeURL)')
     }
 }
 
-struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
-    let player: AVPlayer
-    
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let controller = AVPlayerViewController()
-        controller.player = player
-        
-        // Configure for audio-only playback
-        controller.showsPlaybackControls = true
-        controller.allowsPictureInPicturePlayback = false
-        
-        // Hide video content area for audio-only
-        controller.videoGravity = .resizeAspect
-        
-        return controller
-    }
-    
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
-        uiViewController.player = player
-    }
-}
-
 #Preview {
     ContentView()
 }
