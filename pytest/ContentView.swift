@@ -11,7 +11,7 @@ import AVKit
 import SwiftAudioPlayer
 
 struct ContentView: View {
-    @State private var youtubeURL: String = "https://www.youtube.com/watch?v=J4kj6Ds4mrA"
+    @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
