@@ -16,7 +16,7 @@ struct HomeDownloadMeta: Decodable {
     let thumbnail_is_square: Bool?
 }
 
-struct Home: View {
+struct HomeScreen: View {
     let canOpenPlayer: Bool
     let openPlayerAction: () -> Void
     let onDownloaded: (HomeDownloadMeta) -> Void

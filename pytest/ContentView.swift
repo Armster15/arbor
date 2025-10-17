@@ -33,7 +33,7 @@ struct ContentView: View {
     
     var body: some View {
         NavigationStack(path: $navPath) {
-            Home(
+            HomeScreen(
                 canOpenPlayer: audioFilePath != nil,
                 openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
                 onDownloaded: { meta in
@@ -46,13 +46,12 @@ struct ContentView: View {
             )
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-
             .navigationTitle("Audio Downloader")
             
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .player:
-                    PlayerView(viewModel: saViewModel)
+                    PlayerScreen(viewModel: saViewModel)
                 }
             }
         }

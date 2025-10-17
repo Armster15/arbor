@@ -326,7 +326,7 @@ final class SAPlayerViewModel: ObservableObject {
     }
 }
 
-struct PlayerView: View {
+struct PlayerScreen: View {
     @ObservedObject var viewModel: SAPlayerViewModel
     @State private var isScrubbing: Bool = false
     @State private var scrubbingTime: Double = 0
