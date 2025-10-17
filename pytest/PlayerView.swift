@@ -18,6 +18,9 @@ final class SAPlayerViewModel: ObservableObject {
     @Published var isLooping: Bool = false
     @Published var reverbWetDryMix: Float = 0.0
     @Published var reverbPresetRaw: Int = AVAudioUnitReverbPreset.mediumHall.rawValue
+    @Published var displayTitle: String = "Audio"
+    @Published var displayArtist: String? = nil
+    @Published var displayArtwork: UIImage? = nil
 
     private var elapsedSub: UInt?
     private var durationSub: UInt?
@@ -27,11 +30,15 @@ final class SAPlayerViewModel: ObservableObject {
     private var nowPlayingTitle: String = "Audio"
     private var nowPlayingArtist: String? = nil
     private var nowPlayingArtwork: MPMediaItemArtwork? = nil
+    private var nowPlayingArtworkImage: UIImage? = nil
 
     func startSavedAudio(filePath: String) {
         let url = URL(fileURLWithPath: filePath)
         SAPlayer.shared.startSavedAudio(withSavedUrl: url, mediaInfo: nil)
         nowPlayingTitle = url.deletingPathExtension().lastPathComponent
+        displayTitle = decoratedTitle()
+        displayArtist = nowPlayingArtist
+        displayArtwork = nil
         configureRemoteCommandsIfNeeded()
         subscribeUpdates()
         updateNowPlayingInfo()
@@ -46,6 +53,7 @@ final class SAPlayerViewModel: ObservableObject {
             fetchArtwork(from: url)
         } else {
             nowPlayingArtwork = nil
+            nowPlayingArtworkImage = nil
             updateNowPlayingInfo()
         }
     }
@@ -262,18 +270,31 @@ final class SAPlayerViewModel: ObservableObject {
             info[MPNowPlayingInfoPropertyIsLiveStream] = false
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        let newTitle = decoratedTitle()
+        let newArtist = nowPlayingArtist
+        let newArtwork = nowPlayingArtworkImage
+        DispatchQueue.main.async {
+            self.displayTitle = newTitle
+            self.displayArtist = newArtist
+            self.displayArtwork = newArtwork
+        }
     }
 
     private func fetchArtwork(from url: URL) {
         URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
             guard let self = self else { return }
             guard let data = data, let image = UIImage(data: data) else {
-                DispatchQueue.main.async { self.nowPlayingArtwork = nil; self.updateNowPlayingInfo() }
+                DispatchQueue.main.async {
+                    self.nowPlayingArtwork = nil
+                    self.nowPlayingArtworkImage = nil
+                    self.updateNowPlayingInfo()
+                }
                 return
             }
             let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
             DispatchQueue.main.async {
                 self.nowPlayingArtwork = artwork
+                self.nowPlayingArtworkImage = image
                 self.updateNowPlayingInfo()
             }
         }.resume()
@@ -313,6 +334,27 @@ struct PlayerView: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            // Metadata header
+            VStack(spacing: 8) {
+                if let uiImage = viewModel.displayArtwork {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(1, contentMode: .fill)
+                        .frame(height: 180)
+                        .clipped()
+                        .cornerRadius(12)
+                }
+                Text(viewModel.displayTitle)
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                if let artist = viewModel.displayArtist, !artist.isEmpty {
+                    Text(artist)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+
             // Play / Pause
             HStack(spacing: 24) {
                 Button(action: { viewModel.seek(to: 0) }) {
