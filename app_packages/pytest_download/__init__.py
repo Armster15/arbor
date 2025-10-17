@@ -8,6 +8,7 @@ version = "1.0.0"
 
 def download(url: str):
     # Configuration options matching the command line flags
+    # Options: https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/__init__.py#L776
     ydl_opts = {
         "format": "bestaudio[ext=m4a]/bestaudio",
         "nopostoverwrites": True,
