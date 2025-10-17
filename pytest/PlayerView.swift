@@ -122,11 +122,26 @@ struct PlayerView: View {
 
             // Scrubber
             VStack(spacing: 8) {
-                Slider(value: Binding(get: {
-                    min(viewModel.currentTime, viewModel.duration)
-                }, set: { newVal in
-                    viewModel.seek(to: newVal)
-                }), in: 0...(max(viewModel.duration, 1)))
+                GeometryReader { proxy in
+                    let duration = max(viewModel.duration, 1)
+                    Slider(value: Binding(get: {
+                        min(viewModel.currentTime, viewModel.duration)
+                    }, set: { newVal in
+                        viewModel.seek(to: newVal)
+                    }), in: 0...duration)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onEnded { value in
+                                let width = max(proxy.size.width, 1)
+                                let clampedX = min(max(value.location.x, 0), width)
+                                let ratio = clampedX / width
+                                let target = Double(ratio) * duration
+                                viewModel.seek(to: target)
+                            }
+                    )
+                }
+                .frame(height: 40)
 
                 HStack {
                     Text(formattedTime(viewModel.currentTime))
