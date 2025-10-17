@@ -13,10 +13,6 @@ import Foundation
 import UIKit
 
 struct ContentView: View {
-    @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
-    @State private var isLoading: Bool = false
-    @State private var showError: Bool = false
-    @State private var errorMessage: String = ""
     @State private var audioFilePath: String?
     @StateObject private var saViewModel = SAPlayerViewModel()
     @State private var navPath: [Route] = []
@@ -37,151 +33,29 @@ struct ContentView: View {
     
     var body: some View {
         NavigationStack(path: $navPath) {
-            VStack(spacing: 20) {
-                // URL Input Section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("YouTube URL")
-                        .font(.headline)
-                    
-                    TextField("Enter YouTube URL", text: $youtubeURL)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .disabled(isLoading)
-                        .padding(.trailing, 36)
-                        .overlay(alignment: .trailing) {
-                            Button(action: {
-                                if let clipboard = UIPasteboard.general.string {
-                                    youtubeURL = clipboard
-                                }
-                            }) {
-                                Image(systemName: "doc.on.clipboard")
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.trailing, 8)
-                            .accessibilityLabel("Paste from clipboard")
-                        }
-                        // select all text when text field is focused
-                        // https://stackoverflow.com/a/67502495
-                        .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { obj in
-                            if let textField = obj.object as? UITextField {
-                                textField.selectedTextRange = textField.textRange(from: textField.beginningOfDocument, to: textField.endOfDocument)
-                            }
-                        }
-
+            Home(
+                canOpenPlayer: audioFilePath != nil,
+                openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
+                onDownloaded: { meta in
+                    audioFilePath = meta.path
+                    setupAudioPlayer(filePath: meta.path)
+                    let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
+                    saViewModel.setMetadata(title: meta.title, artist: meta.artist, artworkURL: artworkURL)
+                    if navPath.last != .player { navPath.append(.player) }
                 }
-                
-                // Download Button
-                Button(action: downloadAudio) {
-                    HStack {
-                        if isLoading {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            Image(systemName: "arrow.down.circle.fill")
-                        }
-                        
-                        Text(isLoading ? "Downloading..." : "Download Audio")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isLoading ? Color.gray : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                .disabled(isLoading)
-                
-                if audioFilePath != nil {
-                    // Player Screen Navigation
-                    VStack(spacing: 15) {
-                        Divider()
-                        NavigationLink(value: Route.player) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "music.note.list")
-                                Text("Open Player")
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                }
-                }
-                .padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            )
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
             .navigationTitle("Audio Downloader")
-            .alert("Download Failed", isPresented: $showError) {
-                Button("OK") { }
-            } message: {
-                Text(errorMessage)
-            }
             
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .player:
-                    ScrollView {
-                        PlayerView(viewModel: saViewModel)
-                    }
+                    PlayerView(viewModel: saViewModel)
                 }
             }
         }
-    }
-    
-    private func downloadAudio() {
-        guard !youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            showError(message: "Please enter a YouTube URL")
-            return
-        }
-        
-        isLoading = true
-        
-        // this is not the best way to do this but it works for now
-        // how we should actually do it: see https://docs.python.org/3/extending/embedding.html
-        // tldr: import module and invoke function with args directly via obj-c. they have utils
-        // for importing, invoking methods, passing args, etc.
-        let code = """
-from pytest_download import download
-result = download('\(youtubeURL)')
-"""
-        
-        print("[Swift] Button tapped - starting Python execution (async)")
-
-		pythonExecAndGetStringAsync(
-            code.trimmingCharacters(in: .whitespacesAndNewlines),
-            "result"
-		) { result in
-			defer { isLoading = false }
-			guard let output = result, !output.isEmpty else {
-				print("[Swift] Failed to fetch audio_fp from Python")
-				showError(message: "Failed to download audio. Please check the URL and try again.")
-				return
-			}
-			// Decode JSON metadata
-			guard let data = output.data(using: .utf8),
-					let meta = try? JSONDecoder().decode(DownloadMeta.self, from: data) else {
-				print("[Swift] Failed to decode JSON metadata")
-				showError(message: "Invalid response from downloader.")
-				return
-			}
-			print("[Swift] Downloaded file (JSON): \(meta.path)")
-			audioFilePath = meta.path
-			setupAudioPlayer(filePath: meta.path)
-			let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
-			saViewModel.setMetadata(title: meta.title, artist: meta.artist, artworkURL: artworkURL)
-			if let w = meta.thumbnail_width, let h = meta.thumbnail_height {
-				let isSquare = abs(w - h) <= 2
-				print("[Swift] Thumbnail dimensions: \(w)x\(h) | square? \(isSquare)")
-			} else if let sq = meta.thumbnail_is_square {
-				print("[Swift] Thumbnail square flag (from Python): \(sq)")
-			}
-            if navPath.last != .player {
-                navPath.append(.player)
-            }
-		}
     }
     
     private func setupAudioPlayer(filePath: String) {
@@ -194,11 +68,6 @@ result = download('\(youtubeURL)')
         saViewModel.setPitch(0.0)
         saViewModel.setReverbWetDryMix(0.0)
         saViewModel.startSavedAudio(filePath: filePath)
-    }
-    
-    private func showError(message: String) {
-        errorMessage = message
-        showError = true
     }
 }
 
