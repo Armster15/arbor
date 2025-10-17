@@ -135,8 +135,8 @@ final class SAPlayerViewModel: ObservableObject {
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.isEnabled = true
         commandCenter.previousTrackCommand.isEnabled = true
-        commandCenter.skipBackwardCommand.isEnabled = true
-        commandCenter.skipForwardCommand.isEnabled = true
+        commandCenter.skipBackwardCommand.isEnabled = false
+        commandCenter.skipForwardCommand.isEnabled = false
         commandCenter.seekBackwardCommand.isEnabled = true
         commandCenter.seekForwardCommand.isEnabled = true
 
@@ -170,22 +170,6 @@ final class SAPlayerViewModel: ObservableObject {
             }
         }
 
-        if #available(iOS 9.0, *) {
-            commandCenter.skipBackwardCommand.preferredIntervals = [15]
-            commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
-                SAPlayer.shared.seekTo(seconds: 0)
-                self?.updateNowPlayingInfo()
-                return .success
-            }
-            commandCenter.skipForwardCommand.preferredIntervals = [15]
-            commandCenter.skipForwardCommand.addTarget { [weak self] _ in
-                guard let self = self else { return .commandFailed }
-                let target = min(self.currentTime + 15, self.duration > 0 ? self.duration : self.currentTime + 15)
-                SAPlayer.shared.seekTo(seconds: target)
-                self.updateNowPlayingInfo()
-                return .success
-            }
-        }
 
         commandCenter.seekBackwardCommand.addTarget { [weak self] event in
             guard let self = self else { return .commandFailed }
@@ -383,7 +367,7 @@ struct PlayerView: View {
                     Double(viewModel.pitch)
                 }, set: { newVal in
                     viewModel.setPitch(Float(newVal))
-                }), in: -200...200, step: 1)
+                }), in: -400...300, step: 1)
             }
         }
         .padding()
