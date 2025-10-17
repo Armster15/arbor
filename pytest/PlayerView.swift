@@ -13,6 +13,7 @@ final class SAPlayerViewModel: ObservableObject {
     @Published var duration: Double = 0
     @Published var rate: Float = 1.0
     @Published var pitch: Float = 0.0
+    @Published var isLooping: Bool = false
 
     private var elapsedSub: UInt?
     private var durationSub: UInt?
@@ -47,6 +48,10 @@ final class SAPlayerViewModel: ObservableObject {
         currentTime = 0
     }
 
+    func toggleLoop() {
+        isLooping.toggle()
+    }
+
     func setRate(_ newRate: Float) {
         rate = newRate
         if let node = SAPlayer.shared.audioModifiers.first as? AVAudioUnitTimePitch {
@@ -75,16 +80,24 @@ final class SAPlayerViewModel: ObservableObject {
         }
         if statusSub == nil {
             statusSub = SAPlayer.Updates.PlayingStatus.subscribe { [weak self] status in
+                guard let self = self else { return }
                 switch status {
                 case .playing:
-                    self?.isPlaying = true
+                    self.isPlaying = true
                 case .ended:
-                    self?.isPlaying = false
-                    SAPlayer.shared.pause()
-                    SAPlayer.shared.seekTo(seconds: 0)
-                    self?.currentTime = 0
+                    if self.isLooping {
+                        SAPlayer.shared.seekTo(seconds: 0)
+                        SAPlayer.shared.play()
+                        self.isPlaying = true
+                        self.currentTime = 0
+                    } else {
+                        self.isPlaying = false
+                        SAPlayer.shared.pause()
+                        SAPlayer.shared.seekTo(seconds: 0)
+                        self.currentTime = 0
+                    }
                 default:
-                    self?.isPlaying = false
+                    self.isPlaying = false
                 }
             }
         }
@@ -124,6 +137,12 @@ struct PlayerView: View {
                     Image(systemName: "stop.circle.fill")
                         .font(.system(size: 44))
                         .foregroundColor(.red)
+                }
+                Button(action: { viewModel.toggleLoop() }) {
+                    Image(systemName: viewModel.isLooping ? "repeat.circle.fill" : "repeat.circle")
+                        .font(.system(size: 36))
+                        .foregroundColor(viewModel.isLooping ? .green : .secondary)
+                        .accessibilityLabel(viewModel.isLooping ? "Disable Loop" : "Enable Loop")
                 }
             }
 
