@@ -23,6 +23,7 @@ def download(url: str):
         # Ensure only single videos are downloaded, no playlists
         "playlistend": 1,  # Only download the first item (single video)
         "noplaylist": True,  # Do not download playlists
+        "nocheckcertificate": True,  # Ignore certificate errors (happens on physical device)
     }
 
     # Select iOS-writable locations
