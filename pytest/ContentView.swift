@@ -80,13 +80,15 @@ struct ContentView: View {
                     }
                     .disabled(isLoading)
                     
-                    // Audio Player Section
-                    VStack(spacing: 15) {
-                        Divider()
-                                                
-                        PlayerView(viewModel: saViewModel)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
+                    if audioFilePath != nil {
+                        // Audio Player Section
+                        VStack(spacing: 15) {
+                            Divider()
+                                                    
+                            PlayerView(viewModel: saViewModel)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(10)
+                        }
                     }
                 }
                 .padding()
