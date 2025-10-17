@@ -62,25 +62,65 @@ def download(url: str):
         artist = (
             info.get("artist") or info.get("uploader") or info.get("channel") or None
         )
-        # Prefer top-level thumbnail, else first in thumbnails list
-        thumbnail_url = info.get("thumbnail")
-        if not thumbnail_url:
-            thumbnails = info.get("thumbnails") or []
-            if isinstance(thumbnails, list) and thumbnails:
-                # Pick the highest resolution if available, else first
-                try:
-                    thumbnail_url = max(
-                        thumbnails,
-                        key=lambda t: (t.get("height") or 0) * (t.get("width") or 0),
-                    ).get("url")
-                except Exception:
-                    thumbnail_url = thumbnails[0].get("url")
+        # Choose thumbnail: prefer square art (common for music); else highest resolution
+        thumbnails = info.get("thumbnails") or []
+        thumbnail_info = None
+        thumbnail_url = None
+
+        def _dims(t):
+            if not isinstance(t, dict):
+                return (0, 0)
+            w = t.get("width") or 0
+            h = t.get("height") or 0
+            try:
+                return (int(w), int(h))
+            except Exception:
+                return (0, 0)
+
+        def _area(t):
+            w, h = _dims(t)
+            return w * h
+
+        def _is_square(t, tol=2):
+            w, h = _dims(t)
+            return w > 0 and h > 0 and abs(w - h) <= tol
+
+        if isinstance(thumbnails, list) and thumbnails:
+            square_thumbs = [t for t in thumbnails if _is_square(t)]
+            if square_thumbs:
+                # Largest square by area
+                thumbnail_info = max(square_thumbs, key=_area)
+            else:
+                # Fallback: largest by area
+                thumbnail_info = max(thumbnails, key=_area)
+            thumbnail_url = (thumbnail_info or {}).get("url")
+        else:
+            # Fallback to top-level thumbnail string if thumbnails list is absent
+            thumbnail_url = info.get("thumbnail")
+
+        # Extract dimensions if available
+        thumb_w = None
+        thumb_h = None
+        if isinstance(thumbnail_info, dict):
+            try:
+                w = thumbnail_info.get("width")
+                h = thumbnail_info.get("height")
+                thumb_w = int(w) if isinstance(w, (int, float)) else None
+                thumb_h = int(h) if isinstance(h, (int, float)) else None
+            except Exception:
+                thumb_w = None
+                thumb_h = None
 
         meta = {
             "path": full_path,
             "title": title,
             "artist": artist,
             "thumbnail_url": thumbnail_url,
+            "thumbnail_width": thumb_w,
+            "thumbnail_height": thumb_h,
+            "thumbnail_is_square": (
+                thumb_w is not None and thumb_h is not None and thumb_w == thumb_h
+            ),
         }
 
         return json.dumps(meta)

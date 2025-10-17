@@ -24,6 +24,9 @@ struct ContentView: View {
 		let title: String?
 		let artist: String?
 		let thumbnail_url: String?
+		let thumbnail_width: Int?
+		let thumbnail_height: Int?
+		let thumbnail_is_square: Bool?
 	}
     
     var body: some View {
@@ -160,6 +163,12 @@ result = download('\(youtubeURL)')
 			setupAudioPlayer(filePath: meta.path)
 			let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
 			saViewModel.setMetadata(title: meta.title, artist: meta.artist, artworkURL: artworkURL)
+			if let w = meta.thumbnail_width, let h = meta.thumbnail_height {
+				let isSquare = abs(w - h) <= 2
+				print("[Swift] Thumbnail dimensions: \(w)x\(h) | square? \(isSquare)")
+			} else if let sq = meta.thumbnail_is_square {
+				print("[Swift] Thumbnail square flag (from Python): \(sq)")
+			}
 		}
     }
     

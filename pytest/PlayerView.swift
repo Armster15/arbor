@@ -21,6 +21,7 @@ final class SAPlayerViewModel: ObservableObject {
     @Published var displayTitle: String = "Audio"
     @Published var displayArtist: String? = nil
     @Published var displayArtwork: UIImage? = nil
+	@Published var isArtworkSquare: Bool? = nil
 
     private var elapsedSub: UInt?
     private var durationSub: UInt?
@@ -54,6 +55,7 @@ final class SAPlayerViewModel: ObservableObject {
         } else {
             nowPlayingArtwork = nil
             nowPlayingArtworkImage = nil
+			isArtworkSquare = nil
             updateNowPlayingInfo()
         }
     }
@@ -287,14 +289,19 @@ final class SAPlayerViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self.nowPlayingArtwork = nil
                     self.nowPlayingArtworkImage = nil
+					self.isArtworkSquare = nil
                     self.updateNowPlayingInfo()
                 }
                 return
             }
             let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+			let size = image.size
+			let square = abs(size.width - size.height) <= 2
             DispatchQueue.main.async {
                 self.nowPlayingArtwork = artwork
                 self.nowPlayingArtworkImage = image
+				self.isArtworkSquare = square
+				print("[Swift] PlayerView artwork size: \(Int(size.width))x\(Int(size.height)) | square? \(square)")
                 self.updateNowPlayingInfo()
             }
         }.resume()
@@ -336,14 +343,27 @@ struct PlayerView: View {
         VStack(spacing: 16) {
             // Metadata header
             VStack(spacing: 8) {
-                if let uiImage = viewModel.displayArtwork {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(1, contentMode: .fill)
-                        .frame(height: 180)
-                        .clipped()
-                        .cornerRadius(12)
-                }
+				if let uiImage = viewModel.displayArtwork {
+					if viewModel.isArtworkSquare == true {
+						ZStack(alignment: .topTrailing) {
+							Image(uiImage: uiImage)
+								.resizable()
+								.scaledToFill()
+						}
+						.frame(width: 180, height: 180)
+						.clipped()
+						.cornerRadius(12)
+					} else {
+						ZStack(alignment: .topTrailing) {
+							Image(uiImage: uiImage)
+								.resizable()
+								.scaledToFill()
+						}
+						.frame(height: 180)
+						.clipped()
+						.cornerRadius(12)
+					}
+				}
                 Text(viewModel.displayTitle)
                     .font(.headline)
                     .multilineTextAlignment(.center)
