@@ -43,6 +43,7 @@ struct ContentView: View {
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
+                            .disabled(isLoading)
                             .padding(.trailing, 36)
                             .overlay(alignment: .trailing) {
                                 Button(action: {
