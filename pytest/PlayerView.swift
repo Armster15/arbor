@@ -241,6 +241,8 @@ final class SAPlayerViewModel: ObservableObject {
 
 struct PlayerView: View {
     @ObservedObject var viewModel: SAPlayerViewModel
+    @State private var isScrubbing: Bool = false
+    @State private var scrubbingTime: Double = 0
 
     private func formattedTime(_ seconds: Double) -> String {
         guard seconds.isFinite && !seconds.isNaN else { return "--:--" }
@@ -254,6 +256,11 @@ struct PlayerView: View {
         VStack(spacing: 16) {
             // Play / Pause
             HStack(spacing: 24) {
+                Button(action: { viewModel.seek(to: 0) }) {
+                    Image(systemName: "backward.end.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundColor(.blue)
+                }
                 Button(action: { viewModel.toggle() }) {
                     Image(systemName: viewModel.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 44))
@@ -266,7 +273,7 @@ struct PlayerView: View {
                 }
                 Button(action: { viewModel.toggleLoop() }) {
                     Image(systemName: viewModel.isLooping ? "repeat.circle.fill" : "repeat.circle")
-                        .font(.system(size: 36))
+                        .font(.system(size: 44))
                         .foregroundColor(viewModel.isLooping ? .green : .secondary)
                         .accessibilityLabel(viewModel.isLooping ? "Disable Loop" : "Enable Loop")
                 }
@@ -277,19 +284,26 @@ struct PlayerView: View {
                 GeometryReader { proxy in
                     let duration = max(viewModel.duration, 1)
                     Slider(value: Binding(get: {
-                        min(viewModel.currentTime, viewModel.duration)
+                        let base = min(viewModel.currentTime, viewModel.duration)
+                        return isScrubbing ? min(scrubbingTime, viewModel.duration) : base
                     }, set: { newVal in
-                        viewModel.seek(to: newVal)
+                        isScrubbing = true
+                        scrubbingTime = newVal
                     }), in: 0...duration)
                     .contentShape(Rectangle())
                     .highPriorityGesture(
                         DragGesture(minimumDistance: 0)
-                            .onEnded { value in
+                            .onChanged { value in
+                                isScrubbing = true
                                 let width = max(proxy.size.width, 1)
                                 let clampedX = min(max(value.location.x, 0), width)
                                 let ratio = clampedX / width
                                 let target = Double(ratio) * duration
+                                scrubbingTime = target
                                 viewModel.seek(to: target)
+                            }
+                            .onEnded { _ in
+                                isScrubbing = false
                             }
                     )
                 }
@@ -360,7 +374,7 @@ struct PlayerView: View {
                     Double(viewModel.pitch)
                 }, set: { newVal in
                     viewModel.setPitch(Float(newVal))
-                }), in: -650...650, step: 1) {
+                }), in: -200...200, step: 1) {
                     Text("Adjust pitch")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -369,7 +383,7 @@ struct PlayerView: View {
                     Double(viewModel.pitch)
                 }, set: { newVal in
                     viewModel.setPitch(Float(newVal))
-                }), in: -650...650, step: 1)
+                }), in: -200...200, step: 1)
             }
         }
         .padding()
