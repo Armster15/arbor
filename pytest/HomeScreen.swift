@@ -6,20 +6,10 @@
 import SwiftUI
 import UIKit
 
-struct HomeDownloadMeta: Decodable {
-    let path: String
-    let title: String?
-    let artist: String?
-    let thumbnail_url: String?
-    let thumbnail_width: Int?
-    let thumbnail_height: Int?
-    let thumbnail_is_square: Bool?
-}
-
 struct HomeScreen: View {
     let canOpenPlayer: Bool
     let openPlayerAction: () -> Void
-    let onDownloaded: (HomeDownloadMeta) -> Void
+    let onDownloaded: (DownloadMeta) -> Void
 
     @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
     @State private var isLoading: Bool = false
@@ -105,10 +95,7 @@ struct HomeScreen: View {
             Text(errorMessage)
         }
     }
-}
-
-// MARK: - Download Logic
-extension Home {
+    
     private func downloadAudio() {
         let trimmed = youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -117,6 +104,11 @@ extension Home {
         }
 
         isLoading = true
+        
+        // this is not the best way to do this but it works for now
+        // how we should actually do it: see https://docs.python.org/3/extending/embedding.html
+        // tldr: import module and invoke function with args directly via obj-c. they have utils
+        // for importing, invoking methods, passing args, etc.
         let code = """
 from pytest_download import download
 result = download('\(trimmed)')
@@ -132,11 +124,11 @@ result = download('\(trimmed)')
                 return
             }
             guard let data = output.data(using: .utf8),
-                  let meta = try? JSONDecoder().decode(HomeDownloadMeta.self, from: data) else {
-                showError(message: "Invalid response from downloader.")
-                return
-            }
-            onDownloaded(meta)
+                let meta = try? JSONDecoder().decode(DownloadMeta.self, from: data) else {
+                    showError(message: "Invalid response from downloader.")
+                    return
+                }
+                onDownloaded(meta)
         }
     }
 

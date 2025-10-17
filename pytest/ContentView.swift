@@ -12,20 +12,20 @@ import SwiftAudioPlayer
 import Foundation
 import UIKit
 
+struct DownloadMeta: Decodable {
+    let path: String
+    let title: String?
+    let artist: String?
+    let thumbnail_url: String?
+    let thumbnail_width: Int?
+    let thumbnail_height: Int?
+    let thumbnail_is_square: Bool?
+}
+
 struct ContentView: View {
-    @State private var audioFilePath: String?
     @StateObject private var saViewModel = SAPlayerViewModel()
     @State private var navPath: [Route] = []
-	
-	private struct DownloadMeta: Decodable {
-		let path: String
-		let title: String?
-		let artist: String?
-		let thumbnail_url: String?
-		let thumbnail_width: Int?
-		let thumbnail_height: Int?
-		let thumbnail_is_square: Bool?
-	}
+    @State private var lastDownloadMeta: DownloadMeta? = nil
     
     private enum Route: Hashable {
         case player
@@ -34,10 +34,10 @@ struct ContentView: View {
     var body: some View {
         NavigationStack(path: $navPath) {
             HomeScreen(
-                canOpenPlayer: audioFilePath != nil,
+                canOpenPlayer: lastDownloadMeta != nil,
                 openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
                 onDownloaded: { meta in
-                    audioFilePath = meta.path
+                    lastDownloadMeta = meta
                     setupAudioPlayer(filePath: meta.path)
                     let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
                     saViewModel.setMetadata(title: meta.title, artist: meta.artist, artworkURL: artworkURL)
