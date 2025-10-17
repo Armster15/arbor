@@ -14,4 +14,5 @@ int start_python_runtime(int argc, char *argv[]);
 void finalize_python_runtime(void);
 int pythonRunSimpleString(NSString *code);
 NSString * pythonExecAndGetString(NSString *code, NSString *variableName);
+void pythonExecAndGetStringAsync(NSString *code, NSString *variableName, void (^completion)(NSString *result));
 

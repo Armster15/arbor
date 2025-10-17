@@ -352,6 +352,8 @@ int start_python_runtime(int argc, char *argv[]) {
         }
         @finally {
             // Intentionally keep the Python interpreter alive for future Swift calls.
+            // Release the GIL so other threads (e.g., background queues) can acquire it via PyGILState_Ensure.
+            PyEval_SaveThread();
         }
     }
 
@@ -517,4 +519,25 @@ NSString *pythonExecAndGetString(NSString *code, NSString *variableName) {
 
     PyGILState_Release(gstate);
     return resultString;
+}
+
+// Execute Python code off the main thread and return the string result via completion on the main queue.
+void pythonExecAndGetStringAsync(NSString *code, NSString *variableName, void (^completion)(NSString *result)) {
+    if (code == nil || variableName == nil) {
+        if (completion) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(nil);
+            });
+        }
+        return;
+    }
+
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *result = pythonExecAndGetString(code, variableName);
+        if (completion) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(result);
+            });
+        }
+    });
 }

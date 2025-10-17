@@ -128,22 +128,23 @@ from pytest_download import download
 audio_fp = download('\(youtubeURL)')
 """
         
-        print("[Swift] Button tapped - starting Python execution")
-        print("[Swift] Running Python execution on main thread")
-        
-        if let audioPath = pythonExecAndGetString(
-            code.trimmingCharacters(in: .whitespacesAndNewlines), 
+        print("[Swift] Button tapped - starting Python execution (async)")
+
+        pythonExecAndGetStringAsync(
+            code.trimmingCharacters(in: .whitespacesAndNewlines),
             "audio_fp"
-        ) {
-            print("[Swift] Downloaded file: \(audioPath)")
-            audioFilePath = audioPath
-            setupAudioPlayer(filePath: audioPath)
-        } else {
-            print("[Swift] Failed to fetch audio_fp from Python")
-            showError(message: "Failed to download audio. Please check the URL and try again.")
+        ) { result in
+            if let audioPath = result, !audioPath.isEmpty {
+                print("[Swift] Downloaded file: \(audioPath)")
+                audioFilePath = audioPath
+                setupAudioPlayer(filePath: audioPath)
+            } else {
+                print("[Swift] Failed to fetch audio_fp from Python")
+                showError(message: "Failed to download audio. Please check the URL and try again.")
+            }
+
+            isLoading = false
         }
-        
-        isLoading = false
     }
     
     private func setupAudioPlayer(filePath: String) {
