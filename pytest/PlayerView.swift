@@ -61,15 +61,16 @@ final class SAPlayerViewModel: ObservableObject {
 
     func setRate(_ newRate: Float) {
         rate = newRate
-        if let node = SAPlayer.shared.audioModifiers.first as? AVAudioUnitTimePitch {
+        if let node = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitTimePitch }).first {
             node.rate = newRate
             SAPlayer.shared.playbackRateOfAudioChanged(rate: newRate)
         }
+        updateNowPlayingInfo()
     }
 
     func setPitch(_ newPitch: Float) {
         pitch = newPitch
-        if let node = SAPlayer.shared.audioModifiers.first as? AVAudioUnitTimePitch {
+        if let node = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitTimePitch }).first {
             node.pitch = newPitch
         }
     }
@@ -133,17 +134,30 @@ final class SAPlayerViewModel: ObservableObject {
         commandCenter.playCommand.isEnabled = true
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.isEnabled = true
+        commandCenter.previousTrackCommand.isEnabled = true
+        commandCenter.skipBackwardCommand.isEnabled = true
+        commandCenter.skipForwardCommand.isEnabled = true
+        commandCenter.seekBackwardCommand.isEnabled = true
+        commandCenter.seekForwardCommand.isEnabled = true
 
-        commandCenter.playCommand.addTarget { _ in
+        commandCenter.playCommand.addTarget { [weak self] _ in
             SAPlayer.shared.play()
+            self?.updateNowPlayingInfo()
             return .success
         }
-        commandCenter.pauseCommand.addTarget { _ in
+        commandCenter.pauseCommand.addTarget { [weak self] _ in
             SAPlayer.shared.pause()
+            self?.updateNowPlayingInfo()
             return .success
         }
-        commandCenter.togglePlayPauseCommand.addTarget { _ in
+        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
             SAPlayer.shared.togglePlayAndPause()
+            self?.updateNowPlayingInfo()
+            return .success
+        }
+        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
+            SAPlayer.shared.seekTo(seconds: 0)
+            self?.updateNowPlayingInfo()
             return .success
         }
 
@@ -153,6 +167,55 @@ final class SAPlayerViewModel: ObservableObject {
                 guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
                 SAPlayer.shared.seekTo(seconds: event.positionTime)
                 return .success
+            }
+        }
+
+        if #available(iOS 9.0, *) {
+            commandCenter.skipBackwardCommand.preferredIntervals = [15]
+            commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
+                SAPlayer.shared.seekTo(seconds: 0)
+                self?.updateNowPlayingInfo()
+                return .success
+            }
+            commandCenter.skipForwardCommand.preferredIntervals = [15]
+            commandCenter.skipForwardCommand.addTarget { [weak self] _ in
+                guard let self = self else { return .commandFailed }
+                let target = min(self.currentTime + 15, self.duration > 0 ? self.duration : self.currentTime + 15)
+                SAPlayer.shared.seekTo(seconds: target)
+                self.updateNowPlayingInfo()
+                return .success
+            }
+        }
+
+        commandCenter.seekBackwardCommand.addTarget { [weak self] event in
+            guard let self = self else { return .commandFailed }
+            guard let event = event as? MPSeekCommandEvent else { return .commandFailed }
+            switch event.type {
+            case .beginSeeking:
+                SAPlayer.shared.seekTo(seconds: 0)
+                if self.isPlaying { SAPlayer.shared.play() }
+                self.updateNowPlayingInfo()
+                return .success
+            case .endSeeking:
+                return .success
+            @unknown default:
+                return .commandFailed
+            }
+        }
+        commandCenter.seekForwardCommand.addTarget { [weak self] event in
+            guard let self = self else { return .commandFailed }
+            guard let event = event as? MPSeekCommandEvent else { return .commandFailed }
+            switch event.type {
+            case .beginSeeking:
+                let target = min(self.currentTime + 15, self.duration > 0 ? self.duration : self.currentTime + 15)
+                SAPlayer.shared.seekTo(seconds: target)
+                if self.isPlaying { SAPlayer.shared.play() }
+                self.updateNowPlayingInfo()
+                return .success
+            case .endSeeking:
+                return .success
+            @unknown default:
+                return .commandFailed
             }
         }
     }
@@ -167,6 +230,10 @@ final class SAPlayerViewModel: ObservableObject {
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
         if #available(iOS 10.0, *) {
             info[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
+            info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
+            info[MPNowPlayingInfoPropertyPlaybackQueueCount] = 1
+            info[MPNowPlayingInfoPropertyPlaybackQueueIndex] = 0
+            info[MPNowPlayingInfoPropertyIsLiveStream] = false
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
@@ -246,6 +313,12 @@ struct PlayerView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                     Spacer()
+                    Button("Reset") {
+                        viewModel.setRate(1.0)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .tint(.blue)
                     Text(String(format: "%.2fx", viewModel.rate))
                         .font(.subheadline)
                         .foregroundColor(.blue)
@@ -273,6 +346,12 @@ struct PlayerView: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                     Spacer()
+                    Button("Reset") {
+                        viewModel.setPitch(0.0)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .tint(.blue)
                     Text(String(format: "%.2f cents", viewModel.pitch))
                         .font(.subheadline)
                         .foregroundColor(.blue)
