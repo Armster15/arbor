@@ -87,26 +87,10 @@ struct ContentView: View {
                 if let audioPath = audioFilePath {
                     VStack(spacing: 15) {
                         Divider()
-                        
-                        Text("Audio Player")
-                            .font(.headline)
-                        
+                                                
                         PlayerView(viewModel: saViewModel)
                             .background(Color(.systemGray6))
                             .cornerRadius(10)
-                        
-                        // File info
-                        VStack(spacing: 4) {
-                            Text("Audio File")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Text(audioPath.components(separatedBy: "/").last ?? "Unknown")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                        
-                        // Controls moved into PlayerView via SAPlayer
                     }
                 }
                 
