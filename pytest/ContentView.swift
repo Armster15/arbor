@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var errorMessage: String = ""
     @State private var audioFilePath: String?
     @StateObject private var saViewModel = SAPlayerViewModel()
+    @State private var navPath: [Route] = []
 	
 	private struct DownloadMeta: Decodable {
 		let path: String
@@ -30,83 +31,102 @@ struct ContentView: View {
 		let thumbnail_is_square: Bool?
 	}
     
+    private enum Route: Hashable {
+        case player
+    }
+    
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // URL Input Section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("YouTube URL")
-                            .font(.headline)
-                        
-                        TextField("Enter YouTube URL", text: $youtubeURL)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
-                            .disabled(isLoading)
-                            .padding(.trailing, 36)
-                            .overlay(alignment: .trailing) {
-                                Button(action: {
-                                    if let clipboard = UIPasteboard.general.string {
-                                        youtubeURL = clipboard
-                                    }
-                                }) {
-                                    Image(systemName: "doc.on.clipboard")
-                                        .foregroundColor(.secondary)
+        NavigationStack(path: $navPath) {
+            VStack(spacing: 20) {
+                // URL Input Section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("YouTube URL")
+                        .font(.headline)
+                    
+                    TextField("Enter YouTube URL", text: $youtubeURL)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .disabled(isLoading)
+                        .padding(.trailing, 36)
+                        .overlay(alignment: .trailing) {
+                            Button(action: {
+                                if let clipboard = UIPasteboard.general.string {
+                                    youtubeURL = clipboard
                                 }
-                                .padding(.trailing, 8)
-                                .accessibilityLabel("Paste from clipboard")
+                            }) {
+                                Image(systemName: "doc.on.clipboard")
+                                    .foregroundColor(.secondary)
                             }
-                            // select all text when text field is focused
-                            // https://stackoverflow.com/a/67502495
-                            .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { obj in
-                                if let textField = obj.object as? UITextField {
-                                    textField.selectedTextRange = textField.textRange(from: textField.beginningOfDocument, to: textField.endOfDocument)
-                                }
+                            .padding(.trailing, 8)
+                            .accessibilityLabel("Paste from clipboard")
+                        }
+                        // select all text when text field is focused
+                        // https://stackoverflow.com/a/67502495
+                        .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { obj in
+                            if let textField = obj.object as? UITextField {
+                                textField.selectedTextRange = textField.textRange(from: textField.beginningOfDocument, to: textField.endOfDocument)
                             }
+                        }
 
+                }
+                
+                // Download Button
+                Button(action: downloadAudio) {
+                    HStack {
+                        if isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Image(systemName: "arrow.down.circle.fill")
+                        }
+                        
+                        Text(isLoading ? "Downloading..." : "Download Audio")
+                            .fontWeight(.semibold)
                     }
-                    
-                    // Download Button
-                    Button(action: downloadAudio) {
-                        HStack {
-                            if isLoading {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
-                                Image(systemName: "arrow.down.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(isLoading ? Color.gray : Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .disabled(isLoading)
+                
+                if audioFilePath != nil {
+                    // Player Screen Navigation
+                    VStack(spacing: 15) {
+                        Divider()
+                        NavigationLink(value: Route.player) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "music.note.list")
+                                Text("Open Player")
+                                    .fontWeight(.semibold)
                             }
-                            
-                            Text(isLoading ? "Downloading..." : "Download Audio")
-                                .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding()
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isLoading ? Color.gray : Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                    }
-                    .disabled(isLoading)
-                    
-                    if audioFilePath != nil {
-                        // Audio Player Section
-                        VStack(spacing: 15) {
-                            Divider()
-                                                    
-                            PlayerView(viewModel: saViewModel)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(10)
-                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
+                }
                 .padding()
-            }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
             .navigationTitle("Audio Downloader")
             .alert("Download Failed", isPresented: $showError) {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
+            }
+            
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .player:
+                    ScrollView {
+                        PlayerView(viewModel: saViewModel)
+                    }
+                }
             }
         }
     }
@@ -158,6 +178,9 @@ result = download('\(youtubeURL)')
 			} else if let sq = meta.thumbnail_is_square {
 				print("[Swift] Thumbnail square flag (from Python): \(sq)")
 			}
+            if navPath.last != .player {
+                navPath.append(.player)
+            }
 		}
     }
     
