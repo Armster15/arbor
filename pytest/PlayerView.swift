@@ -71,9 +71,10 @@ final class SAPlayerViewModel: ObservableObject {
     }
 
     func setPitch(_ newPitch: Float) {
-        pitch = newPitch
+        let rounded = Float(round(Double(newPitch)))
+        pitch = rounded
         if let node = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitTimePitch }).first {
-            node.pitch = newPitch
+            node.pitch = rounded
         }
     }
 
@@ -368,7 +369,7 @@ struct PlayerView: View {
                     .font(.caption)
                     .buttonStyle(.bordered)
                     .tint(.blue)
-                    Text(String(format: "%.2f cents", viewModel.pitch))
+                    Text(String(format: "%d cents", Int(viewModel.pitch)))
                         .font(.subheadline)
                         .foregroundColor(.blue)
                 }
@@ -385,7 +386,7 @@ struct PlayerView: View {
                     Double(viewModel.pitch)
                 }, set: { newVal in
                     viewModel.setPitch(Float(newVal))
-                }), in: -400...300, step: 1)
+                }), in: -700...500, step: 15)
             }
 
             // Reverb
