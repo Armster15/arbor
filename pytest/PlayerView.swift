@@ -100,6 +100,7 @@ final class SAPlayerViewModel: ObservableObject {
         if let reverb = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitReverb }).first {
             reverb.wetDryMix = clamped
         }
+        updateNowPlayingInfo()
     }
 
     func setReverbPresetRaw(_ raw: Int) {
@@ -241,7 +242,7 @@ final class SAPlayerViewModel: ObservableObject {
 
     private func updateNowPlayingInfo() {
         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
-        info[MPMediaItemPropertyTitle] = nowPlayingTitle
+        info[MPMediaItemPropertyTitle] = decoratedTitle()
         if let artist = nowPlayingArtist {
             info[MPMediaItemPropertyArtist] = artist
         }
@@ -276,6 +277,24 @@ final class SAPlayerViewModel: ObservableObject {
                 self.updateNowPlayingInfo()
             }
         }.resume()
+    }
+
+    private func decoratedTitle() -> String {
+        var tags: [String] = []
+        if rate > 1.0 {
+            tags.append("sped up")
+        } else if rate < 1.0 {
+            tags.append("slowed down")
+        }
+        if reverbWetDryMix > 0.0 {
+            if tags.isEmpty {
+                tags.append("reverb")
+            } else {
+                tags.append("reverb")
+            }
+        }
+        guard !tags.isEmpty else { return nowPlayingTitle }
+        return "\(nowPlayingTitle) (\(tags.joined(separator: " + ")))"
     }
 }
 
