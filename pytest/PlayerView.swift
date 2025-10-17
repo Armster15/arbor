@@ -15,6 +15,8 @@ final class SAPlayerViewModel: ObservableObject {
     @Published var rate: Float = 1.0
     @Published var pitch: Float = 0.0
     @Published var isLooping: Bool = false
+    @Published var reverbWetDryMix: Float = 0.0
+    @Published var reverbPresetRaw: Int = AVAudioUnitReverbPreset.mediumHall.rawValue
 
     private var elapsedSub: UInt?
     private var durationSub: UInt?
@@ -72,6 +74,22 @@ final class SAPlayerViewModel: ObservableObject {
         pitch = newPitch
         if let node = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitTimePitch }).first {
             node.pitch = newPitch
+        }
+    }
+
+    func setReverbWetDryMix(_ newMix: Float) {
+        let clamped = max(0.0, min(100.0, newMix))
+        reverbWetDryMix = clamped
+        if let reverb = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitReverb }).first {
+            reverb.wetDryMix = clamped
+        }
+    }
+
+    func setReverbPresetRaw(_ raw: Int) {
+        reverbPresetRaw = raw
+        if let preset = AVAudioUnitReverbPreset(rawValue: raw),
+           let reverb = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitReverb }).first {
+            reverb.loadFactoryPreset(preset)
         }
     }
 
@@ -368,6 +386,33 @@ struct PlayerView: View {
                 }, set: { newVal in
                     viewModel.setPitch(Float(newVal))
                 }), in: -400...300, step: 1)
+            }
+
+            // Reverb
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Reverb")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Spacer()
+                    Button("Reset") {
+                        viewModel.setReverbWetDryMix(0.0)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .tint(.blue)
+                    Text(String(format: "%.0f%%", viewModel.reverbWetDryMix))
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                }
+                Text("Adjust reverb mix")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Slider(value: Binding(get: {
+                    Double(viewModel.reverbWetDryMix)
+                }, set: { newVal in
+                    viewModel.setReverbWetDryMix(Float(newVal))
+                }), in: 0...100, step: 1)
             }
         }
         .padding()

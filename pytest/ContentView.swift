@@ -148,11 +148,14 @@ audio_fp = download('\(youtubeURL)')
     }
     
     private func setupAudioPlayer(filePath: String) {
-        // Initialize SAPlayer with saved file and attach TimePitch for speed/pitch
+        // Initialize SAPlayer with saved file and attach TimePitch for speed/pitch and Reverb effect
         let timePitch = AVAudioUnitTimePitch()
-        SAPlayer.shared.audioModifiers = [timePitch]
+        let reverb = AVAudioUnitReverb()
+        reverb.wetDryMix = 0
+        SAPlayer.shared.audioModifiers = [timePitch, reverb]
         saViewModel.setRate(1.0)
         saViewModel.setPitch(0.0)
+        saViewModel.setReverbWetDryMix(0.0)
         saViewModel.startSavedAudio(filePath: filePath)
     }
     
