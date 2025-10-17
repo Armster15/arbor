@@ -56,6 +56,14 @@ struct ContentView: View {
                                 .padding(.trailing, 8)
                                 .accessibilityLabel("Paste from clipboard")
                             }
+                            // select all text when text field is focused
+                            // https://stackoverflow.com/a/67502495
+                            .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { obj in
+                                if let textField = obj.object as? UITextField {
+                                    textField.selectedTextRange = textField.textRange(from: textField.beginningOfDocument, to: textField.endOfDocument)
+                                }
+                            }
+
                     }
                     
                     // Download Button
