@@ -10,6 +10,7 @@ import AVFoundation
 import AVKit
 import SwiftAudioPlayer
 import Foundation
+import UIKit
 
 struct ContentView: View {
     @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
@@ -59,6 +60,19 @@ struct ContentView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                        .padding(.trailing, 36)
+                        .overlay(alignment: .trailing) {
+                            Button(action: {
+                                if let clipboard = UIPasteboard.general.string {
+                                    youtubeURL = clipboard
+                                }
+                            }) {
+                                Image(systemName: "doc.on.clipboard")
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.trailing, 8)
+                            .accessibilityLabel("Paste from clipboard")
+                        }
                 }
                 
                 // Download Button
