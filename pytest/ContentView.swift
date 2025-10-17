@@ -34,78 +34,60 @@ struct ContentView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                // Header
-                VStack {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 50))
-                        .foregroundColor(.blue)
-                    
-                    Text("YouTube Audio Downloader")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    Text("Download and play audio from YouTube videos")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top)
-                
-                // URL Input Section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("YouTube URL")
-                        .font(.headline)
-                    
-                    TextField("Enter YouTube URL", text: $youtubeURL)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .padding(.trailing, 36)
-                        .overlay(alignment: .trailing) {
-                            Button(action: {
-                                if let clipboard = UIPasteboard.general.string {
-                                    youtubeURL = clipboard
-                                }
-                            }) {
-                                Image(systemName: "doc.on.clipboard")
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.trailing, 8)
-                            .accessibilityLabel("Paste from clipboard")
-                        }
-                }
-                
-                // Download Button
-                Button(action: downloadAudio) {
-                    HStack {
-                        if isLoading {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            Image(systemName: "arrow.down.circle.fill")
-                        }
+                    // URL Input Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("YouTube URL")
+                            .font(.headline)
                         
-                        Text(isLoading ? "Downloading..." : "Download Audio")
-                            .fontWeight(.semibold)
+                        TextField("Enter YouTube URL", text: $youtubeURL)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .padding(.trailing, 36)
+                            .overlay(alignment: .trailing) {
+                                Button(action: {
+                                    if let clipboard = UIPasteboard.general.string {
+                                        youtubeURL = clipboard
+                                    }
+                                }) {
+                                    Image(systemName: "doc.on.clipboard")
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.trailing, 8)
+                                .accessibilityLabel("Paste from clipboard")
+                            }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isLoading ? Color.gray : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                .disabled(isLoading)
-                
-                // Audio Player Section
-                VStack(spacing: 15) {
-                    Divider()
-                                            
-                    PlayerView(viewModel: saViewModel)
-                        .background(Color(.systemGray6))
+                    
+                    // Download Button
+                    Button(action: downloadAudio) {
+                        HStack {
+                            if isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Image(systemName: "arrow.down.circle.fill")
+                            }
+                            
+                            Text(isLoading ? "Downloading..." : "Download Audio")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(isLoading ? Color.gray : Color.blue)
+                        .foregroundColor(.white)
                         .cornerRadius(10)
-                }
-
+                    }
+                    .disabled(isLoading)
+                    
+                    // Audio Player Section
+                    VStack(spacing: 15) {
+                        Divider()
+                                                
+                        PlayerView(viewModel: saViewModel)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(10)
+                    }
                 }
                 .padding()
             }
