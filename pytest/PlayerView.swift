@@ -37,7 +37,7 @@ final class SAPlayerViewModel: ObservableObject {
         let url = URL(fileURLWithPath: filePath)
         SAPlayer.shared.startSavedAudio(withSavedUrl: url, mediaInfo: nil)
         nowPlayingTitle = url.deletingPathExtension().lastPathComponent
-        displayTitle = decoratedTitle()
+        displayTitle = nowPlayingTitle
         displayArtist = nowPlayingArtist
         displayArtwork = nil
         configureRemoteCommandsIfNeeded()
@@ -272,7 +272,7 @@ final class SAPlayerViewModel: ObservableObject {
             info[MPNowPlayingInfoPropertyIsLiveStream] = false
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-        let newTitle = decoratedTitle()
+        let newTitle = nowPlayingTitle
         let newArtist = nowPlayingArtist
         let newArtwork = nowPlayingArtworkImage
         DispatchQueue.main.async {
