@@ -76,8 +76,15 @@ final class SAPlayerViewModel: ObservableObject {
         if statusSub == nil {
             statusSub = SAPlayer.Updates.PlayingStatus.subscribe { [weak self] status in
                 switch status {
-                case .playing: self?.isPlaying = true
-                default: self?.isPlaying = false
+                case .playing:
+                    self?.isPlaying = true
+                case .ended:
+                    self?.isPlaying = false
+                    SAPlayer.shared.pause()
+                    SAPlayer.shared.seekTo(seconds: 0)
+                    self?.currentTime = 0
+                default:
+                    self?.isPlaying = false
                 }
             }
         }
