@@ -405,9 +405,15 @@ struct PlayerView: View {
                         .font(.subheadline)
                         .foregroundColor(.blue)
                 }
-                Text("Adjust reverb mix")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Stepper(value: Binding(get: {
+                    Double(viewModel.reverbWetDryMix)
+                }, set: { newVal in
+                    viewModel.setReverbWetDryMix(Float(newVal))
+                }), in: 0...100, step: 1) {
+                    Text("Adjust reverb mix")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 Slider(value: Binding(get: {
                     Double(viewModel.reverbWetDryMix)
                 }, set: { newVal in
