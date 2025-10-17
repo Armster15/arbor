@@ -31,9 +31,22 @@
 		08C4FFF72EA1455D00F9F26C /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Python.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		08C4480B2EA1F0C400F9F26C /* Exceptions for "pytest" folder in "pytest" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 08C4FFE52EA1436F00F9F26C /* pytest */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		08C4FFE82EA1436F00F9F26C /* pytest */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				08C4480B2EA1F0C400F9F26C /* Exceptions for "pytest" folder in "pytest" target */,
+			);
 			path = pytest;
 			sourceTree = "<group>";
 		};
@@ -314,6 +327,7 @@
 				DEVELOPMENT_TEAM = SDPGJ289XK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = pytest/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -345,6 +359,7 @@
 				DEVELOPMENT_TEAM = SDPGJ289XK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = pytest/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

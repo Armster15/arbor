@@ -6,6 +6,7 @@
 import SwiftUI
 import AVFoundation
 import SwiftAudioPlayer
+import MediaPlayer
 
 final class SAPlayerViewModel: ObservableObject {
     @Published var isPlaying: Bool = false
@@ -19,10 +20,16 @@ final class SAPlayerViewModel: ObservableObject {
     private var durationSub: UInt?
     private var statusSub: UInt?
 
+    private var remoteCommandsConfigured: Bool = false
+    private var nowPlayingTitle: String = "Audio"
+
     func startSavedAudio(filePath: String) {
         let url = URL(fileURLWithPath: filePath)
         SAPlayer.shared.startSavedAudio(withSavedUrl: url, mediaInfo: nil)
+        nowPlayingTitle = url.deletingPathExtension().lastPathComponent
+        configureRemoteCommandsIfNeeded()
         subscribeUpdates()
+        updateNowPlayingInfo()
     }
 
     func play() {
@@ -71,11 +78,13 @@ final class SAPlayerViewModel: ObservableObject {
         if elapsedSub == nil {
             elapsedSub = SAPlayer.Updates.ElapsedTime.subscribe { [weak self] time in
                 self?.currentTime = time
+                self?.updateNowPlayingInfo()
             }
         }
         if durationSub == nil {
             durationSub = SAPlayer.Updates.Duration.subscribe { [weak self] dur in
                 self?.duration = dur
+                self?.updateNowPlayingInfo()
             }
         }
         if statusSub == nil {
@@ -84,20 +93,24 @@ final class SAPlayerViewModel: ObservableObject {
                 switch status {
                 case .playing:
                     self.isPlaying = true
+                    self.updateNowPlayingInfo()
                 case .ended:
                     if self.isLooping {
                         SAPlayer.shared.seekTo(seconds: 0)
                         SAPlayer.shared.play()
                         self.isPlaying = true
                         self.currentTime = 0
+                        self.updateNowPlayingInfo()
                     } else {
                         self.isPlaying = false
                         SAPlayer.shared.pause()
                         SAPlayer.shared.seekTo(seconds: 0)
                         self.currentTime = 0
+                        self.updateNowPlayingInfo()
                     }
                 default:
                     self.isPlaying = false
+                    self.updateNowPlayingInfo()
                 }
             }
         }
@@ -110,6 +123,52 @@ final class SAPlayerViewModel: ObservableObject {
         elapsedSub = nil
         durationSub = nil
         statusSub = nil
+    }
+
+    private func configureRemoteCommandsIfNeeded() {
+        guard !remoteCommandsConfigured else { return }
+        remoteCommandsConfigured = true
+
+        let commandCenter = MPRemoteCommandCenter.shared()
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+
+        commandCenter.playCommand.addTarget { _ in
+            SAPlayer.shared.play()
+            return .success
+        }
+        commandCenter.pauseCommand.addTarget { _ in
+            SAPlayer.shared.pause()
+            return .success
+        }
+        commandCenter.togglePlayPauseCommand.addTarget { _ in
+            SAPlayer.shared.togglePlayAndPause()
+            return .success
+        }
+
+        if #available(iOS 9.1, *) {
+            commandCenter.changePlaybackPositionCommand.isEnabled = true
+            commandCenter.changePlaybackPositionCommand.addTarget { event in
+                guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+                SAPlayer.shared.seekTo(seconds: event.positionTime)
+                return .success
+            }
+        }
+    }
+
+    private func updateNowPlayingInfo() {
+        var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+        info[MPMediaItemPropertyTitle] = nowPlayingTitle
+        if duration.isFinite && duration > 0 {
+            info[MPMediaItemPropertyPlaybackDuration] = duration
+        }
+        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
+        if #available(iOS 10.0, *) {
+            info[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 }
 
