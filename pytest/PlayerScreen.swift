@@ -25,8 +25,8 @@ class AudioPlayerWithReverb: ObservableObject {
     @Published public var currentTime: TimeInterval = 0.0
     @Published public var duration: TimeInterval = 0.0
     private var displayLink: CADisplayLink? // timer that synchronizes with the screen's refresh rate
-    private var startFrame: AVAudioFramePosition = 0
-    private var startTime: TimeInterval = 0
+    private var seekOffset: AVAudioFramePosition = 0 // Track where we seeked to
+    private var isSeeking: Bool = false
     
     // Now Playing metadata
     private var metaTitle: String?
@@ -122,6 +122,17 @@ class AudioPlayerWithReverb: ObservableObject {
             self.play()
             return .success
         }
+        
+        // Change playback position command (scrubbing)
+        commandCenter.changePlaybackPositionCommand.isEnabled = true
+        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let self = self,
+                  let event = event as? MPChangePlaybackPositionCommandEvent else {
+                return .commandFailed
+            }
+            self.seek(to: event.positionTime)
+            return .success
+        }
     }
     
     func loadAudio(url: URL, metaTitle: String? = nil, metaArtist: String? = nil, metaArtworkURL: URL? = nil) throws {
@@ -190,12 +201,8 @@ class AudioPlayerWithReverb: ObservableObject {
     func play() {
         guard let audioFile = audioFile else { return }
         
-        // Store the starting frame position
-        if let nodeTime = playerNode.lastRenderTime,
-           let playerTime = playerNode.playerTime(forNodeTime: nodeTime) {
-            startFrame = playerTime.sampleTime
-            startTime = CACurrentMediaTime()
-        }
+        // Reset seek offset when starting from the beginning
+        seekOffset = 0
         
         playerNode.scheduleFile(audioFile, at: nil)
         
@@ -227,9 +234,57 @@ class AudioPlayerWithReverb: ObservableObject {
         engine.stop()
         isPlaying = false
         currentTime = 0
+        seekOffset = 0
         
         updateNowPlayingInfo()
         stopDisplayLink()
+    }
+    
+    func seek(to time: TimeInterval) {
+        guard let audioFile = audioFile else { return }
+        
+        // Store if we were playing
+        let wasPlaying = isPlaying
+        
+        // Stop current playback
+        playerNode.stop()
+        
+        // Calculate frame position from time
+        let sampleRate = audioFile.processingFormat.sampleRate
+        let framePosition = AVAudioFramePosition(time * sampleRate)
+        
+        // Clamp the frame position to valid range
+        let clampedFrame = min(max(framePosition, 0), audioFile.length)
+        
+        // Store the seek offset so updateCurrentTime can calculate correctly
+        seekOffset = clampedFrame
+        
+        // Calculate the frames remaining from the seek position
+        let frameCount = AVAudioFrameCount(audioFile.length - clampedFrame)
+        
+        // Update current time
+        currentTime = Double(clampedFrame) / sampleRate
+        
+        // Schedule the segment from the seek position to the end
+        if frameCount > 0 {
+            playerNode.scheduleSegment(
+                audioFile,
+                startingFrame: clampedFrame,
+                frameCount: frameCount,
+                at: nil
+            )
+        }
+        
+        // Resume playback if we were playing
+        if wasPlaying {
+            if !engine.isRunning {
+                try? engine.start()
+            }
+            playerNode.play()
+            startDisplayLink()
+        }
+        
+        updateNowPlayingInfo()
     }
     
     func teardown() {
@@ -266,7 +321,8 @@ class AudioPlayerWithReverb: ObservableObject {
         }
         
         let sampleRate = audioFile.processingFormat.sampleRate
-        let currentFrame = playerTime.sampleTime
+        // Add seek offset to get the actual position in the file
+        let currentFrame = playerTime.sampleTime + seekOffset
         
         // Calculate elapsed time based on frames played
         currentTime = Double(currentFrame) / sampleRate
