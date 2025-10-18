@@ -104,6 +104,24 @@ class AudioPlayerWithReverb: ObservableObject {
             }
             return .success
         }
+        
+        // Previous track command (restart from beginning with fast rewind icon)
+        commandCenter.previousTrackCommand.isEnabled = true
+        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            self.stop()
+            self.play()
+            return .success
+        }
+        
+        // Next track command (restart from beginning with fast forward icon)
+        commandCenter.nextTrackCommand.isEnabled = true
+        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            self.stop()
+            self.play()
+            return .success
+        }
     }
     
     func loadAudio(url: URL, metaTitle: String? = nil, metaArtist: String? = nil, metaArtworkURL: URL? = nil) throws {
