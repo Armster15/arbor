@@ -219,7 +219,7 @@ struct PlayerScreen: View {
                 //                    }
                 //                }
                 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 24) {
                     //                    // Speed
                     //                    HStack {
                     //                        Text("Speed")
