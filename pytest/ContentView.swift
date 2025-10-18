@@ -45,7 +45,13 @@ struct ContentView: View {
                     audioPlayer = nil
 
                     let newAudioPlayer = AudioPlayerWithReverb()
-                    try? newAudioPlayer.loadAudio(url: URL(string: meta.path)!, metadata: meta)
+                    let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
+                    try? newAudioPlayer.loadAudio(
+                        url: URL(string: meta.path)!,
+                        metaTitle: meta.title,
+                        metaArtist: meta.artist,
+                        metaArtworkURL: artworkURL
+                    )
                     audioPlayer = newAudioPlayer
                     
                     if navPath.last != .player { navPath.append(.player) }

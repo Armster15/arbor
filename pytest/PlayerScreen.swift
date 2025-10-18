@@ -28,8 +28,10 @@ class AudioPlayerWithReverb: ObservableObject {
     private var startFrame: AVAudioFramePosition = 0
     private var startTime: TimeInterval = 0
     
-    // for now playing info
-    private var metadata: DownloadMeta?
+    // Now Playing metadata
+    private var metaTitle: String?
+    private var metaArtist: String?
+    private var metaArtworkURL: URL?
 
     init() {
         engine = AVAudioEngine()
@@ -104,9 +106,11 @@ class AudioPlayerWithReverb: ObservableObject {
         }
     }
     
-    func loadAudio(url: URL, metadata: DownloadMeta? = nil) throws {
+    func loadAudio(url: URL, metaTitle: String? = nil, metaArtist: String? = nil, metaArtworkURL: URL? = nil) throws {
         audioFile = try AVAudioFile(forReading: url)
-        self.metadata = metadata
+        self.metaTitle = metaTitle
+        self.metaArtist = metaArtist
+        self.metaArtworkURL = metaArtworkURL
         
         // Calculate duration
         if let file = audioFile {
@@ -123,20 +127,19 @@ class AudioPlayerWithReverb: ObservableObject {
         var nowPlayingInfo = [String: Any]()
         
         // Set title
-        if let metadata = metadata {
-            nowPlayingInfo[MPMediaItemPropertyTitle] = metadata.title
-            
-            // Set artist if available
-            if let artist = metadata.artist, !artist.isEmpty {
-                nowPlayingInfo[MPMediaItemPropertyArtist] = artist
-            }
-            
-            // Load and set artwork asynchronously
-            if let thumbnailUrl = metadata.thumbnail_url,
-               let url = URL(string: thumbnailUrl) {
-                Task {
-                    await loadAndSetArtwork(from: url)
-                }
+        if let title = metaTitle {
+            nowPlayingInfo[MPMediaItemPropertyTitle] = title
+        }
+        
+        // Set artist if available
+        if let artist = metaArtist, !artist.isEmpty {
+            nowPlayingInfo[MPMediaItemPropertyArtist] = artist
+        }
+        
+        // Load and set artwork asynchronously
+        if let artworkURL = metaArtworkURL {
+            Task {
+                await loadAndSetArtwork(from: artworkURL)
             }
         }
         
