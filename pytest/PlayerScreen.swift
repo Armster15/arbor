@@ -52,10 +52,6 @@ class AudioPlayerWithReverb: ObservableObject {
     private func setupAudioEngine() {
         player.attach(node: pitchNode)
         player.attach(node: reverbNode)
-
-        player.delegate?.audioPlayerStateChanged(
-            player: <#T##AudioPlayer#>, with: <#T##AudioPlayerState#>,
-            previous: <#T##AudioPlayerState#>)
     }
 
     private func setupAudioSession() {
@@ -77,21 +73,24 @@ class AudioPlayerWithReverb: ObservableObject {
         // Play command
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
-            self?.play()
+            guard let self = self else { return .commandFailed }
+            self.play()
             return .success
         }
 
         // Pause command
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
-            self?.pause()
+            guard let self = self else { return .commandFailed }
+            self.pause()
             return .success
         }
 
         // Stop command
         commandCenter.stopCommand.isEnabled = true
         commandCenter.stopCommand.addTarget { [weak self] _ in
-            self?.stop()
+            guard let self = self else { return .commandFailed }
+            self.stop()
             return .success
         }
 
@@ -204,12 +203,16 @@ class AudioPlayerWithReverb: ObservableObject {
             player.play(url: url)
             hasPlayedBefore = true
         }
+        
+        self.isPlaying = true
 
         updateNowPlayingInfo()
     }
 
     func pause() {
         player.pause()
+        
+        self.isPlaying = false
 
         updateNowPlayingInfo()
     }
@@ -221,6 +224,8 @@ class AudioPlayerWithReverb: ObservableObject {
     func stop() {
         player.stop()
         updateNowPlayingInfo()
+        self.isPlaying = false
+        self.hasPlayedBefore = false
     }
 
     func seek(to time: Double) {
@@ -351,8 +356,7 @@ struct PlayerScreen: View {
                     HStack(spacing: 24) {
                         // Rewind
                         Button(action: {
-                            audioPlayer.stop()
-                            audioPlayer.play()
+                            audioPlayer.seek(to: 0)
 
                         }) {
                             Image(systemName: "backward.end.circle.fill")
