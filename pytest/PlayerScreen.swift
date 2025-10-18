@@ -75,42 +75,21 @@ class AudioPlayerWithReverb: ObservableObject {
         // Play command
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- playCommand -- in progress")
-            
-            if self.isPlaying {
-                self.pause()
-            } else {
-                self.play()
-            }
-            
-            debugPrint("commandCenter -- playCommand -- played")
+            self?.play()
             return .success
         }
         
         // Pause command
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- pauseCommand -- in progress")
-            
-            if self.isPlaying {
-                self.pause()
-            } else {
-                self.play()
-            }
-            
-            debugPrint("commandCenter -- pauseCommand -- paused")
+            self?.pause()
             return .success
         }
         
         // Stop command
         commandCenter.stopCommand.isEnabled = true
         commandCenter.stopCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- stopCommand -- in progress")
-            self.stop()
-            debugPrint("commandCenter -- stopCommand -- stopped")
+            self?.stop()
             return .success
         }
         
@@ -118,15 +97,11 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.togglePlayPauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- togglePlayPauseCommand -- in progress")
             if self.isPlaying {
-                debugPrint("commandCenter -- togglePlayPauseCommand -- pausing")
                 self.pause()
             } else {
-                debugPrint("commandCenter -- togglePlayPauseCommand -- playing")
                 self.play()
             }
-            debugPrint("commandCenter -- togglePlayPauseCommand -- completed")
             return .success
         }
         
@@ -134,11 +109,8 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.previousTrackCommand.isEnabled = true
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- previousTrackCommand -- in progress")
             self.stop()
-            debugPrint("commandCenter -- previousTrackCommand -- stopped")
             self.play()
-            debugPrint("commandCenter -- previousTrackCommand -- played")
             return .success
         }
         
@@ -146,9 +118,7 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.nextTrackCommand.isEnabled = true
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- nextTrackCommand -- in progress")
             self.stop()
-            debugPrint("commandCenter -- nextTrackCommand -- stopped")
             self.play()
             return .success
         }
@@ -160,9 +130,7 @@ class AudioPlayerWithReverb: ObservableObject {
                   let event = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
             }
-            debugPrint("commandCenter -- changePlaybackPositionCommand -- in progress")
             self.seek(to: event.positionTime)
-            debugPrint("commandCenter -- changePlaybackPositionCommand -- completed")
             return .success
         }
     }
@@ -201,23 +169,13 @@ class AudioPlayerWithReverb: ObservableObject {
         }
         
         // Set duration
-        if duration.isFinite && duration > 0 {
-            nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
-        }
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
         
         // Set current playback time
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         
         // Set playback rate
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
-        
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
-        
-        nowPlayingInfo[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueCount] = 1
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueIndex] = 0
-        nowPlayingInfo[MPNowPlayingInfoPropertyIsLiveStream] = false
-
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
@@ -255,7 +213,7 @@ class AudioPlayerWithReverb: ObservableObject {
         playerNode.play()
         isPlaying = true
         
-//        updateNowPlayingInfo()
+        updateNowPlayingInfo()
         startDisplayLink()
     }
     
@@ -263,7 +221,7 @@ class AudioPlayerWithReverb: ObservableObject {
         playerNode.pause()
         isPlaying = false
         
-//        updateNowPlayingInfo()
+        updateNowPlayingInfo()
         stopDisplayLink()
     }
 
