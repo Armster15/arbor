@@ -40,6 +40,10 @@ struct ContentView: View {
                     debugPrint(meta)
                     lastDownloadMeta = meta
                     
+                    // Tear down any existing engine before creating a new one
+                    audioPlayer?.teardown()
+                    audioPlayer = nil
+
                     let newAudioPlayer = AudioPlayerWithReverb()
                     try? newAudioPlayer.loadAudio(url: URL(string: meta.path)!)
                     audioPlayer = newAudioPlayer

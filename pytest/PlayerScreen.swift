@@ -104,6 +104,21 @@ class AudioPlayerWithReverb: ObservableObject {
         currentTime = 0
         stopDisplayLink()
     }
+    
+    func teardown() {
+        stop()
+
+        engine.reset()
+        engine.disconnectNodeInput(reverbNode)
+        engine.disconnectNodeInput(pitchNode)
+        engine.disconnectNodeInput(playerNode)
+
+        engine.detach(reverbNode)
+        engine.detach(pitchNode)
+        engine.detach(playerNode)
+
+        audioFile = nil
+    }
         
     private func startDisplayLink() {
         stopDisplayLink()
@@ -157,9 +172,8 @@ class AudioPlayerWithReverb: ObservableObject {
         reverbMix = reverbNode.wetDryMix
     }
     
-    deinit {
-        displayLink?.invalidate()
-        displayLink = nil
+    @MainActor deinit {
+        teardown()
     }
 }
 
