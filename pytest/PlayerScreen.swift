@@ -290,7 +290,7 @@ struct PlayerScreen: View {
                     }
                     
                     // Scrubber
-                    VStack(spacing: 8) {
+                    VStack {
                         HStack {
                             Text(formattedTime(audioPlayer.currentTime))
                                 .font(.caption)
@@ -302,6 +302,8 @@ struct PlayerScreen: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
+                        
+                        Slider(value: $audioPlayer.currentTime, in: 0...audioPlayer.duration)
                     }
                 }
                 
