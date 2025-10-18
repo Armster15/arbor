@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		08C448072EA1E9B500F9F26C /* SwiftAudioPlayer in Frameworks */ = {isa = PBXBuildFile; productRef = 08C448062EA1E9B500F9F26C /* SwiftAudioPlayer */; };
 		08C4FFF92EA1461C00F9F26C /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08C4FFF72EA1455D00F9F26C /* Python.xcframework */; };
 		08C4FFFA2EA1461C00F9F26C /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 08C4FFF72EA1455D00F9F26C /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -58,7 +57,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				08C4FFF92EA1461C00F9F26C /* Python.xcframework in Frameworks */,
-				08C448072EA1E9B500F9F26C /* SwiftAudioPlayer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -104,7 +102,6 @@
 			);
 			name = pytest;
 			packageProductDependencies = (
-				08C448062EA1E9B500F9F26C /* SwiftAudioPlayer */,
 			);
 			productName = pytest;
 			productReference = 08C4FFE62EA1436F00F9F26C /* pytest.app */;
@@ -136,7 +133,6 @@
 			mainGroup = 08C4FFDD2EA1436F00F9F26C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				08C448052EA1E9B500F9F26C /* XCRemoteSwiftPackageReference "SwiftAudioPlayer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 08C4FFE72EA1436F00F9F26C /* Products */;
@@ -401,25 +397,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		08C448052EA1E9B500F9F26C /* XCRemoteSwiftPackageReference "SwiftAudioPlayer" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/tanhakabir/SwiftAudioPlayer";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 7.6.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		08C448062EA1E9B500F9F26C /* SwiftAudioPlayer */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 08C448052EA1E9B500F9F26C /* XCRemoteSwiftPackageReference "SwiftAudioPlayer" */;
-			productName = SwiftAudioPlayer;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 08C4FFDE2EA1436F00F9F26C /* Project object */;
 }
