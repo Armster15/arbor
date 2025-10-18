@@ -270,25 +270,23 @@ struct PlayerScreen: View {
                     }
                     
                     // Scrubber
-                    //                VStack(spacing: 8) {
-                    //                    HStack {
-                    //                        Text(formattedTime(viewModel.currentTime))
-                    //                            .font(.caption)
-                    //                            .foregroundColor(.secondary)
-                    //                        Spacer()
-                    //                        Text(formattedTime(viewModel.duration))
-                    //                            .font(.caption)
-                    //                            .foregroundColor(.secondary)
-                    //                    }
-                    //                }
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text(formattedTime(audioPlayer.currentTime))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Spacer()
+                            
+                            Text(formattedTime(audioPlayer.duration))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
                 
                 // Slider sections
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("Duration: \(formattedTime(audioPlayer.duration))")
-                    
-                    Text("Current Time: \(formattedTime(audioPlayer.currentTime))")
-                    
                     // Speed
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
