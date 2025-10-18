@@ -19,6 +19,7 @@ class AudioPlayerWithReverb: ObservableObject {
     private var reverbNode: AVAudioUnitReverb
     
     @Published public var isPlaying: Bool = false
+    @Published public var speedRate: Float = 1.0
     @Published public var reverbMix: Float = 0.0
     @Published public var pitchCents: Float = 0.0
 
@@ -30,6 +31,9 @@ class AudioPlayerWithReverb: ObservableObject {
         reverbNode = AVAudioUnitReverb()
         
         setupAudioEngine()
+        
+        // Default parameters
+        pitchNode.rate = speedRate
     }
     
     private func setupAudioEngine() {
@@ -75,6 +79,12 @@ class AudioPlayerWithReverb: ObservableObject {
     func setPitchByCents(_ cents: Float) {
         pitchNode.pitch = min(max(cents, -2400), 2400)
         pitchCents = pitchNode.pitch
+    }
+    
+    // Adjust playback speed (0.25x ... 2.0x)
+    func setSpeedRate(_ newRate: Float) {
+        pitchNode.rate = min(max(newRate, 0.25), 2.0)
+        speedRate = pitchNode.rate
     }
         
     // Adjust reverb intensity (0-100)
@@ -220,38 +230,63 @@ struct PlayerScreen: View {
                 //                }
                 
                 VStack(alignment: .leading, spacing: 24) {
-                    //                    // Speed
-                    //                    HStack {
-                    //                        Text("Speed")
-                    //                            .font(.subheadline)
-                    //                            .fontWeight(.medium)
-                    //                        Spacer()
-                    //                        Button("Reset") {
-                    //                            viewModel.setRate(1.0)
-                    //                        }
-                    //                        .font(.caption)
-                    //                        .buttonStyle(.bordered)
-                    //                        .tint(.blue)
-                    //                        Text(String(format: "%.2fx", viewModel.rate))
-                    //                            .font(.subheadline)
-                    //                            .foregroundColor(.blue)
-                    //                    }
-                    //                    Stepper(value: Binding(get: {
-                    //                        Double(viewModel.rate)
-                    //                    }, set: { newVal in
-                    //                        viewModel.setRate(Float(newVal))
-                    //                    }), in: 0.25...3.0, step: 0.01) {
-                    //                        Text("Adjust speed")
-                    //                            .font(.caption)
-                    //                            .foregroundColor(.secondary)
-                    //                    }
-                    //                    Slider(value: Binding(get: {
-                    //                        Double(viewModel.rate)
-                    //                    }, set: { newVal in
-                    //                        viewModel.setRate(Float(newVal))
-                    //                    }), in: 0.25...3.0, step: 0.01)
-                    //                }
-                    //
+                    // Speed
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Speed")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                                Button("Reset") {
+                                    audioPlayer.setSpeedRate(1.0)
+                                }
+                                .font(.caption)
+                                .buttonStyle(.bordered)
+                                .tint(.blue)
+                                .opacity(audioPlayer.speedRate == 1.0 ? 0 : 1)
+                            
+                            Spacer()
+                            
+                            Text(String(format: "%.2fx", audioPlayer.speedRate))
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        }
+                        
+                        HStack {
+                            Slider(
+                                value: Binding(
+                                    get: {
+                                        Double(audioPlayer.speedRate)
+                                    },
+                                    set: { newVal in
+                                        // Slider sends continuous values while dragging, so we snap to the nearest 0.05 to enforce stepping.
+                                        let snapped = (newVal / 0.05).rounded() * 0.05
+                                        audioPlayer.setSpeedRate(Float(snapped))
+                                    }
+                                ),
+                                in: 0.25...2.0,
+                                step: 0.05
+                            )
+                            // `flex: 1` (???)
+                            .frame(maxWidth: .infinity)
+                            
+                            Stepper(
+                                value: Binding(
+                                    get: {
+                                        Double(audioPlayer.speedRate)
+                                    },
+                                    set: { newVal in
+                                        audioPlayer.setSpeedRate(Float(newVal))
+                                    }
+                                ),
+                                in: 0.25...2.0,
+                                step: 0.01,
+                            ) {}
+                            .fixedSize()
+                        }
+                    }
+
+                    
                     // Pitch (cents)
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -289,7 +324,6 @@ struct PlayerScreen: View {
                                 in: -800...800,
                                 step: 50
                             )
-                            // `flex: 1` (???)
                             .frame(maxWidth: .infinity)
                             
                             Stepper(
@@ -344,7 +378,6 @@ struct PlayerScreen: View {
                                 in: 0...100,
                                 step: 1
                             )
-                            // `flex: 1` (???)
                             .frame(maxWidth: .infinity)
                             
                             Stepper(
