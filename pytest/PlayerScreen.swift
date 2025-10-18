@@ -108,127 +108,130 @@ struct PlayerScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                // Metadata header
-                VStack(spacing: 16) {
-                    if let thumbnailUrl = meta.thumbnail_url, let isSquare = meta.thumbnail_is_square {
-                        if isSquare == true {
-                            ZStack(alignment: .topTrailing) {
-                                AsyncImage(url: URL(string: thumbnailUrl)) { image in
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 180, height: 180)
-                                        .clipped()
-                                        .cornerRadius(12)
-                                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-                                } placeholder: {
-                                    ProgressView()
-                                        .frame(width: 180, height: 180)
+            VStack(spacing: 32) {
+                VStack(spacing: 20) {
+                    // Metadata header
+                    VStack(spacing: 16) {
+                        if let thumbnailUrl = meta.thumbnail_url, let isSquare = meta.thumbnail_is_square {
+                            if isSquare == true {
+                                ZStack(alignment: .topTrailing) {
+                                    AsyncImage(url: URL(string: thumbnailUrl)) { image in
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 180, height: 180)
+                                            .clipped()
+                                            .cornerRadius(12)
+                                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+                                    } placeholder: {
+                                        ProgressView()
+                                            .frame(width: 180, height: 180)
+                                    }
+                                }
+                            } else {
+                                ZStack(alignment: .topTrailing) {
+                                    AsyncImage(url: URL(string: thumbnailUrl)) { image in
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(height: 180)
+                                            .clipped()
+                                            .cornerRadius(12)
+                                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+                                    } placeholder: {
+                                        ProgressView()
+                                            .frame(height: 180)
+                                    }
                                 }
                             }
-                        } else {
-                            ZStack(alignment: .topTrailing) {
-                                AsyncImage(url: URL(string: thumbnailUrl)) { image in
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(height: 180)
-                                        .clipped()
-                                        .cornerRadius(12)
-                                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-                                } placeholder: {
-                                    ProgressView()
-                                        .frame(height: 180)
-                                }
+                        }
+                        
+                        VStack(spacing: 4) {
+                            Text(meta.title)
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                            
+                            if let artist = meta.artist, !artist.isEmpty {
+                                Text(artist)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
                             }
                         }
                     }
                     
-                    VStack(spacing: 4) {
-                        Text(meta.title)
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
-                        
-                        if let artist = meta.artist, !artist.isEmpty {
-                            Text(artist)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
+                    // Action buttons
+                    HStack(spacing: 24) {
+                        // Rewind
+                        Button(action: {
+                            audioPlayer.stop()
+                            audioPlayer.play()
+                            
+                        }) {
+                            Image(systemName: "backward.end.circle.fill")
+                                .font(.system(size: 44))
+                                .foregroundColor(.blue)
                         }
-                    }
-                }
-                
-                // Action buttons
-                HStack(spacing: 24) {
-                    // Rewind
-                    Button(action: {
-                        audioPlayer.stop()
-                        audioPlayer.play()
                         
-                    }) {
-                        Image(systemName: "backward.end.circle.fill")
+                        // Play / Pause
+                        Button(action: {
+                            if audioPlayer.isPlaying {
+                                audioPlayer.pause()
+                            } else {
+                                audioPlayer.play()
+                            }
+                            //                        viewModel.toggle()
+                        }) {
+                            Image(
+                                systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
+                            )
                             .font(.system(size: 44))
                             .foregroundColor(.blue)
-                    }
-                    
-                    // Play / Pause
-                    Button(action: {
-                        if audioPlayer.isPlaying {
-                            audioPlayer.pause()
-                        } else {
-                            audioPlayer.play()
                         }
-                        //                        viewModel.toggle()
-                    }) {
-                        Image(
-                            systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
-                        )
-                        .font(.system(size: 44))
-                        .foregroundColor(.blue)
-                    }
-                    
-                    // Stop
-                    Button(action: {
-                        audioPlayer.stop()
-                    }) {
-                        Image(systemName: "stop.circle.fill")
+                        
+                        // Stop
+                        Button(action: {
+                            audioPlayer.stop()
+                        }) {
+                            Image(systemName: "stop.circle.fill")
+                                .font(.system(size: 44))
+                                .foregroundColor(.red)
+                        }
+                        
+                        // Loop
+                        Button(action: {
+                            //                        viewModel.toggleLoop()
+                        }) {
+                            Image(systemName: "repeat.circle"
+                                  //                        viewModel.isLooping ? "repeat.circle.fill" : "repeat.circle"
+                            )
                             .font(.system(size: 44))
-                            .foregroundColor(.red)
+                            .foregroundColor(
+                                .secondary
+                                //                                viewModel.isLooping ? .green : .secondary
+                            )
+                            .accessibilityLabel(
+                                "Enable Loop"
+                                //                                viewModel.isLooping ? "Disable Loop" : "Enable Loop"
+                            )
+                        }
                     }
                     
-                    // Loop
-                    Button(action: {
-                        //                        viewModel.toggleLoop()
-                    }) {
-                        Image(systemName: "repeat.circle"
-                              //                        viewModel.isLooping ? "repeat.circle.fill" : "repeat.circle"
-                        )
-                        .font(.system(size: 44))
-                        .foregroundColor(
-                            .secondary
-                            //                                viewModel.isLooping ? .green : .secondary
-                        )
-                        .accessibilityLabel(
-                            "Enable Loop"
-                            //                                viewModel.isLooping ? "Disable Loop" : "Enable Loop"
-                        )
-                    }
+                    // Scrubber
+                    //                VStack(spacing: 8) {
+                    //                    HStack {
+                    //                        Text(formattedTime(viewModel.currentTime))
+                    //                            .font(.caption)
+                    //                            .foregroundColor(.secondary)
+                    //                        Spacer()
+                    //                        Text(formattedTime(viewModel.duration))
+                    //                            .font(.caption)
+                    //                            .foregroundColor(.secondary)
+                    //                    }
+                    //                }
                 }
                 
-                // Scrubber
-                //                VStack(spacing: 8) {
-                //                    HStack {
-                //                        Text(formattedTime(viewModel.currentTime))
-                //                            .font(.caption)
-                //                            .foregroundColor(.secondary)
-                //                        Spacer()
-                //                        Text(formattedTime(viewModel.duration))
-                //                            .font(.caption)
-                //                            .foregroundColor(.secondary)
-                //                    }
-                //                }
-                
+                // Slider sections
                 VStack(alignment: .leading, spacing: 24) {
                     // Speed
                     VStack(alignment: .leading, spacing: 8) {
