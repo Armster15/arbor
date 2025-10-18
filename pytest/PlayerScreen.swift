@@ -633,7 +633,7 @@ struct PlayerScreen: View {
                                     }
                                 ),
                                 in: -800...800,
-                                step: 50,
+                                step: 10,
                             ) {}
                             .fixedSize()
                         }
