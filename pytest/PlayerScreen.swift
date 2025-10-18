@@ -23,6 +23,12 @@ class AudioPlayerWithReverb: ObservableObject {
     @Published public var reverbMix: Float = 0.0
     @Published public var pitchCents: Float = 0.0
 
+    @Published public var currentTime: TimeInterval = 0.0
+    @Published public var duration: TimeInterval = 0.0
+    private var displayLink: CADisplayLink? // timer that synchronizes with the screen's refresh rate
+    private var startFrame: AVAudioFramePosition = 0
+    private var startTime: TimeInterval = 0
+
     init() {
         engine = AVAudioEngine()
         playerNode = AVAudioPlayerNode()
@@ -49,10 +55,24 @@ class AudioPlayerWithReverb: ObservableObject {
     
     func loadAudio(url: URL) throws {
         audioFile = try AVAudioFile(forReading: url)
+        
+        // Calculate duration
+        if let file = audioFile {
+            let sampleRate = file.processingFormat.sampleRate
+            let frameCount = file.length
+            duration = Double(frameCount) / sampleRate
+        }
     }
     
     func play() {
         guard let audioFile = audioFile else { return }
+        
+        // Store the starting frame position
+        if let nodeTime = playerNode.lastRenderTime,
+           let playerTime = playerNode.playerTime(forNodeTime: nodeTime) {
+            startFrame = playerTime.sampleTime
+            startTime = CACurrentMediaTime()
+        }
         
         playerNode.scheduleFile(audioFile, at: nil)
         
@@ -62,18 +82,54 @@ class AudioPlayerWithReverb: ObservableObject {
         
         playerNode.play()
         isPlaying = true
+        
+        startDisplayLink()
     }
     
     func pause() {
         playerNode.pause()
         isPlaying = false
+        stopDisplayLink()
     }
     
     func stop() {
         playerNode.stop()
         engine.stop()
         isPlaying = false
+        currentTime = 0
+        stopDisplayLink()
     }
+        
+    private func startDisplayLink() {
+        stopDisplayLink()
+        displayLink = CADisplayLink(target: self, selector: #selector(updateCurrentTime))
+        displayLink?.add(to: .main, forMode: .common)
+    }
+    
+    private func stopDisplayLink() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+    
+    @objc private func updateCurrentTime() {
+        guard let nodeTime = playerNode.lastRenderTime,
+              let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
+              let audioFile = audioFile else {
+            return
+        }
+        
+        let sampleRate = audioFile.processingFormat.sampleRate
+        let currentFrame = playerTime.sampleTime
+        
+        // Calculate elapsed time based on frames played
+        currentTime = Double(currentFrame) / sampleRate
+        
+        // Check if playback has finished
+        if currentTime >= duration {
+            stop()
+        }
+    }
+
     
     // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
     func setPitchByCents(_ cents: Float) {
@@ -91,6 +147,11 @@ class AudioPlayerWithReverb: ObservableObject {
     func setReverbMix(_ mix: Float) {
         reverbNode.wetDryMix = min(max(mix, 0), 100)
         reverbMix = reverbNode.wetDryMix
+    }
+    
+    deinit {
+        displayLink?.invalidate()
+        displayLink = nil
     }
 }
 
@@ -159,7 +220,7 @@ struct PlayerScreen: View {
                             }
                         }
                     }
-                    
+                                        
                     // Action buttons
                     HStack(spacing: 24) {
                         // Rewind
@@ -233,6 +294,10 @@ struct PlayerScreen: View {
                 
                 // Slider sections
                 VStack(alignment: .leading, spacing: 24) {
+                    Text("Duration: \(audioPlayer.duration)")
+                    
+                    Text("Current Time: \(audioPlayer.currentTime)")
+                    
                     // Speed
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
