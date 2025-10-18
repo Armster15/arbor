@@ -93,14 +93,15 @@ struct PlayerScreen: View {
                         if isSquare == true {
                             ZStack(alignment: .topTrailing) {
                                 AsyncImage(url: URL(string: thumbnailUrl)) { image in
-                                    image.resizable()
-                                    image.scaledToFill()
+                                    image
+                                        .resizable()
+                                        .aspectRatio(1, contentMode: .fit)
+                                        .frame(width: 180, height: 180)
                                 } placeholder: {
                                     ProgressView()
+                                        .frame(width: 180, height: 180)
                                 }
                             }
-                            .frame(width: 180, height: 180)
-                            .clipped()
                             .cornerRadius(12)
                         } else {
                             ZStack(alignment: .topTrailing) {
