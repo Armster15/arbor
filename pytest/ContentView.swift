@@ -25,6 +25,7 @@ struct DownloadMeta: Decodable {
 struct ContentView: View {
     @State private var navPath: [Route] = []
     @State private var lastDownloadMeta: DownloadMeta? = nil
+    @State private var audioPlayer: AudioPlayerWithReverb? = nil
     
     private enum Route: Hashable {
         case player
@@ -37,6 +38,11 @@ struct ContentView: View {
                 openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
                 onDownloaded: { meta in
                     lastDownloadMeta = meta
+                    
+                    let newAudioPlayer = AudioPlayerWithReverb()
+                    try? newAudioPlayer.loadAudio(url: URL(string: meta.path)!)
+                    audioPlayer = newAudioPlayer
+                    
                     if navPath.last != .player { navPath.append(.player) }
                 }
             )
@@ -47,7 +53,7 @@ struct ContentView: View {
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .player:
-                    PlayerScreen(meta: lastDownloadMeta!)
+                    PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
                 }
             }
         }

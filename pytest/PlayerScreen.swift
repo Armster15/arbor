@@ -9,8 +9,72 @@ import SwiftAudioPlayer
 import MediaPlayer
 import UIKit
 
+class AudioPlayerWithReverb {
+    private var engine: AVAudioEngine
+    private var playerNode: AVAudioPlayerNode
+    private var reverbNode: AVAudioUnitReverb
+    private var audioFile: AVAudioFile?
+    
+    var isPlaying: Bool {
+        return playerNode.isPlaying
+    }
+    
+    init() {
+        engine = AVAudioEngine()
+        playerNode = AVAudioPlayerNode()
+        reverbNode = AVAudioUnitReverb()
+        
+        setupAudioEngine()
+    }
+    
+    private func setupAudioEngine() {
+        engine.attach(playerNode)
+        engine.attach(reverbNode)
+                
+        // Connect nodes: player -> reverb -> output
+        engine.connect(playerNode, to: reverbNode, format: nil)
+        engine.connect(reverbNode, to: engine.mainMixerNode, format: nil)
+    }
+    
+    func loadAudio(url: URL) throws {
+        audioFile = try AVAudioFile(forReading: url)
+    }
+    
+    func play() {
+        guard let audioFile = audioFile else { return }
+        
+        playerNode.scheduleFile(audioFile, at: nil)
+        
+        if !engine.isRunning {
+            try? engine.start()
+        }
+        
+        playerNode.play()
+    }
+    
+    func pause() {
+        playerNode.pause()
+    }
+    
+    func stop() {
+        playerNode.stop()
+        engine.stop()
+    }
+    
+    // Adjust reverb intensity (0-100)
+    func setReverbMix(_ mix: Float) {
+        reverbNode.wetDryMix = min(max(mix, 0), 100)
+    }
+    
+    // Change reverb preset
+    func setReverbPreset(_ preset: AVAudioUnitReverbPreset) {
+        reverbNode.loadFactoryPreset(preset)
+    }
+}
+
 struct PlayerScreen: View {
     let meta: DownloadMeta
+    let audioPlayer: AudioPlayerWithReverb
 
     private func formattedTime(_ seconds: Double) -> String {
         guard seconds.isFinite && !seconds.isNaN else { return "--:--" }
@@ -77,6 +141,11 @@ struct PlayerScreen: View {
                             .foregroundColor(.blue)
                     }
                     Button(action: {
+                        if audioPlayer.isPlaying {
+                            audioPlayer.pause()
+                        } else {
+                            audioPlayer.play()
+                        }
 //                        viewModel.toggle()
                     }) {
                         Image(
