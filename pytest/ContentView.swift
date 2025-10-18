@@ -14,7 +14,7 @@ import UIKit
 
 struct DownloadMeta: Decodable {
     let path: String
-    let title: String?
+    let title: String
     let artist: String?
     let thumbnail_url: String?
     let thumbnail_width: Int?
@@ -23,7 +23,6 @@ struct DownloadMeta: Decodable {
 }
 
 struct ContentView: View {
-    @StateObject private var saViewModel = SAPlayerViewModel()
     @State private var navPath: [Route] = []
     @State private var lastDownloadMeta: DownloadMeta? = nil
     
@@ -38,9 +37,6 @@ struct ContentView: View {
                 openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
                 onDownloaded: { meta in
                     lastDownloadMeta = meta
-                    setupAudioPlayer(filePath: meta.path)
-                    let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
-                    saViewModel.setMetadata(title: meta.title, artist: meta.artist, artworkURL: artworkURL)
                     if navPath.last != .player { navPath.append(.player) }
                 }
             )
@@ -51,22 +47,10 @@ struct ContentView: View {
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .player:
-                    PlayerScreen(viewModel: saViewModel)
+                    PlayerScreen(meta: lastDownloadMeta!)
                 }
             }
         }
-    }
-    
-    private func setupAudioPlayer(filePath: String) {
-        // Initialize SAPlayer with saved file and attach TimePitch for speed/pitch and Reverb effect
-        let timePitch = AVAudioUnitTimePitch()
-        let reverb = AVAudioUnitReverb()
-        reverb.wetDryMix = 0
-        SAPlayer.shared.audioModifiers = [timePitch, reverb]
-        saViewModel.setRate(1.0)
-        saViewModel.setPitch(0.0)
-        saViewModel.setReverbWetDryMix(0.0)
-        saViewModel.startSavedAudio(filePath: filePath)
     }
 }
 
