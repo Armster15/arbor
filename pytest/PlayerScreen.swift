@@ -233,7 +233,6 @@ struct PlayerScreen: View {
                             } else {
                                 audioPlayer.play()
                             }
-                            //                        viewModel.toggle()
                         }) {
                             Image(
                                 systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
