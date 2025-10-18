@@ -37,6 +37,7 @@ struct ContentView: View {
                 canOpenPlayer: lastDownloadMeta != nil,
                 openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
                 onDownloaded: { meta in
+                    debugPrint(meta)
                     lastDownloadMeta = meta
                     
                     let newAudioPlayer = AudioPlayerWithReverb()
