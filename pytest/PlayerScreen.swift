@@ -13,15 +13,20 @@ import UIKit
 class AudioPlayerWithReverb: ObservableObject {
     private var engine: AVAudioEngine
     private var playerNode: AVAudioPlayerNode
-    private var reverbNode: AVAudioUnitReverb
     private var audioFile: AVAudioFile?
+    
+    private var pitchNode: AVAudioUnitTimePitch
+    private var reverbNode: AVAudioUnitReverb
     
     @Published public var isPlaying: Bool = false
     @Published public var reverbMix: Float = 0.0
+    @Published public var pitchCents: Float = 0.0
 
     init() {
         engine = AVAudioEngine()
         playerNode = AVAudioPlayerNode()
+        
+        pitchNode = AVAudioUnitTimePitch()
         reverbNode = AVAudioUnitReverb()
         
         setupAudioEngine()
@@ -29,10 +34,12 @@ class AudioPlayerWithReverb: ObservableObject {
     
     private func setupAudioEngine() {
         engine.attach(playerNode)
+        engine.attach(pitchNode)
         engine.attach(reverbNode)
                 
-        // Connect nodes: player -> reverb -> output
-        engine.connect(playerNode, to: reverbNode, format: nil)
+        // Connect nodes: player -> pitch -> reverb -> output
+        engine.connect(playerNode, to: pitchNode, format: nil)
+        engine.connect(pitchNode, to: reverbNode, format: nil)
         engine.connect(reverbNode, to: engine.mainMixerNode, format: nil)
     }
     
@@ -63,12 +70,18 @@ class AudioPlayerWithReverb: ObservableObject {
         engine.stop()
         isPlaying = false
     }
+    
+    // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
+    func setPitchByCents(_ cents: Float) {
+        pitchNode.pitch = min(max(cents, -2400), 2400)
+        pitchCents = pitchNode.pitch
+    }
         
     // Adjust reverb intensity (0-100)
     func setReverbMix(_ mix: Float) {
         reverbNode.wetDryMix = min(max(mix, 0), 100)
         reverbMix = reverbNode.wetDryMix
-    }    
+    }
 }
 
 struct PlayerScreen: View {
@@ -239,39 +252,63 @@ struct PlayerScreen: View {
                     //                    }), in: 0.25...3.0, step: 0.01)
                     //                }
                     //
-                    //                // Pitch (cents)
-                    //                VStack(alignment: .leading, spacing: 8) {
-                    //                    HStack {
-                    //                        Text("Pitch")
-                    //                            .font(.subheadline)
-                    //                            .fontWeight(.medium)
-                    //                        Spacer()
-                    //                        Button("Reset") {
-                    //                            viewModel.setPitch(0.0)
-                    //                        }
-                    //                        .font(.caption)
-                    //                        .buttonStyle(.bordered)
-                    //                        .tint(.blue)
-                    //                        Text(String(format: "%d cents", Int(viewModel.pitch)))
-                    //                            .font(.subheadline)
-                    //                            .foregroundColor(.blue)
-                    //                    }
-                    //                    Stepper(value: Binding(get: {
-                    //                        Double(viewModel.pitch)
-                    //                    }, set: { newVal in
-                    //                        viewModel.setPitch(Float(newVal))
-                    //                    }), in: -200...200, step: 1) {
-                    //                        Text("Adjust pitch")
-                    //                            .font(.caption)
-                    //                            .foregroundColor(.secondary)
-                    //                    }
-                    //                    Slider(value: Binding(get: {
-                    //                        Double(viewModel.pitch)
-                    //                    }, set: { newVal in
-                    //                        viewModel.setPitch(Float(newVal))
-                    //                    }), in: -700...500, step: 15)
-                    //                }
-                    //
+                    // Pitch (cents)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Pitch")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                                Button("Reset") {
+                                    audioPlayer.setPitchByCents(0.0)
+                                }
+                                .font(.caption)
+                                .buttonStyle(.bordered)
+                                .tint(.blue)
+                                .opacity(audioPlayer.pitchCents.isZero ? 0 : 1)
+                            
+                            Spacer()
+                            
+                            Text("\(Int(audioPlayer.pitchCents)) cents")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        }
+                        
+                        HStack {
+                            Slider(
+                                value: Binding(
+                                    get: {
+                                        Double(audioPlayer.pitchCents)
+                                    },
+                                    set: { newVal in
+                                        // Slider sends continuous values while dragging, so we snap to the nearest 50 to enforce stepping.
+                                        let snapped = (newVal / 50.0).rounded() * 50.0
+                                        audioPlayer.setPitchByCents(Float(snapped))
+                                    }
+                                ),
+                                in: -800...800,
+                                step: 50
+                            )
+                            // `flex: 1` (???)
+                            .frame(maxWidth: .infinity)
+                            
+                            Stepper(
+                                value: Binding(
+                                    get: {
+                                        Double(audioPlayer.pitchCents)
+                                    },
+                                    set: { newVal in
+                                        audioPlayer.setPitchByCents(Float(newVal))
+                                    }
+                                ),
+                                in: -800...800,
+                                step: 50,
+                            ) {}
+                            .fixedSize()
+                        }
+                    }
+
+                    
                     // Reverb
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
