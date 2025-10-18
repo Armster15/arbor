@@ -159,14 +159,6 @@ struct PlayerScreen: View {
     let meta: DownloadMeta
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
 
-    private func formattedTime(_ seconds: Double) -> String {
-        guard seconds.isFinite && !seconds.isNaN else { return "--:--" }
-        let s = Int(seconds.rounded())
-        let mins = s / 60
-        let secs = s % 60
-        return String(format: "%d:%02d", mins, secs)
-    }
-
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
@@ -294,9 +286,9 @@ struct PlayerScreen: View {
                 
                 // Slider sections
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("Duration: \(audioPlayer.duration)")
+                    Text("Duration: \(formattedTime(audioPlayer.duration))")
                     
-                    Text("Current Time: \(audioPlayer.currentTime)")
+                    Text("Current Time: \(formattedTime(audioPlayer.currentTime))")
                     
                     // Speed
                     VStack(alignment: .leading, spacing: 8) {
@@ -470,4 +462,11 @@ struct PlayerScreen: View {
     }
 }
 
+private func formattedTime(_ seconds: Double) -> String {
+    guard seconds.isFinite && !seconds.isNaN else { return "--:--" }
+    let s = Int(seconds.rounded())
+    let mins = s / 60
+    let secs = s % 60
+    return String(format: "%d:%02d", mins, secs)
+}
 
