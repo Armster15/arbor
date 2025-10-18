@@ -119,24 +119,20 @@ class AudioPlayerWithReverb: ObservableObject {
             duration = Double(frameCount) / sampleRate
         }
         
-        // Update Now Playing info with initial metadata
         updateNowPlayingInfo()
     }
     
     private func updateNowPlayingInfo() {
         var nowPlayingInfo = [String: Any]()
         
-        // Set title
         if let title = metaTitle {
             nowPlayingInfo[MPMediaItemPropertyTitle] = title
         }
         
-        // Set artist if available
         if let artist = metaArtist, !artist.isEmpty {
             nowPlayingInfo[MPMediaItemPropertyArtist] = artist
         }
         
-        // Load and set artwork asynchronously
         if let artworkURL = metaArtworkURL {
             Task {
                 await loadAndSetArtwork(from: artworkURL)
@@ -192,9 +188,7 @@ class AudioPlayerWithReverb: ObservableObject {
         playerNode.play()
         isPlaying = true
         
-        // Update Now Playing info with playback rate
         updateNowPlayingInfo()
-        
         startDisplayLink()
     }
     
@@ -202,9 +196,7 @@ class AudioPlayerWithReverb: ObservableObject {
         playerNode.pause()
         isPlaying = false
         
-        // Update Now Playing info to show paused state
         updateNowPlayingInfo()
-        
         stopDisplayLink()
     }
 
@@ -218,9 +210,7 @@ class AudioPlayerWithReverb: ObservableObject {
         isPlaying = false
         currentTime = 0
         
-        // Update Now Playing info to show stopped state
         updateNowPlayingInfo()
-        
         stopDisplayLink()
     }
     
