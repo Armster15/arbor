@@ -5,9 +5,7 @@
 
 import SwiftUI
 import AVFoundation
-import SwiftAudioPlayer
 import MediaPlayer
-import UIKit
 
 @MainActor
 class AudioPlayerWithReverb: ObservableObject {
