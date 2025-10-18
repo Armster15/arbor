@@ -340,208 +340,209 @@ struct PlayerScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            // Metadata header
-            VStack(spacing: 8) {
-				if let uiImage = viewModel.displayArtwork {
-					if viewModel.isArtworkSquare == true {
-						ZStack(alignment: .topTrailing) {
-							Image(uiImage: uiImage)
-								.resizable()
-								.scaledToFill()
-						}
-						.frame(width: 180, height: 180)
-						.clipped()
-						.cornerRadius(12)
-					} else {
-						ZStack(alignment: .topTrailing) {
-							Image(uiImage: uiImage)
-								.resizable()
-								.scaledToFill()
-						}
-						.frame(height: 180)
-						.clipped()
-						.cornerRadius(12)
-					}
-				}
-                Text(viewModel.displayTitle)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                if let artist = viewModel.displayArtist, !artist.isEmpty {
-                    Text(artist)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+        ScrollView {
+            VStack(spacing: 16) {
+                // Metadata header
+                VStack(spacing: 8) {
+                    if let uiImage = viewModel.displayArtwork {
+                        if viewModel.isArtworkSquare == true {
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                            }
+                            .frame(width: 180, height: 180)
+                            .clipped()
+                            .cornerRadius(12)
+                        } else {
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                            }
+                            .frame(height: 180)
+                            .clipped()
+                            .cornerRadius(12)
+                        }
+                    }
+                    Text(viewModel.displayTitle)
+                        .font(.headline)
                         .multilineTextAlignment(.center)
+                    if let artist = viewModel.displayArtist, !artist.isEmpty {
+                        Text(artist)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
-            }
 
-            // Play / Pause
-            HStack(spacing: 24) {
-                Button(action: { viewModel.seek(to: 0) }) {
-                    Image(systemName: "backward.end.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.blue)
+                // Play / Pause
+                HStack(spacing: 24) {
+                    Button(action: { viewModel.seek(to: 0) }) {
+                        Image(systemName: "backward.end.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundColor(.blue)
+                    }
+                    Button(action: { viewModel.toggle() }) {
+                        Image(systemName: viewModel.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundColor(.blue)
+                    }
+                    Button(action: { viewModel.stop() }) {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundColor(.red)
+                    }
+                    Button(action: { viewModel.toggleLoop() }) {
+                        Image(systemName: viewModel.isLooping ? "repeat.circle.fill" : "repeat.circle")
+                            .font(.system(size: 44))
+                            .foregroundColor(viewModel.isLooping ? .green : .secondary)
+                            .accessibilityLabel(viewModel.isLooping ? "Disable Loop" : "Enable Loop")
+                    }
                 }
-                Button(action: { viewModel.toggle() }) {
-                    Image(systemName: viewModel.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.blue)
-                }
-                Button(action: { viewModel.stop() }) {
-                    Image(systemName: "stop.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.red)
-                }
-                Button(action: { viewModel.toggleLoop() }) {
-                    Image(systemName: viewModel.isLooping ? "repeat.circle.fill" : "repeat.circle")
-                        .font(.system(size: 44))
-                        .foregroundColor(viewModel.isLooping ? .green : .secondary)
-                        .accessibilityLabel(viewModel.isLooping ? "Disable Loop" : "Enable Loop")
-                }
-            }
 
-            // Scrubber
-            VStack(spacing: 8) {
-                GeometryReader { proxy in
-                    let duration = max(viewModel.duration, 1)
-                    Slider(value: Binding(get: {
-                        let base = min(viewModel.currentTime, viewModel.duration)
-                        return isScrubbing ? min(scrubbingTime, viewModel.duration) : base
+                // Scrubber
+                VStack(spacing: 8) {
+                    GeometryReader { proxy in
+                        let duration = max(viewModel.duration, 1)
+                        Slider(value: Binding(get: {
+                            let base = min(viewModel.currentTime, viewModel.duration)
+                            return isScrubbing ? min(scrubbingTime, viewModel.duration) : base
+                        }, set: { newVal in
+                            isScrubbing = true
+                            scrubbingTime = newVal
+                        }), in: 0...duration)
+                        .contentShape(Rectangle())
+                        .highPriorityGesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    isScrubbing = true
+                                    let width = max(proxy.size.width, 1)
+                                    let clampedX = min(max(value.location.x, 0), width)
+                                    let ratio = clampedX / width
+                                    let target = Double(ratio) * duration
+                                    scrubbingTime = target
+                                    viewModel.seek(to: target)
+                                }
+                                .onEnded { _ in
+                                    isScrubbing = false
+                                }
+                        )
+                    }
+                    .frame(height: 40)
+
+                    HStack {
+                        Text(formattedTime(viewModel.currentTime))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(formattedTime(viewModel.duration))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Speed
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Speed")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Button("Reset") {
+                            viewModel.setRate(1.0)
+                        }
+                        .font(.caption)
+                        .buttonStyle(.bordered)
+                        .tint(.blue)
+                        Text(String(format: "%.2fx", viewModel.rate))
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                    }
+                    Stepper(value: Binding(get: {
+                        Double(viewModel.rate)
                     }, set: { newVal in
-                        isScrubbing = true
-                        scrubbingTime = newVal
-                    }), in: 0...duration)
-                    .contentShape(Rectangle())
-                    .highPriorityGesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                isScrubbing = true
-                                let width = max(proxy.size.width, 1)
-                                let clampedX = min(max(value.location.x, 0), width)
-                                let ratio = clampedX / width
-                                let target = Double(ratio) * duration
-                                scrubbingTime = target
-                                viewModel.seek(to: target)
-                            }
-                            .onEnded { _ in
-                                isScrubbing = false
-                            }
-                    )
-                }
-                .frame(height: 40)
-
-                HStack {
-                    Text(formattedTime(viewModel.currentTime))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(formattedTime(viewModel.duration))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            // Speed
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Speed")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Spacer()
-                    Button("Reset") {
-                        viewModel.setRate(1.0)
+                        viewModel.setRate(Float(newVal))
+                    }), in: 0.25...3.0, step: 0.01) {
+                        Text("Adjust speed")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    .font(.caption)
-                    .buttonStyle(.bordered)
-                    .tint(.blue)
-                    Text(String(format: "%.2fx", viewModel.rate))
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
+                    Slider(value: Binding(get: {
+                        Double(viewModel.rate)
+                    }, set: { newVal in
+                        viewModel.setRate(Float(newVal))
+                    }), in: 0.25...3.0, step: 0.01)
                 }
-                Stepper(value: Binding(get: {
-                    Double(viewModel.rate)
-                }, set: { newVal in
-                    viewModel.setRate(Float(newVal))
-                }), in: 0.25...3.0, step: 0.01) {
-                    Text("Adjust speed")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Slider(value: Binding(get: {
-                    Double(viewModel.rate)
-                }, set: { newVal in
-                    viewModel.setRate(Float(newVal))
-                }), in: 0.25...3.0, step: 0.01)
-            }
 
-            // Pitch (cents)
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Pitch")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Spacer()
-                    Button("Reset") {
-                        viewModel.setPitch(0.0)
-                    }
-                    .font(.caption)
-                    .buttonStyle(.bordered)
-                    .tint(.blue)
-                    Text(String(format: "%d cents", Int(viewModel.pitch)))
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
-                }
-                Stepper(value: Binding(get: {
-                    Double(viewModel.pitch)
-                }, set: { newVal in
-                    viewModel.setPitch(Float(newVal))
-                }), in: -200...200, step: 1) {
-                    Text("Adjust pitch")
+                // Pitch (cents)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Pitch")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Button("Reset") {
+                            viewModel.setPitch(0.0)
+                        }
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .buttonStyle(.bordered)
+                        .tint(.blue)
+                        Text(String(format: "%d cents", Int(viewModel.pitch)))
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                    }
+                    Stepper(value: Binding(get: {
+                        Double(viewModel.pitch)
+                    }, set: { newVal in
+                        viewModel.setPitch(Float(newVal))
+                    }), in: -200...200, step: 1) {
+                        Text("Adjust pitch")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Slider(value: Binding(get: {
+                        Double(viewModel.pitch)
+                    }, set: { newVal in
+                        viewModel.setPitch(Float(newVal))
+                    }), in: -700...500, step: 15)
                 }
-                Slider(value: Binding(get: {
-                    Double(viewModel.pitch)
-                }, set: { newVal in
-                    viewModel.setPitch(Float(newVal))
-                }), in: -700...500, step: 15)
-            }
 
-            // Reverb
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Reverb")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Spacer()
-                    Button("Reset") {
-                        viewModel.setReverbWetDryMix(0.0)
-                    }
-                    .font(.caption)
-                    .buttonStyle(.bordered)
-                    .tint(.blue)
-                    Text(String(format: "%.0f%%", viewModel.reverbWetDryMix))
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
-                }
-                Stepper(value: Binding(get: {
-                    Double(viewModel.reverbWetDryMix)
-                }, set: { newVal in
-                    viewModel.setReverbWetDryMix(Float(newVal))
-                }), in: 0...100, step: 1) {
-                    Text("Adjust reverb mix")
+                // Reverb
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Reverb")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                        Button("Reset") {
+                            viewModel.setReverbWetDryMix(0.0)
+                        }
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .buttonStyle(.bordered)
+                        .tint(.blue)
+                        Text(String(format: "%.0f%%", viewModel.reverbWetDryMix))
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                    }
+                    Stepper(value: Binding(get: {
+                        Double(viewModel.reverbWetDryMix)
+                    }, set: { newVal in
+                        viewModel.setReverbWetDryMix(Float(newVal))
+                    }), in: 0...100, step: 1) {
+                        Text("Adjust reverb mix")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Slider(value: Binding(get: {
+                        Double(viewModel.reverbWetDryMix)
+                    }, set: { newVal in
+                        viewModel.setReverbWetDryMix(Float(newVal))
+                    }), in: 0...100, step: 1)
                 }
-                Slider(value: Binding(get: {
-                    Double(viewModel.reverbWetDryMix)
-                }, set: { newVal in
-                    viewModel.setReverbWetDryMix(Float(newVal))
-                }), in: 0...100, step: 1)
             }
+            .padding()
         }
-        .padding()
-        .onDisappear { viewModel.unsubscribeUpdates() }
     }
 }
 
