@@ -1,0 +1,15 @@
+{
+  "originHash" : "e513b9891146e54b68921120d0f3830214c435004e3ae49852c3f548c268980b",
+  "pins" : [
+    {
+      "identity" : "audiostreaming",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/dimitris-c/AudioStreaming",
+      "state" : {
+        "revision" : "4b8bae96c2e624aa64f6e0ac361ee76a3374a641",
+        "version" : "1.3.0"
+      }
+    }
+  ],
+  "version" : 3
+}

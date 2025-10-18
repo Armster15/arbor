@@ -45,9 +45,11 @@ struct ContentView: View {
                     audioPlayer = nil
 
                     let newAudioPlayer = AudioPlayerWithReverb()
+                    let fileURL = URL(fileURLWithPath: meta.path, isDirectory: false)
                     let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
+                    
                     try? newAudioPlayer.loadAudio(
-                        url: URL(string: meta.path)!,
+                        url: fileURL,
                         metaTitle: meta.title,
                         metaArtist: meta.artist,
                         metaArtworkURL: artworkURL
