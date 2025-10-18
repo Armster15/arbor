@@ -95,26 +95,29 @@ struct PlayerScreen: View {
                                 AsyncImage(url: URL(string: thumbnailUrl)) { image in
                                     image
                                         .resizable()
-                                        .aspectRatio(1, contentMode: .fit)
+                                        .scaledToFill()
                                         .frame(width: 180, height: 180)
+                                        .clipped()
+                                        .cornerRadius(12)
                                 } placeholder: {
                                     ProgressView()
                                         .frame(width: 180, height: 180)
                                 }
                             }
-                            .cornerRadius(12)
                         } else {
                             ZStack(alignment: .topTrailing) {
                                 AsyncImage(url: URL(string: thumbnailUrl)) { image in
-                                    image.resizable()
-                                    image.scaledToFill()
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(height: 180)
+                                        .clipped()
+                                        .cornerRadius(12)
                                 } placeholder: {
                                     ProgressView()
+                                        .frame(height: 180)
                                 }
                             }
-                            .frame(height: 180)
-                            .clipped()
-                            .cornerRadius(12)
                         }
                     }
                     
