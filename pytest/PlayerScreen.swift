@@ -27,6 +27,9 @@ class AudioPlayerWithReverb: ObservableObject {
     private var displayLink: CADisplayLink? // timer that synchronizes with the screen's refresh rate
     private var startFrame: AVAudioFramePosition = 0
     private var startTime: TimeInterval = 0
+    
+    // for now playing info
+    private var metadata: DownloadMeta?
 
     init() {
         engine = AVAudioEngine()
@@ -36,6 +39,8 @@ class AudioPlayerWithReverb: ObservableObject {
         reverbNode = AVAudioUnitReverb()
         
         setupAudioEngine()
+        setupAudioSession()
+        setupRemoteCommands()
         
         // Default parameters
         pitchNode.rate = speedRate
@@ -52,14 +57,116 @@ class AudioPlayerWithReverb: ObservableObject {
         engine.connect(reverbNode, to: engine.mainMixerNode, format: nil)
     }
     
-    func loadAudio(url: URL) throws {
+    private func setupAudioSession() {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playback, mode: .default)
+            try audioSession.setActive(true)
+        } catch {
+            print("Failed to set up audio session: \(error)")
+        }
+    }
+    
+    private func setupRemoteCommands() {
+        let commandCenter = MPRemoteCommandCenter.shared()
+        
+        // Play command
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.playCommand.addTarget { [weak self] _ in
+            self?.play()
+            return .success
+        }
+        
+        // Pause command
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.pauseCommand.addTarget { [weak self] _ in
+            self?.pause()
+            return .success
+        }
+        
+        // Stop command
+        commandCenter.stopCommand.isEnabled = true
+        commandCenter.stopCommand.addTarget { [weak self] _ in
+            self?.stop()
+            return .success
+        }
+        
+        // Toggle play/pause
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            if self.isPlaying {
+                self.pause()
+            } else {
+                self.play()
+            }
+            return .success
+        }
+    }
+    
+    func loadAudio(url: URL, metadata: DownloadMeta? = nil) throws {
         audioFile = try AVAudioFile(forReading: url)
+        self.metadata = metadata
         
         // Calculate duration
         if let file = audioFile {
             let sampleRate = file.processingFormat.sampleRate
             let frameCount = file.length
             duration = Double(frameCount) / sampleRate
+        }
+        
+        // Update Now Playing info with initial metadata
+        updateNowPlayingInfo()
+    }
+    
+    private func updateNowPlayingInfo() {
+        var nowPlayingInfo = [String: Any]()
+        
+        // Set title
+        if let metadata = metadata {
+            nowPlayingInfo[MPMediaItemPropertyTitle] = metadata.title
+            
+            // Set artist if available
+            if let artist = metadata.artist, !artist.isEmpty {
+                nowPlayingInfo[MPMediaItemPropertyArtist] = artist
+            }
+            
+            // Load and set artwork asynchronously
+            if let thumbnailUrl = metadata.thumbnail_url,
+               let url = URL(string: thumbnailUrl) {
+                Task {
+                    await loadAndSetArtwork(from: url)
+                }
+            }
+        }
+        
+        // Set duration
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
+        
+        // Set current playback time
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        
+        // Set playback rate
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
+        
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+    }
+    
+    private func loadAndSetArtwork(from url: URL) async {
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let image = UIImage(data: data) {
+                let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in
+                    return image
+                }
+                
+                // Update Now Playing info with artwork
+                var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+            }
+        } catch {
+            print("Failed to load artwork: \(error)")
         }
     }
     
@@ -82,12 +189,19 @@ class AudioPlayerWithReverb: ObservableObject {
         playerNode.play()
         isPlaying = true
         
+        // Update Now Playing info with playback rate
+        updateNowPlayingInfo()
+        
         startDisplayLink()
     }
     
     func pause() {
         playerNode.pause()
         isPlaying = false
+        
+        // Update Now Playing info to show paused state
+        updateNowPlayingInfo()
+        
         stopDisplayLink()
     }
 
@@ -100,6 +214,10 @@ class AudioPlayerWithReverb: ObservableObject {
         engine.stop()
         isPlaying = false
         currentTime = 0
+        
+        // Update Now Playing info to show stopped state
+        updateNowPlayingInfo()
+        
         stopDisplayLink()
     }
     
@@ -142,6 +260,12 @@ class AudioPlayerWithReverb: ObservableObject {
         // Calculate elapsed time based on frames played
         currentTime = Double(currentFrame) / sampleRate
         
+        // Update Now Playing elapsed time
+        if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
+            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        }
+        
         // Check if playback has finished
         if currentTime >= duration {
             stop()
@@ -162,6 +286,12 @@ class AudioPlayerWithReverb: ObservableObject {
     func setSpeedRate(_ newRate: Float) {
         pitchNode.rate = min(max(newRate, 0.25), 2.0)
         speedRate = pitchNode.rate
+        
+        // Update Now Playing info with new playback rate
+        if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
+            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        }
     }
         
     // Adjust reverb intensity (0-100)
