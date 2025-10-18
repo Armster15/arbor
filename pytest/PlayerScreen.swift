@@ -60,7 +60,7 @@ class AudioPlayerWithReverb {
         playerNode.stop()
         engine.stop()
     }
-    
+        
     // Adjust reverb intensity (0-100)
     func setReverbMix(_ mix: Float) {
         reverbNode.wetDryMix = min(max(mix, 0), 100)
@@ -137,15 +137,20 @@ struct PlayerScreen: View {
                     }
                 }
 
-                // Play / Pause
+                // Action buttons
                 HStack(spacing: 24) {
+                    // Rewind
                     Button(action: {
-//                        viewModel.seek(to: 0)
+                        audioPlayer.stop()
+                        audioPlayer.play()
+
                     }) {
                         Image(systemName: "backward.end.circle.fill")
                             .font(.system(size: 44))
                             .foregroundColor(.blue)
                     }
+                    
+                    // Play / Pause
                     Button(action: {
                         if audioPlayer.isPlaying {
                             audioPlayer.pause()
@@ -161,13 +166,17 @@ struct PlayerScreen: View {
                             .font(.system(size: 44))
                             .foregroundColor(.blue)
                     }
+                    
+                    // Stop
                     Button(action: {
-//                        viewModel.stop()
+                        audioPlayer.stop()
                     }) {
                         Image(systemName: "stop.circle.fill")
                             .font(.system(size: 44))
                             .foregroundColor(.red)
                     }
+                    
+                    // Loop
                     Button(action: {
 //                        viewModel.toggleLoop()
                     }) {
