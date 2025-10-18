@@ -146,6 +146,8 @@ class AudioPlayerWithReverb: ObservableObject {
             let sampleRate = file.processingFormat.sampleRate
             let frameCount = file.length
             duration = Double(frameCount) / sampleRate
+
+            playerNode.scheduleFile(file, at: nil)
         }
         
         updateNowPlayingInfo()
@@ -203,9 +205,7 @@ class AudioPlayerWithReverb: ObservableObject {
         
         // Reset seek offset when starting from the beginning
         seekOffset = 0
-        
-        playerNode.scheduleFile(audioFile, at: nil)
-        
+                
         if !engine.isRunning {
             try? engine.start()
         }
@@ -213,16 +213,24 @@ class AudioPlayerWithReverb: ObservableObject {
         playerNode.play()
         isPlaying = true
         
+        // Fade in over 300ms with exponential curve
+        rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+        
         updateNowPlayingInfo()
         startDisplayLink()
     }
     
     func pause() {
-        playerNode.pause()
         isPlaying = false
         
         updateNowPlayingInfo()
         stopDisplayLink()
+        
+        rampVolume(from: engine.mainMixerNode.outputVolume, to: 0.0, duration: 0.3) { [weak self] in
+            guard let self = self else { return }
+            self.playerNode.pause()
+            self.engine.pause()
+        }
     }
 
     func toggleLoop() {
@@ -230,7 +238,6 @@ class AudioPlayerWithReverb: ObservableObject {
     }
     
     func stop() {
-        playerNode.stop()
         engine.stop()
         isPlaying = false
         currentTime = 0
@@ -371,6 +378,42 @@ class AudioPlayerWithReverb: ObservableObject {
         reverbNode.wetDryMix = min(max(mix, 0), 100)
         reverbMix = reverbNode.wetDryMix
     }
+    
+    private func rampVolume(from startVolume: Float, to endVolume: Float, duration: TimeInterval, completion: (() -> Void)? = nil) {
+        let steps = 60 // More steps for smoother transition
+        let stepDuration = duration / Double(steps)
+        
+        var currentStep = 0
+        Timer.scheduledTimer(withTimeInterval: stepDuration, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            currentStep += 1
+            let progress = Float(currentStep) / Float(steps)
+            
+            // Use exponential curve for more natural-sounding fade
+            let curvedProgress: Float
+            if endVolume > startVolume {
+                // Fade in: exponential curve
+                curvedProgress = progress * progress
+            } else {
+                // Fade out: inverse exponential curve
+                curvedProgress = 1.0 - (1.0 - progress) * (1.0 - progress)
+            }
+            
+            let newVolume = startVolume + (endVolume - startVolume) * curvedProgress
+            self.engine.mainMixerNode.outputVolume = newVolume
+            
+            if currentStep >= steps {
+                timer.invalidate()
+                self.engine.mainMixerNode.outputVolume = endVolume
+                completion?()
+            }
+        }
+    }
+
     
     @MainActor deinit {
         teardown()
