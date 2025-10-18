@@ -22,6 +22,7 @@ class AudioPlayerWithReverb: ObservableObject {
     @Published public var speedRate: Float = 1.0
     @Published public var reverbMix: Float = 0.0
     @Published public var pitchCents: Float = 0.0
+    @Published public var isLooping: Bool = false
 
     @Published public var currentTime: TimeInterval = 0.0
     @Published public var duration: TimeInterval = 0.0
@@ -91,6 +92,10 @@ class AudioPlayerWithReverb: ObservableObject {
         isPlaying = false
         stopDisplayLink()
     }
+
+    func toggleLoop() {
+        isLooping = !isLooping
+    }
     
     func stop() {
         playerNode.stop()
@@ -127,9 +132,12 @@ class AudioPlayerWithReverb: ObservableObject {
         // Check if playback has finished
         if currentTime >= duration {
             stop()
+
+            if isLooping {
+                play()
+            }
         }
     }
-
     
     // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
     func setPitchByCents(_ cents: Float) {
@@ -252,19 +260,17 @@ struct PlayerScreen: View {
                         
                         // Loop
                         Button(action: {
-                            //                        viewModel.toggleLoop()
+                            audioPlayer.toggleLoop()
                         }) {
-                            Image(systemName: "repeat.circle"
-                                  //                        viewModel.isLooping ? "repeat.circle.fill" : "repeat.circle"
+                            Image(
+                                systemName: audioPlayer.isLooping ? "repeat.circle.fill" : "repeat.circle"
                             )
                             .font(.system(size: 44))
                             .foregroundColor(
-                                .secondary
-                                //                                viewModel.isLooping ? .green : .secondary
+                                audioPlayer.isLooping ? .green : .secondary
                             )
                             .accessibilityLabel(
-                                "Enable Loop"
-                                //                                viewModel.isLooping ? "Disable Loop" : "Enable Loop"
+                                audioPlayer.isLooping ? "Disable Loop" : "Enable Loop"
                             )
                         }
                     }
