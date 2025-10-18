@@ -22,9 +22,9 @@ struct PlayerScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 // Metadata header
-                VStack(spacing: 8) {
+                VStack(spacing: 16) {
                     if let thumbnailUrl = meta.thumbnail_url, let isSquare = meta.thumbnail_is_square {
                         if isSquare == true {
                             ZStack(alignment: .topTrailing) {
@@ -53,15 +53,17 @@ struct PlayerScreen: View {
                         }
                     }
                     
-                    Text(meta.title)
-                        .font(.headline)
-                        .multilineTextAlignment(.center)
-                    
-                    if let artist = meta.artist, !artist.isEmpty {
-                        Text(artist)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                    VStack(spacing: 4) {
+                        Text(meta.title)
+                            .font(.headline)
                             .multilineTextAlignment(.center)
+                        
+                        if let artist = meta.artist, !artist.isEmpty {
+                            Text(artist)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
                     }
                 }
 
