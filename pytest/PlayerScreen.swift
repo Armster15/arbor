@@ -496,7 +496,7 @@ struct PlayerScreen: View {
                         Double(viewModel.pitch)
                     }, set: { newVal in
                         viewModel.setPitch(Float(newVal))
-                    }), in: -200...200, step: 1) {
+                    }), in: -700...500, step: 15) {
                         Text("Adjust pitch")
                             .font(.caption)
                             .foregroundColor(.secondary)
