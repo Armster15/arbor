@@ -24,7 +24,7 @@ struct DownloadMeta: Decodable {
 struct ContentView: View {
     @State private var navPath: [Route] = []
     @State private var lastDownloadMeta: DownloadMeta? = nil
-    @State private var audioPlayer: AudioPlayerWithReverb? = nil
+    @State private var audioPlayer: MetronomeAudioPlayer? = nil
     
     private enum Route: Hashable {
         case player
@@ -39,21 +39,18 @@ struct ContentView: View {
                     debugPrint(meta)
                     lastDownloadMeta = meta
                     
-                    // Tear down any existing engine before creating a new one
-                    audioPlayer?.teardown()
+                    // Stop any existing player before creating a new one
+                    audioPlayer?.stop()
                     audioPlayer = nil
 
-                    let newAudioPlayer = AudioPlayerWithReverb()
-                    let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
-                    try? newAudioPlayer.loadAudio(
-                        url: URL(string: meta.path)!,
-                        metaTitle: meta.title,
-                        metaArtist: meta.artist,
-                        metaArtworkURL: artworkURL
-                    )
-                    audioPlayer = newAudioPlayer
-                    
-                    if navPath.last != .player { navPath.append(.player) }
+                    // Create audio file from URL
+                    if let audioURL = URL(string: meta.path),
+                       let audioFile = try? AVAudioFile(forReading: audioURL) {
+                        let newAudioPlayer = MetronomeAudioPlayer(audioFile: audioFile)
+                        audioPlayer = newAudioPlayer
+                        
+                        if navPath.last != .player { navPath.append(.player) }
+                    }
                 }
             )
             .padding()

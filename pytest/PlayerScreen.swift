@@ -7,439 +7,14 @@ import SwiftUI
 import AVFoundation
 import MediaPlayer
 
-@MainActor
-class AudioPlayerWithReverb: ObservableObject {
-    private var engine: AVAudioEngine
-    private var playerNode: AVAudioPlayerNode
-    private var audioFile: AVAudioFile?
-    
-    private var pitchNode: AVAudioUnitTimePitch
-    private var reverbNode: AVAudioUnitReverb
-    
-    @Published public var isPlaying: Bool = false
-    @Published public var speedRate: Float = 1.0
-    @Published public var reverbMix: Float = 0.0
-    @Published public var pitchCents: Float = 0.0
-    @Published public var isLooping: Bool = false
-
-    @Published public var currentTime: TimeInterval = 0.0
-    @Published public var duration: TimeInterval = 0.0
-    private var displayLink: CADisplayLink? // timer that synchronizes with the screen's refresh rate
-    private var seekOffset: AVAudioFramePosition = 0 // Track where we seeked to
-    private var isSeeking: Bool = false
-    
-    // Now Playing metadata
-    private var metaTitle: String?
-    private var metaArtist: String?
-    private var metaArtworkURL: URL?
-
-    init() {
-        engine = AVAudioEngine()
-        playerNode = AVAudioPlayerNode()
-        
-        pitchNode = AVAudioUnitTimePitch()
-        reverbNode = AVAudioUnitReverb()
-        
-        setupAudioEngine()
-        setupAudioSession()
-        setupRemoteCommands()
-        
-        // Default parameters
-        pitchNode.rate = speedRate
-    }
-    
-    private func setupAudioEngine() {
-        engine.attach(playerNode)
-        engine.attach(pitchNode)
-        engine.attach(reverbNode)
-                
-        // Connect nodes: player -> pitch -> reverb -> output
-        engine.connect(playerNode, to: pitchNode, format: nil)
-        engine.connect(pitchNode, to: reverbNode, format: nil)
-        engine.connect(reverbNode, to: engine.mainMixerNode, format: nil)
-    }
-    
-    private func setupAudioSession() {
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback, mode: .default)
-            try audioSession.setActive(true)
-        } catch {
-            print("Failed to set up audio session: \(error)")
-        }
-    }
-    
-    private func setupRemoteCommands() {
-        let commandCenter = MPRemoteCommandCenter.shared()
-        
-        // Play command
-        commandCenter.playCommand.isEnabled = true
-        commandCenter.playCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- playCommand -- in progress")
-            
-            if self.isPlaying {
-                self.pause()
-            } else {
-                self.play()
-            }
-            
-            debugPrint("commandCenter -- playCommand -- played")
-            return .success
-        }
-        
-        // Pause command
-        commandCenter.pauseCommand.isEnabled = true
-        commandCenter.pauseCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- pauseCommand -- in progress")
-            
-            if self.isPlaying {
-                self.pause()
-            } else {
-                self.play()
-            }
-            
-            debugPrint("commandCenter -- pauseCommand -- paused")
-            return .success
-        }
-        
-        // Stop command
-        commandCenter.stopCommand.isEnabled = true
-        commandCenter.stopCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- stopCommand -- in progress")
-            self.stop()
-            debugPrint("commandCenter -- stopCommand -- stopped")
-            return .success
-        }
-        
-        // Toggle play/pause
-        commandCenter.togglePlayPauseCommand.isEnabled = true
-        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- togglePlayPauseCommand -- in progress")
-            if self.isPlaying {
-                debugPrint("commandCenter -- togglePlayPauseCommand -- pausing")
-                self.pause()
-            } else {
-                debugPrint("commandCenter -- togglePlayPauseCommand -- playing")
-                self.play()
-            }
-            debugPrint("commandCenter -- togglePlayPauseCommand -- completed")
-            return .success
-        }
-        
-        // Previous track command (restart from beginning with fast rewind icon)
-        commandCenter.previousTrackCommand.isEnabled = true
-        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- previousTrackCommand -- in progress")
-            self.stop()
-            debugPrint("commandCenter -- previousTrackCommand -- stopped")
-            self.play()
-            debugPrint("commandCenter -- previousTrackCommand -- played")
-            return .success
-        }
-        
-        // Next track command (restart from beginning with fast forward icon)
-        commandCenter.nextTrackCommand.isEnabled = true
-        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- nextTrackCommand -- in progress")
-            self.stop()
-            debugPrint("commandCenter -- nextTrackCommand -- stopped")
-            self.play()
-            return .success
-        }
-        
-        // Change playback position command (scrubbing)
-        commandCenter.changePlaybackPositionCommand.isEnabled = true
-        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-            guard let self = self,
-                  let event = event as? MPChangePlaybackPositionCommandEvent else {
-                return .commandFailed
-            }
-            debugPrint("commandCenter -- changePlaybackPositionCommand -- in progress")
-            self.seek(to: event.positionTime)
-            debugPrint("commandCenter -- changePlaybackPositionCommand -- completed")
-            return .success
-        }
-    }
-    
-    func loadAudio(url: URL, metaTitle: String? = nil, metaArtist: String? = nil, metaArtworkURL: URL? = nil) throws {
-        audioFile = try AVAudioFile(forReading: url)
-        self.metaTitle = metaTitle
-        self.metaArtist = metaArtist
-        self.metaArtworkURL = metaArtworkURL
-        
-        // Calculate duration
-        if let file = audioFile {
-            let sampleRate = file.processingFormat.sampleRate
-            let frameCount = file.length
-            duration = Double(frameCount) / sampleRate
-        }
-        
-        updateNowPlayingInfo()
-    }
-    
-    private func updateNowPlayingInfo() {
-        var nowPlayingInfo = [String: Any]()
-        
-        if let title = metaTitle {
-            nowPlayingInfo[MPMediaItemPropertyTitle] = title
-        }
-        
-        if let artist = metaArtist, !artist.isEmpty {
-            nowPlayingInfo[MPMediaItemPropertyArtist] = artist
-        }
-        
-        if let artworkURL = metaArtworkURL {
-            Task {
-                await loadAndSetArtwork(from: artworkURL)
-            }
-        }
-        
-        // Set duration
-        if duration.isFinite && duration > 0 {
-            nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
-        }
-        
-        // Set current playback time
-        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
-        
-        // Set playback rate
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
-        
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
-        
-        nowPlayingInfo[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueCount] = 1
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueIndex] = 0
-        nowPlayingInfo[MPNowPlayingInfoPropertyIsLiveStream] = false
-
-        
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-    }
-    
-    private func loadAndSetArtwork(from url: URL) async {
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            if let image = UIImage(data: data) {
-                let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in
-                    return image
-                }
-                
-                // Update Now Playing info with artwork
-                var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
-                nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
-                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-            }
-        } catch {
-            print("Failed to load artwork: \(error)")
-        }
-    }
-    
-    func play() {
-        guard let audioFile = audioFile else { return }
-        
-        // Reset seek offset when starting from the beginning
-        seekOffset = 0
-        
-        playerNode.scheduleFile(audioFile, at: nil)
-        
-        if !engine.isRunning {
-            try? engine.start()
-        }
-        
-        playerNode.play()
-        isPlaying = true
-        
-//        updateNowPlayingInfo()
-        startDisplayLink()
-    }
-    
-    func pause() {
-        playerNode.pause()
-        isPlaying = false
-        
-//        updateNowPlayingInfo()
-        stopDisplayLink()
-    }
-
-    func toggleLoop() {
-        isLooping = !isLooping
-    }
-    
-    func stop() {
-        playerNode.stop()
-        engine.stop()
-        isPlaying = false
-        currentTime = 0
-        seekOffset = 0
-        
-        updateNowPlayingInfo()
-        stopDisplayLink()
-    }
-    
-    func seek(to time: TimeInterval) {
-        guard let audioFile = audioFile else { return }
-        
-        // Store if we were playing
-        let wasPlaying = isPlaying
-        
-        // Stop current playback
-        playerNode.stop()
-        
-        // Calculate frame position from time
-        let sampleRate = audioFile.processingFormat.sampleRate
-        let framePosition = AVAudioFramePosition(time * sampleRate)
-        
-        // Clamp the frame position to valid range
-        let clampedFrame = min(max(framePosition, 0), audioFile.length)
-        
-        // Store the seek offset so updateCurrentTime can calculate correctly
-        seekOffset = clampedFrame
-        
-        // Calculate the frames remaining from the seek position
-        let frameCount = AVAudioFrameCount(audioFile.length - clampedFrame)
-        
-        // Update current time
-        currentTime = Double(clampedFrame) / sampleRate
-        
-        // Schedule the segment from the seek position to the end
-        if frameCount > 0 {
-            playerNode.scheduleSegment(
-                audioFile,
-                startingFrame: clampedFrame,
-                frameCount: frameCount,
-                at: nil
-            )
-        }
-        
-        // Resume playback if we were playing
-        if wasPlaying {
-            if !engine.isRunning {
-                try? engine.start()
-            }
-            playerNode.play()
-            startDisplayLink()
-        }
-        
-        updateNowPlayingInfo()
-    }
-    
-    func teardown() {
-        stop()
-
-        engine.reset()
-        engine.disconnectNodeInput(reverbNode)
-        engine.disconnectNodeInput(pitchNode)
-        engine.disconnectNodeInput(playerNode)
-
-        engine.detach(reverbNode)
-        engine.detach(pitchNode)
-        engine.detach(playerNode)
-
-        audioFile = nil
-    }
-
-    func updateTitle(title: String) {
-        metaTitle = title
-        updateNowPlayingInfo()
-    }
-        
-    private func startDisplayLink() {
-        stopDisplayLink()
-        displayLink = CADisplayLink(target: self, selector: #selector(updateCurrentTime))
-        displayLink?.add(to: .main, forMode: .common)
-    }
-    
-    private func stopDisplayLink() {
-        displayLink?.invalidate()
-        displayLink = nil
-    }
-    
-    @objc private func updateCurrentTime() {
-        guard let nodeTime = playerNode.lastRenderTime,
-              let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
-              let audioFile = audioFile else {
-            return
-        }
-        
-        let sampleRate = audioFile.processingFormat.sampleRate
-        // Add seek offset to get the actual position in the file
-        let currentFrame = playerTime.sampleTime + seekOffset
-        
-        // Calculate elapsed time based on frames played
-        currentTime = Double(currentFrame) / sampleRate
-        
-        // Update Now Playing elapsed time
-        if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
-            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-        }
-        
-        // Check if playback has finished
-        if currentTime >= duration {
-            stop()
-
-            if isLooping {
-                play()
-            }
-        }
-    }
-    
-    // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
-    func setPitchByCents(_ cents: Float) {
-        pitchNode.pitch = min(max(cents, -2400), 2400)
-        pitchCents = pitchNode.pitch
-    }
-    
-    // Adjust playback speed (0.25x ... 2.0x)
-    func setSpeedRate(_ newRate: Float) {
-        pitchNode.rate = min(max(newRate, 0.25), 2.0)
-        speedRate = pitchNode.rate
-        
-        // Update Now Playing info with new playback rate
-        if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
-            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-        }
-    }
-        
-    // Adjust reverb intensity (0-100)
-    func setReverbMix(_ mix: Float) {
-        reverbNode.wetDryMix = min(max(mix, 0), 100)
-        reverbMix = reverbNode.wetDryMix
-    }
-    
-    @MainActor deinit {
-        teardown()
-    }
-}
 
 struct PlayerScreen: View {
     let meta: DownloadMeta
-    @ObservedObject var audioPlayer: AudioPlayerWithReverb
-
-    private func decoratedTitle() -> String {
-        var tags: [String] = []
-        if audioPlayer.speedRate > 1.0 {
-            tags.append("sped up")
-        } else if audioPlayer.speedRate < 1.0 {
-            tags.append("slowed")
-        }
-        if audioPlayer.reverbMix > 0.0 {
-            if tags.isEmpty {
-                tags.append("reverb")
-            } else {
-                tags.append("reverb")
-            }
-        }
-        guard !tags.isEmpty else { return meta.title }
-        return "\(meta.title) (\(tags.joined(separator: " + ")))"
-    }
+    @ObservedObject var audioPlayer: MetronomeAudioPlayer
+    
+    // Local state to track slider values since MetronomeAudioPlayer doesn't expose them
+    @State private var speedRate: Float = 1.0
+    @State private var pitchRate: Float = 1.0
 
     var body: some View {
         ScrollView {
@@ -501,7 +76,6 @@ struct PlayerScreen: View {
                         Button(action: {
                             audioPlayer.stop()
                             audioPlayer.play()
-                            
                         }) {
                             Image(systemName: "backward.end.circle.fill")
                                 .font(.system(size: 44))
@@ -531,39 +105,6 @@ struct PlayerScreen: View {
                                 .font(.system(size: 44))
                                 .foregroundColor(.red)
                         }
-                        
-                        // Loop
-                        Button(action: {
-                            audioPlayer.toggleLoop()
-                        }) {
-                            Image(
-                                systemName: audioPlayer.isLooping ? "repeat.circle.fill" : "repeat.circle"
-                            )
-                            .font(.system(size: 44))
-                            .foregroundColor(
-                                audioPlayer.isLooping ? .green : .secondary
-                            )
-                            .accessibilityLabel(
-                                audioPlayer.isLooping ? "Disable Loop" : "Enable Loop"
-                            )
-                        }
-                    }
-                    
-                    // Scrubber
-                    VStack {
-                        HStack {
-                            Text(formattedTime(audioPlayer.currentTime))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            Text(formattedTime(audioPlayer.duration))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Slider(value: $audioPlayer.currentTime, in: 0...audioPlayer.duration)
                     }
                 }
                 
@@ -577,16 +118,17 @@ struct PlayerScreen: View {
                                 .fontWeight(.medium)
                             
                                 Button("Reset") {
-                                    audioPlayer.setSpeedRate(1.0)
+                                    speedRate = 1.0
+                                    audioPlayer.setRate(rate: speedRate)
                                 }
                                 .font(.caption)
                                 .buttonStyle(.bordered)
                                 .tint(.blue)
-                                .opacity(audioPlayer.speedRate == 1.0 ? 0 : 1)
+                                .opacity(speedRate == 1.0 ? 0 : 1)
                             
                             Spacer()
                             
-                            Text(String(format: "%.2fx", audioPlayer.speedRate))
+                            Text(String(format: "%.2fx", speedRate))
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
@@ -595,27 +137,28 @@ struct PlayerScreen: View {
                             Slider(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.speedRate)
+                                        Double(speedRate)
                                     },
                                     set: { newVal in
                                         // Slider sends continuous values while dragging, so we snap to the nearest 0.05 to enforce stepping.
                                         let snapped = (newVal / 0.05).rounded() * 0.05
-                                        audioPlayer.setSpeedRate(Float(snapped))
+                                        speedRate = Float(snapped)
+                                        audioPlayer.setRate(rate: speedRate)
                                     }
                                 ),
                                 in: 0.25...2.0,
                                 step: 0.05
                             )
-                            // `flex: 1` (???)
                             .frame(maxWidth: .infinity)
                             
                             Stepper(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.speedRate)
+                                        Double(speedRate)
                                     },
                                     set: { newVal in
-                                        audioPlayer.setSpeedRate(Float(newVal))
+                                        speedRate = Float(newVal)
+                                        audioPlayer.setRate(rate: speedRate)
                                     }
                                 ),
                                 in: 0.25...2.0,
@@ -626,7 +169,7 @@ struct PlayerScreen: View {
                     }
 
                     
-                    // Pitch (cents)
+                    // Pitch
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Pitch")
@@ -634,16 +177,17 @@ struct PlayerScreen: View {
                                 .fontWeight(.medium)
                             
                                 Button("Reset") {
-                                    audioPlayer.setPitchByCents(0.0)
+                                    pitchRate = 1.0
+                                    audioPlayer.setPitch(rate: pitchRate)
                                 }
                                 .font(.caption)
                                 .buttonStyle(.bordered)
                                 .tint(.blue)
-                                .opacity(audioPlayer.pitchCents.isZero ? 0 : 1)
+                                .opacity(pitchRate == 1.0 ? 0 : 1)
                             
                             Spacer()
                             
-                            Text("\(Int(audioPlayer.pitchCents)) cents")
+                            Text(String(format: "%.2fx", pitchRate))
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
@@ -652,84 +196,32 @@ struct PlayerScreen: View {
                             Slider(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.pitchCents)
+                                        Double(pitchRate)
                                     },
                                     set: { newVal in
-                                        // Slider sends continuous values while dragging, so we snap to the nearest 50 to enforce stepping.
-                                        let snapped = (newVal / 50.0).rounded() * 50.0
-                                        audioPlayer.setPitchByCents(Float(snapped))
+                                        // Slider sends continuous values while dragging, so we snap to the nearest 0.05 to enforce stepping.
+                                        let snapped = (newVal / 0.05).rounded() * 0.05
+                                        pitchRate = Float(snapped)
+                                        audioPlayer.setPitch(rate: pitchRate)
                                     }
                                 ),
-                                in: -800...800,
-                                step: 50
+                                in: 0.5...2.0,
+                                step: 0.05
                             )
                             .frame(maxWidth: .infinity)
                             
                             Stepper(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.pitchCents)
+                                        Double(pitchRate)
                                     },
                                     set: { newVal in
-                                        audioPlayer.setPitchByCents(Float(newVal))
+                                        pitchRate = Float(newVal)
+                                        audioPlayer.setPitch(rate: pitchRate)
                                     }
                                 ),
-                                in: -800...800,
-                                step: 10,
-                            ) {}
-                            .fixedSize()
-                        }
-                    }
-
-                    
-                    // Reverb
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Reverb")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            
-                                Button("Reset") {
-                                    audioPlayer.setReverbMix(0.0)
-                                }
-                                .font(.caption)
-                                .buttonStyle(.bordered)
-                                .tint(.blue)
-                                .opacity(audioPlayer.reverbMix > 0 ? 1 : 0)
-                            
-                            Spacer()
-                            
-                            Text(String(format: "%.0f%%", audioPlayer.reverbMix))
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                        }
-                        
-                        HStack {
-                            Slider(
-                                value: Binding(
-                                    get: {
-                                        Double(audioPlayer.reverbMix)
-                                    },
-                                    set: { newVal in
-                                        audioPlayer.setReverbMix(Float(newVal))
-                                    }
-                                ),
-                                in: 0...100,
-                                step: 1
-                            )
-                            .frame(maxWidth: .infinity)
-                            
-                            Stepper(
-                                value: Binding(
-                                    get: {
-                                        Double(audioPlayer.reverbMix)
-                                    },
-                                    set: { newVal in
-                                        audioPlayer.setReverbMix(Float(newVal))
-                                    }
-                                ),
-                                in: 0...100,
-                                step: 1,
+                                in: 0.5...2.0,
+                                step: 0.01,
                             ) {}
                             .fixedSize()
                         }
@@ -738,20 +230,5 @@ struct PlayerScreen: View {
             }
             .padding()
         }
-        .onChange(of: audioPlayer.speedRate) { _, _ in
-            audioPlayer.updateTitle(title: decoratedTitle())
-        }
-        .onChange(of: audioPlayer.reverbMix) { _, _ in
-            audioPlayer.updateTitle(title: decoratedTitle())
-        }
     }
 }
-
-private func formattedTime(_ seconds: Double) -> String {
-    guard seconds.isFinite && !seconds.isNaN else { return "--:--" }
-    let s = Int(seconds.rounded())
-    let mins = s / 60
-    let secs = s % 60
-    return String(format: "%d:%02d", mins, secs)
-}
-
