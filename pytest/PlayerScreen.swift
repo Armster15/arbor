@@ -312,7 +312,7 @@ final class SAPlayerViewModel: ObservableObject {
         if rate > 1.0 {
             tags.append("sped up")
         } else if rate < 1.0 {
-            tags.append("slowed down")
+            tags.append("slowed")
         }
         if reverbWetDryMix > 0.0 {
             if tags.isEmpty {
