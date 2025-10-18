@@ -99,6 +99,7 @@ struct PlayerScreen: View {
                                         .frame(width: 180, height: 180)
                                         .clipped()
                                         .cornerRadius(12)
+                                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
                                 } placeholder: {
                                     ProgressView()
                                         .frame(width: 180, height: 180)
@@ -113,6 +114,7 @@ struct PlayerScreen: View {
                                         .frame(height: 180)
                                         .clipped()
                                         .cornerRadius(12)
+                                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
                                 } placeholder: {
                                     ProgressView()
                                         .frame(height: 180)
