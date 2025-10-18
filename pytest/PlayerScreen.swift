@@ -9,16 +9,15 @@ import SwiftAudioPlayer
 import MediaPlayer
 import UIKit
 
-class AudioPlayerWithReverb {
+@MainActor
+class AudioPlayerWithReverb: ObservableObject {
     private var engine: AVAudioEngine
     private var playerNode: AVAudioPlayerNode
     private var reverbNode: AVAudioUnitReverb
     private var audioFile: AVAudioFile?
     
-    var isPlaying: Bool {
-        return playerNode.isPlaying
-    }
-    
+    @Published public var isPlaying: Bool = false
+
     init() {
         engine = AVAudioEngine()
         playerNode = AVAudioPlayerNode()
@@ -50,15 +49,18 @@ class AudioPlayerWithReverb {
         }
         
         playerNode.play()
+        isPlaying = true
     }
     
     func pause() {
         playerNode.pause()
+        isPlaying = false
     }
     
     func stop() {
         playerNode.stop()
         engine.stop()
+        isPlaying = false
     }
         
     // Adjust reverb intensity (0-100)
@@ -74,7 +76,7 @@ class AudioPlayerWithReverb {
 
 struct PlayerScreen: View {
     let meta: DownloadMeta
-    let audioPlayer: AudioPlayerWithReverb
+    @ObservedObject var audioPlayer: AudioPlayerWithReverb
 
     private func formattedTime(_ seconds: Double) -> String {
         guard seconds.isFinite && !seconds.isNaN else { return "--:--" }
@@ -160,8 +162,7 @@ struct PlayerScreen: View {
 //                        viewModel.toggle()
                     }) {
                         Image(
-                            systemName: "play.circle.fill"
-//                            systemName: viewModel.isPlaying ? "pause.circle.fill" : "play.circle.fill"
+                            systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
                         )
                             .font(.system(size: 44))
                             .foregroundColor(.blue)
