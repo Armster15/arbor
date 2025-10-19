@@ -49,6 +49,7 @@ class AudioPlayerWithReverb: ObservableObject {
         setupRemoteCommands()
         
         // Default parameters
+        reverbNode.wetDryMix = reverbMix
         pitchNode.rate = speedRate
     }
     
@@ -220,9 +221,13 @@ class AudioPlayerWithReverb: ObservableObject {
         playerNode.play()
         isPlaying = true
         
-        // Fade in over 300ms with exponential curve
-        if shouldRampVolume == true {
+        // Fade in over 300ms with exponential curve, but *not* when starting from the beginning
+        let justStarted = currentTime <= 0.05 && seekOffset == 0
+        if shouldRampVolume == true && !justStarted {
             rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+        } else {
+            // required to override any race conditions where we may already be ramping the volume at some point
+            engine.mainMixerNode.outputVolume = 1.0
         }
         
         updateNowPlayingInfo()
@@ -323,7 +328,10 @@ class AudioPlayerWithReverb: ObservableObject {
         
         self.stop(queueAudio: false)
 
-        engine.reset()
+        engine.disconnectNodeOutput(reverbNode)
+        engine.disconnectNodeOutput(pitchNode)
+        engine.disconnectNodeOutput(playerNode)
+
         engine.disconnectNodeInput(reverbNode)
         engine.disconnectNodeInput(pitchNode)
         engine.disconnectNodeInput(playerNode)
@@ -331,6 +339,8 @@ class AudioPlayerWithReverb: ObservableObject {
         engine.detach(reverbNode)
         engine.detach(pitchNode)
         engine.detach(playerNode)
+
+        engine.reset()
 
         audioFile = nil
     }
