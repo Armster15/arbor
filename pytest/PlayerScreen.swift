@@ -171,13 +171,11 @@ class AudioPlayerWithReverb: ObservableObject {
             }
         }
         
-        // Set duration
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
         
-        // Set current playback time
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         
-        // Set playback rate
+        // Set playback rate + this also indicates if we're paused or playing
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
@@ -202,8 +200,6 @@ class AudioPlayerWithReverb: ObservableObject {
     }
     
     func play() {
-        guard let audioFile = audioFile else { return }
-        
         // Reset seek offset when starting from the beginning
         seekOffset = 0
                 
