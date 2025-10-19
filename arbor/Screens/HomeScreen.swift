@@ -104,6 +104,8 @@ struct HomeScreen: View {
             }
         }
         .navigationTitle("🌳 Arbor")
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .searchable(text: $searchQuery, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search by title, artist, etc.")
         .onSubmit(of: .search) {
             performSearch()

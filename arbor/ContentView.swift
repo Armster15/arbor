@@ -62,8 +62,6 @@ struct ContentView: View {
                     if navPath.last != .player { navPath.append(.player) }
                 }
             )
-            .padding()
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             
             .navigationDestination(for: Route.self) { route in
                 switch route {
