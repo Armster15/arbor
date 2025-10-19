@@ -76,15 +76,7 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- playCommand -- in progress")
-            
-            if self.isPlaying {
-                self.pause()
-            } else {
-                self.play()
-            }
-            
-            debugPrint("commandCenter -- playCommand -- played")
+            self.play()
             return .success
         }
         
@@ -92,15 +84,7 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- pauseCommand -- in progress")
-            
-            if self.isPlaying {
-                self.pause()
-            } else {
-                self.play()
-            }
-            
-            debugPrint("commandCenter -- pauseCommand -- paused")
+            self.pause()
             return .success
         }
         
@@ -108,9 +92,7 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.stopCommand.isEnabled = true
         commandCenter.stopCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- stopCommand -- in progress")
             self.stop()
-            debugPrint("commandCenter -- stopCommand -- stopped")
             return .success
         }
         
@@ -118,15 +100,11 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.togglePlayPauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- togglePlayPauseCommand -- in progress")
             if self.isPlaying {
-                debugPrint("commandCenter -- togglePlayPauseCommand -- pausing")
                 self.pause()
             } else {
-                debugPrint("commandCenter -- togglePlayPauseCommand -- playing")
                 self.play()
             }
-            debugPrint("commandCenter -- togglePlayPauseCommand -- completed")
             return .success
         }
         
@@ -134,11 +112,7 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.previousTrackCommand.isEnabled = true
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- previousTrackCommand -- in progress")
-            self.stop()
-            debugPrint("commandCenter -- previousTrackCommand -- stopped")
-            self.play()
-            debugPrint("commandCenter -- previousTrackCommand -- played")
+            self.seek(to: 0)
             return .success
         }
         
@@ -146,10 +120,7 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.nextTrackCommand.isEnabled = true
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            debugPrint("commandCenter -- nextTrackCommand -- in progress")
-            self.stop()
-            debugPrint("commandCenter -- nextTrackCommand -- stopped")
-            self.play()
+            self.seek(to: 0)
             return .success
         }
         
@@ -160,9 +131,7 @@ class AudioPlayerWithReverb: ObservableObject {
                   let event = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
             }
-            debugPrint("commandCenter -- changePlaybackPositionCommand -- in progress")
             self.seek(to: event.positionTime)
-            debugPrint("commandCenter -- changePlaybackPositionCommand -- completed")
             return .success
         }
     }
@@ -178,6 +147,8 @@ class AudioPlayerWithReverb: ObservableObject {
             let sampleRate = file.processingFormat.sampleRate
             let frameCount = file.length
             duration = Double(frameCount) / sampleRate
+
+            playerNode.scheduleFile(file, at: nil)
         }
         
         updateNowPlayingInfo()
@@ -201,23 +172,13 @@ class AudioPlayerWithReverb: ObservableObject {
         }
         
         // Set duration
-        if duration.isFinite && duration > 0 {
-            nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
-        }
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
         
         // Set current playback time
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         
         // Set playback rate
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
-        
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
-        
-        nowPlayingInfo[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueCount] = 1
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueIndex] = 0
-        nowPlayingInfo[MPNowPlayingInfoPropertyIsLiveStream] = false
-
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
@@ -245,9 +206,7 @@ class AudioPlayerWithReverb: ObservableObject {
         
         // Reset seek offset when starting from the beginning
         seekOffset = 0
-        
-        playerNode.scheduleFile(audioFile, at: nil)
-        
+                
         if !engine.isRunning {
             try? engine.start()
         }
@@ -255,16 +214,24 @@ class AudioPlayerWithReverb: ObservableObject {
         playerNode.play()
         isPlaying = true
         
-//        updateNowPlayingInfo()
+        // Fade in over 300ms with exponential curve
+        rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+        
+        updateNowPlayingInfo()
         startDisplayLink()
     }
     
     func pause() {
-        playerNode.pause()
         isPlaying = false
         
-//        updateNowPlayingInfo()
+        updateNowPlayingInfo()
         stopDisplayLink()
+        
+        rampVolume(from: engine.mainMixerNode.outputVolume, to: 0.0, duration: 0.3) { [weak self] in
+            guard let self = self else { return }
+            self.playerNode.pause()
+            self.engine.pause()
+        }
     }
 
     func toggleLoop() {
@@ -272,7 +239,6 @@ class AudioPlayerWithReverb: ObservableObject {
     }
     
     func stop() {
-        playerNode.stop()
         engine.stop()
         isPlaying = false
         currentTime = 0
@@ -414,6 +380,42 @@ class AudioPlayerWithReverb: ObservableObject {
         reverbMix = reverbNode.wetDryMix
     }
     
+    private func rampVolume(from startVolume: Float, to endVolume: Float, duration: TimeInterval, completion: (() -> Void)? = nil) {
+        let steps = 60 // More steps for smoother transition
+        let stepDuration = duration / Double(steps)
+        
+        var currentStep = 0
+        Timer.scheduledTimer(withTimeInterval: stepDuration, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            currentStep += 1
+            let progress = Float(currentStep) / Float(steps)
+            
+            // Use exponential curve for more natural-sounding fade
+            let curvedProgress: Float
+            if endVolume > startVolume {
+                // Fade in: exponential curve
+                curvedProgress = progress * progress
+            } else {
+                // Fade out: inverse exponential curve
+                curvedProgress = 1.0 - (1.0 - progress) * (1.0 - progress)
+            }
+            
+            let newVolume = startVolume + (endVolume - startVolume) * curvedProgress
+            self.engine.mainMixerNode.outputVolume = newVolume
+            
+            if currentStep >= steps {
+                timer.invalidate()
+                self.engine.mainMixerNode.outputVolume = endVolume
+                completion?()
+            }
+        }
+    }
+
+    
     @MainActor deinit {
         teardown()
     }
@@ -499,8 +501,7 @@ struct PlayerScreen: View {
                     HStack(spacing: 24) {
                         // Rewind
                         Button(action: {
-                            audioPlayer.stop()
-                            audioPlayer.play()
+                            audioPlayer.seek(to: 0)
                             
                         }) {
                             Image(systemName: "backward.end.circle.fill")
