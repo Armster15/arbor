@@ -75,21 +75,24 @@ class AudioPlayerWithReverb: ObservableObject {
         // Play command
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
-            self?.play()
+            guard let self = self else { return .commandFailed }
+            self.play()
             return .success
         }
         
         // Pause command
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
-            self?.pause()
+            guard let self = self else { return .commandFailed }
+            self.pause()
             return .success
         }
         
         // Stop command
         commandCenter.stopCommand.isEnabled = true
         commandCenter.stopCommand.addTarget { [weak self] _ in
-            self?.stop()
+            guard let self = self else { return .commandFailed }
+            self.stop()
             return .success
         }
         
