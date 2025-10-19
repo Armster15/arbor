@@ -6,7 +6,10 @@ ytmusic = YTMusic()
 
 
 def search(query: str):
+    print(f"Searching for {query}")
     raw_results = ytmusic.search(query, filter="songs", limit=15)
+    print(f"Found {len(raw_results)} results")
+
     results = []
 
     for result in raw_results:
