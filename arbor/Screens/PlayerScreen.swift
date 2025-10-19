@@ -304,7 +304,7 @@ struct PlayerScreen: View {
                                     }
                                 ),
                                 in: 0...100,
-                                step: 1
+                                step: 5
                             )
                             .frame(maxWidth: .infinity)
                             
