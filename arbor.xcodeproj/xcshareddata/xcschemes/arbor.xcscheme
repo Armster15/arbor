@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "08C4FFE52EA1436F00F9F26C"
-               BuildableName = "pytest.app"
-               BlueprintName = "pytest"
-               ReferencedContainer = "container:pytest.xcodeproj">
+               BuildableName = "arbor.app"
+               BlueprintName = "arbor"
+               ReferencedContainer = "container:arbor.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "08C4FFE52EA1436F00F9F26C"
-            BuildableName = "pytest.app"
-            BlueprintName = "pytest"
-            ReferencedContainer = "container:pytest.xcodeproj">
+            BuildableName = "arbor.app"
+            BlueprintName = "arbor"
+            ReferencedContainer = "container:arbor.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "08C4FFE52EA1436F00F9F26C"
-            BuildableName = "pytest.app"
-            BlueprintName = "pytest"
-            ReferencedContainer = "container:pytest.xcodeproj">
+            BuildableName = "arbor.app"
+            BlueprintName = "arbor"
+            ReferencedContainer = "container:arbor.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

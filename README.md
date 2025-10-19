@@ -9,13 +9,13 @@ Most of this is me learning and playing around at the same time.
 
 -> app_packages (configured as a site packages dir. feel free to make your own packages and put them here)
 
--> pytest (root xcode app source code)
+-> arbor (root xcode app source code)
 
     -> main.m (bootstraps the python interpreter)
 
-    -> pytest-Bridging-Header.h (exposes the `start_python_runtime` method to swift)
+    -> arbor-Bridging-Header.h (exposes the `start_python_runtime` method to swift)
 
--> pytest.xcodeproj
+-> arbor.xcodeproj
 
 -> python_modules (gitignored. also configured as a site packages dir. this is where pip will install packages provided you follow the readme)
 
@@ -30,7 +30,7 @@ Add dependency to `requirements.txt` and then run:
 pip3 install --target=./python_modules --platform=any --only-binary=:all: -r requirements.txt
 ```
 
-This installs packages to the `pytest/python_modules` dir
+This installs packages to the `python_modules` dir
 
 ## Syncing submodules
 

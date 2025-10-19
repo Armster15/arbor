@@ -9,7 +9,7 @@ import SwiftUI
 import AVFoundation
 
 @main
-struct pytestApp: App {
+struct arborApp: App {
     init() {
         _ = start_python_runtime(CommandLine.argc, CommandLine.unsafeArgv)
     }
