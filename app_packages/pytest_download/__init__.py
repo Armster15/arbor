@@ -52,7 +52,9 @@ def download(url: str):
         print(f"Downloading video from: {url}")
         print(f"Downloading video to: {output_dir}")
         print(f"Using cache dir: {yt_cache_dir}")
+
         info = ydl.extract_info(url, download=True)
+
         filename = ydl.prepare_filename(info)
         full_path = os.path.abspath(filename)
         print(f"Downloaded file: {full_path}")
