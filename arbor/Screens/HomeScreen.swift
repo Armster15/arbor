@@ -139,6 +139,9 @@ struct HomeScreen: View {
                 ForEach(searchResults, id: \.youtubeURL) { item in
                     Button {
                         youtubeURL = item.youtubeURL
+                        // Close suggestions by clearing the query and results
+                        searchQuery = ""
+                        searchResults = []
                     } label: {
                         HStack(spacing: 10) {
                             // Cover art thumbnail
@@ -204,7 +207,6 @@ struct HomeScreen: View {
                             }
                         }
                     }
-                    .searchCompletion(item.title)
                 }
             }
         }
