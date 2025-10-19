@@ -323,7 +323,10 @@ class AudioPlayerWithReverb: ObservableObject {
         
         self.stop(queueAudio: false)
 
-        engine.reset()
+        engine.disconnectNodeOutput(reverbNode)
+        engine.disconnectNodeOutput(pitchNode)
+        engine.disconnectNodeOutput(playerNode)
+
         engine.disconnectNodeInput(reverbNode)
         engine.disconnectNodeInput(pitchNode)
         engine.disconnectNodeInput(playerNode)
@@ -331,6 +334,8 @@ class AudioPlayerWithReverb: ObservableObject {
         engine.detach(reverbNode)
         engine.detach(pitchNode)
         engine.detach(playerNode)
+
+        engine.reset()
 
         audioFile = nil
     }
