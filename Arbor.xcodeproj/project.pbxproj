@@ -26,27 +26,27 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		08C4FFE62EA1436F00F9F26C /* arbor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = arbor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		08C4FFE62EA1436F00F9F26C /* Arbor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Arbor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		08C4FFF72EA1455D00F9F26C /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Python.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		08C4480B2EA1F0C400F9F26C /* Exceptions for "arbor" folder in "arbor" target */ = {
+		08C4480B2EA1F0C400F9F26C /* Exceptions for "Arbor" folder in "Arbor" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 08C4FFE52EA1436F00F9F26C /* arbor */;
+			target = 08C4FFE52EA1436F00F9F26C /* Arbor */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		08C4FFE82EA1436F00F9F26C /* arbor */ = {
+		08C4FFE82EA1436F00F9F26C /* Arbor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				08C4480B2EA1F0C400F9F26C /* Exceptions for "arbor" folder in "arbor" target */,
+				08C4480B2EA1F0C400F9F26C /* Exceptions for "Arbor" folder in "Arbor" target */,
 			);
-			path = arbor;
+			path = Arbor;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -67,7 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				08C4FFF72EA1455D00F9F26C /* Python.xcframework */,
-				08C4FFE82EA1436F00F9F26C /* arbor */,
+				08C4FFE82EA1436F00F9F26C /* Arbor */,
 				08C4FFE72EA1436F00F9F26C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -75,7 +75,7 @@
 		08C4FFE72EA1436F00F9F26C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				08C4FFE62EA1436F00F9F26C /* arbor.app */,
+				08C4FFE62EA1436F00F9F26C /* Arbor.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,9 +83,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		08C4FFE52EA1436F00F9F26C /* arbor */ = {
+		08C4FFE52EA1436F00F9F26C /* Arbor */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 08C4FFF12EA1437000F9F26C /* Build configuration list for PBXNativeTarget "arbor" */;
+			buildConfigurationList = 08C4FFF12EA1437000F9F26C /* Build configuration list for PBXNativeTarget "Arbor" */;
 			buildPhases = (
 				08C4FFE22EA1436F00F9F26C /* Sources */,
 				08C4FFE32EA1436F00F9F26C /* Frameworks */,
@@ -98,13 +98,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				08C4FFE82EA1436F00F9F26C /* arbor */,
+				08C4FFE82EA1436F00F9F26C /* Arbor */,
 			);
-			name = arbor;
+			name = Arbor;
 			packageProductDependencies = (
 			);
-			productName = arbor;
-			productReference = 08C4FFE62EA1436F00F9F26C /* arbor.app */;
+			productName = Arbor;
+			productReference = 08C4FFE62EA1436F00F9F26C /* Arbor.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -123,7 +123,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 08C4FFE12EA1436F00F9F26C /* Build configuration list for PBXProject "arbor" */;
+			buildConfigurationList = 08C4FFE12EA1436F00F9F26C /* Build configuration list for PBXProject "Arbor" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -139,7 +139,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				08C4FFE52EA1436F00F9F26C /* arbor */,
+				08C4FFE52EA1436F00F9F26C /* Arbor */,
 			);
 		};
 /* End PBXProject section */
@@ -325,7 +325,8 @@
 				DEVELOPMENT_TEAM = SDPGJ289XK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = arbor/Info.plist;
+				INFOPLIST_FILE = Arbor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Arbor;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -357,7 +358,8 @@
 				DEVELOPMENT_TEAM = SDPGJ289XK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = arbor/Info.plist;
+				INFOPLIST_FILE = Arbor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Arbor;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -380,7 +382,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		08C4FFE12EA1436F00F9F26C /* Build configuration list for PBXProject "arbor" */ = {
+		08C4FFE12EA1436F00F9F26C /* Build configuration list for PBXProject "Arbor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				08C4FFEF2EA1437000F9F26C /* Debug */,
@@ -389,7 +391,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		08C4FFF12EA1437000F9F26C /* Build configuration list for PBXNativeTarget "arbor" */ = {
+		08C4FFF12EA1437000F9F26C /* Build configuration list for PBXNativeTarget "Arbor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				08C4FFF22EA1437000F9F26C /* Debug */,

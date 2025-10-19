@@ -9,13 +9,13 @@ Most of this is me learning and playing around at the same time.
 
 -> app_packages (configured as a site packages dir. feel free to make your own packages and put them here)
 
--> arbor (root xcode app source code)
+-> Arbor (root xcode app source code)
 
     -> main.m (bootstraps the python interpreter)
 
-    -> arbor-Bridging-Header.h (exposes the `start_python_runtime` method to swift)
+    -> Arbor-Bridging-Header.h (exposes the `start_python_runtime` method to swift)
 
--> arbor.xcodeproj
+-> Arbor.xcodeproj
 
 -> python_modules (gitignored. also configured as a site packages dir. this is where pip will install packages provided you follow the readme)
 

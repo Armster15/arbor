@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "08C4FFE52EA1436F00F9F26C"
-               BuildableName = "arbor.app"
-               BlueprintName = "arbor"
-               ReferencedContainer = "container:arbor.xcodeproj">
+               BuildableName = "Arbor.app"
+               BlueprintName = "Arbor"
+               ReferencedContainer = "container:Arbor.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "08C4FFE52EA1436F00F9F26C"
-            BuildableName = "arbor.app"
-            BlueprintName = "arbor"
-            ReferencedContainer = "container:arbor.xcodeproj">
+            BuildableName = "Arbor.app"
+            BlueprintName = "Arbor"
+            ReferencedContainer = "container:Arbor.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "08C4FFE52EA1436F00F9F26C"
-            BuildableName = "arbor.app"
-            BlueprintName = "arbor"
-            ReferencedContainer = "container:arbor.xcodeproj">
+            BuildableName = "Arbor.app"
+            BlueprintName = "Arbor"
+            ReferencedContainer = "container:Arbor.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
