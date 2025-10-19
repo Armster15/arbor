@@ -11,27 +11,31 @@ import MediaPlayer
 class AudioPlayerWithReverb: ObservableObject {
     private var engine: AVAudioEngine
     private var playerNode: AVAudioPlayerNode
-    private var audioFile: AVAudioFile?
-    
+        
     private var pitchNode: AVAudioUnitTimePitch
     private var reverbNode: AVAudioUnitReverb
     
+    // metadata related to the loaded audio file (including the actual audiofile)
+    private var audioFile: AVAudioFile?
+
+    // publicly exposed properties
     @Published public var isPlaying: Bool = false
     @Published public var speedRate: Float = 1.0
     @Published public var reverbMix: Float = 0.0
     @Published public var pitchCents: Float = 0.0
     @Published public var isLooping: Bool = false
 
+    // properties just for showing the currentTime/duration
     @Published public var currentTime: TimeInterval = 0.0
     @Published public var duration: TimeInterval = 0.0
     private var displayLink: CADisplayLink? // timer that synchronizes with the screen's refresh rate
-    private var seekOffset: AVAudioFramePosition = 0 // Track where we seeked to
-    private var isSeeking: Bool = false
+    private var seekOffset: AVAudioFramePosition = 0 // to track which frame we seeked to
     
-    // Now Playing metadata
+    // now playing metadata
     private var metaTitle: String?
     private var metaArtist: String?
     private var metaArtworkURL: URL?
+
 
     init() {
         engine = AVAudioEngine()
