@@ -34,7 +34,7 @@ class AudioPlayerWithReverb: ObservableObject {
     // now playing metadata
     private var metaTitle: String?
     private var metaArtist: String?
-    private var metaArtworkURL: URL?
+    private var metaArtwork: MPMediaItemArtwork?
 
 
     init() {
@@ -152,10 +152,8 @@ class AudioPlayerWithReverb: ObservableObject {
             nowPlayingInfo[MPMediaItemPropertyArtist] = artist
         }
         
-        if let artworkURL = metaArtworkURL {
-            Task {
-                await loadAndSetArtwork(from: artworkURL)
-            }
+        if let artwork = metaArtwork {
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
         }
         
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
@@ -167,25 +165,7 @@ class AudioPlayerWithReverb: ObservableObject {
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
-    
-    private func loadAndSetArtwork(from url: URL) async {
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            if let image = UIImage(data: data) {
-                let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in
-                    return image
-                }
-                
-                // Update Now Playing info with artwork
-                var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
-                nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
-                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-            }
-        } catch {
-            print("Failed to load artwork: \(error)")
-        }
-    }
-    
+        
     func loadAudio(url: URL) throws {
         let file = try AVAudioFile(forReading: url)
         loadAudio(file: file)
@@ -204,12 +184,24 @@ class AudioPlayerWithReverb: ObservableObject {
         updateNowPlayingInfo()
     }
     
-    func loadMetadata(title: String? = nil, artist: String? = nil, artworkURL: URL? = nil) {
+    func loadMetadataStrings(title: String? = nil, artist: String? = nil) {
         self.metaTitle = title
         self.metaArtist = artist
-        self.metaArtworkURL = artworkURL
         
         updateNowPlayingInfo()
+    }
+    
+    func loadMetadataArtwork(url: URL) async {
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let image = UIImage(data: data) {
+                self.metaArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in
+                    return image
+                }
+            }
+        } catch {
+            print("Failed to load artwork: \(error)")
+        }
     }
     
     func play() {

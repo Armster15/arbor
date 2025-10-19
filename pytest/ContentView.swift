@@ -44,16 +44,18 @@ struct ContentView: View {
                     audioPlayer = nil
 
                     let newAudioPlayer = AudioPlayerWithReverb()
-                    let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
                     try? newAudioPlayer.loadAudio(
                         url: URL(string: meta.path)!,
                     )
                     
-                    newAudioPlayer.loadMetadata(
-                        title: meta.title,
-                        artist: meta.artist,
-                        artworkURL: artworkURL
-                    )
+                    newAudioPlayer.loadMetadataStrings(title: meta.title, artist: meta.artist)
+                    
+                    let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
+                    if let artworkURL = artworkURL {
+                        Task { // will not block the ui
+                            await newAudioPlayer.loadMetadataArtwork(url: artworkURL)
+                        }
+                    }
                     
                     audioPlayer = newAudioPlayer
                     
