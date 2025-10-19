@@ -4,7 +4,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct SearchResult: Decodable {
     let title: String

@@ -6,10 +6,6 @@
 //
 
 import SwiftUI
-import AVFoundation
-import AVKit
-import Foundation
-import UIKit
 
 struct DownloadMeta: Decodable {
     let path: String
