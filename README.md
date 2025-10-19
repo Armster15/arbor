@@ -32,12 +32,6 @@ pip3 install --target=./python_modules --platform=any --only-binary=:all: -r req
 
 This installs packages to the `python_modules` dir
 
-## Syncing submodules
-
-```
-git submodule update --init --recursive
-```
-
 ## Useful links
 
 - https://docs.python.org/3/using/ios.html#adding-python-to-an-ios-project
