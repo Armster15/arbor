@@ -151,8 +151,6 @@ class AudioPlayerWithReverb: ObservableObject {
             let sampleRate = file.processingFormat.sampleRate
             let frameCount = file.length
             duration = Double(frameCount) / sampleRate
-
-            playerNode.scheduleFile(file, at: nil)
         }
         
         updateNowPlayingInfo()
@@ -205,7 +203,9 @@ class AudioPlayerWithReverb: ObservableObject {
     
     func play() {
         // Reset seek offset when starting from the beginning
+        guard let audioFile = audioFile else { return }
         seekOffset = 0
+        playerNode.scheduleFile(audioFile, at: nil)
                 
         if !engine.isRunning {
             try? engine.start()
