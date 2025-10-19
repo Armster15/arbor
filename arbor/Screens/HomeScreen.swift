@@ -16,18 +16,7 @@ struct HomeScreen: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
 
-    // Search UI state (UI only – no fetching logic)
-    private struct SearchResult: Identifiable, Hashable {
-        let id = UUID()
-        let title: String
-        let channel: String
-        let duration: String
-        let url: String
-    }
-
     @State private var searchQuery: String = ""
-    @State private var isSearching: Bool = false
-    @State private var searchResults: [SearchResult] = []
 
     var body: some View {
         VStack(spacing: 20) {
@@ -108,34 +97,12 @@ struct HomeScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .searchable(text: $searchQuery, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search by title, artist, etc.")
         .onSubmit(of: .search) {
-            performSearch()
+//            performSearch()
         }
         .searchSuggestions {
-            // Show suggestions based on current query and existing demo results
-            if isSearching {
-                Label("Searching…", systemImage: "hourglass")
-                    .foregroundColor(.secondary)
-            } else if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                // Starter suggestions (static)
-                ForEach(["faded", "lofi", "chill beats", "instrumental"], id: \.self) { suggestion in
-                    Text(suggestion)
-                        .searchCompletion(suggestion)
-                }
-            } else if !searchResults.isEmpty {
-                ForEach(searchResults) { result in
-                    // Tapping a suggestion fills the search field; selecting from results still fills URL below
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(result.title)
-                            .searchCompletion(result.title)
-                        Text("\(result.channel) • \(result.duration)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .onTapGesture {
-                        youtubeURL = result.url
-                    }
-                }
-            }
+            Text("🍎 Apple").searchCompletion("apple")
+            Text("🍐 Pear").searchCompletion("pear")
+            Text("🍌 Banana").searchCompletion("banana")
         }
         .alert("Download Failed", isPresented: $showError) {
             Button("OK") { }
@@ -183,41 +150,5 @@ result = download('\(trimmed)')
     private func showError(message: String) {
         errorMessage = message
         showError = true
-    }
-
-    // UI-only search that generates placeholder results based on the query
-    private func performSearch() {
-        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            searchResults = []
-            return
-        }
-
-        isSearching = true
-        // Simulate a brief search delay for UI feedback
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            let baseTitles = [
-                "\(trimmed)",
-                "\(trimmed) (Official Video)",
-                "\(trimmed) (Lyrics)",
-                "\(trimmed) (Audio)",
-                "\(trimmed) Live",
-                "\(trimmed) Remix"
-            ]
-
-            let channels = ["Artist Channel", "Topic", "Vevo", "Official", "Live Archive", "Mixes"]
-            let durations = ["3:12", "3:45", "4:02", "2:58", "5:21", "3:33"]
-
-            searchResults = baseTitles.enumerated().map { idx, title in
-                SearchResult(
-                    title: title,
-                    channel: channels[idx % channels.count],
-                    duration: durations[idx % durations.count],
-                    // Placeholder URL per result; selecting will fill the URL field
-                    url: "https://www.youtube.com/watch?v=placeholder_\(idx + 1)"
-                )
-            }
-            isSearching = false
-        }
     }
 }
