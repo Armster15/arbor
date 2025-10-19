@@ -244,7 +244,9 @@ class AudioPlayerWithReverb: ObservableObject {
     }
     
     func stop() {
+        playerNode.stop()
         engine.stop()
+        
         isPlaying = false
         currentTime = 0
         seekOffset = 0
