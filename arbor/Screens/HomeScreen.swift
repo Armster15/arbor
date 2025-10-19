@@ -6,6 +6,32 @@
 import SwiftUI
 import UIKit
 
+struct SearchResult: Decodable {
+    let title: String
+    let artists: [String]?
+    let youtubeURL: String
+    let views: String?
+    let duration: String?
+    let isExplicit: Bool?
+    let thumbnailURL: String?
+    let thumbnailIsSquare: Bool?
+    let thumbnailWidth: Int?
+    let thumbnailHeight: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case artists
+        case youtubeURL = "youtube_url"
+        case views
+        case duration
+        case isExplicit = "is_explicit"
+        case thumbnailURL = "thumbnail_url"
+        case thumbnailIsSquare = "thumbnail_is_square"
+        case thumbnailWidth = "thumbnail_width"
+        case thumbnailHeight = "thumbnail_height"
+    }
+}
+
 struct HomeScreen: View {
     let canOpenPlayer: Bool
     let openPlayerAction: () -> Void
@@ -17,6 +43,7 @@ struct HomeScreen: View {
     @State private var errorMessage: String = ""
 
     @State private var searchQuery: String = ""
+    @State private var searchResults: [SearchResult] = []
 
     var body: some View {
         VStack(spacing: 20) {
@@ -97,12 +124,89 @@ struct HomeScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .searchable(text: $searchQuery, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search by title, artist, etc.")
         .onSubmit(of: .search) {
-//            performSearch()
+            performSearch()
+        }
+        .onChange(of: searchQuery) { newValue in
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty { searchResults = [] }
         }
         .searchSuggestions {
-            Text("🍎 Apple").searchCompletion("apple")
-            Text("🍐 Pear").searchCompletion("pear")
-            Text("🍌 Banana").searchCompletion("banana")
+            if searchResults.isEmpty {
+                Text("Try searching for a song title or artist")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(searchResults, id: \.youtubeURL) { item in
+                    Button {
+                        youtubeURL = item.youtubeURL
+                    } label: {
+                        HStack(spacing: 10) {
+                            // Cover art thumbnail
+                            if let urlString = item.thumbnailURL, let url = URL(string: urlString) {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ZStack {
+                                            Color.gray.opacity(0.2)
+                                            ProgressView().scaleEffect(0.7)
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 40, height: 40)
+                                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    case .failure:
+                                        ZStack {
+                                            Color.gray.opacity(0.2)
+                                            Image(systemName: "music.note")
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    @unknown default:
+                                        EmptyView()
+                                    }
+                                }
+                            } else {
+                                ZStack {
+                                    Color.gray.opacity(0.2)
+                                    Image(systemName: "music.note")
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(width: 40, height: 40)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title)
+                                    .lineLimit(1)
+                                if let artists = item.artists {
+                                    HStack(spacing: 6) {
+                                        if item.isExplicit == true {
+                                            Text("E")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 4)
+                                                .padding(.vertical, 1)
+                                                .background(Color.secondary)
+                                                .clipShape(RoundedRectangle(cornerRadius: 3))
+                                                .accessibilityLabel("Explicit")
+                                        }
+                                        Text(artists.joined(separator: ", "))
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .searchCompletion(item.title)
+                }
+            }
         }
         .alert("Download Failed", isPresented: $showError) {
             Button("OK") { }
@@ -144,6 +248,38 @@ result = download('\(trimmed)')
                     return
                 }
                 onDownloaded(meta)
+        }
+    }
+
+    private func performSearch() {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            searchResults = []
+            return
+        }
+
+        // Escape backslashes and single quotes for safe embedding in Python string literal
+        let escaped = trimmed
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+
+        let code = """
+from pytest_download import search
+result = search('\(escaped)')
+"""
+
+        pythonExecAndGetStringAsync(
+            code.trimmingCharacters(in: .whitespacesAndNewlines),
+            "result"
+        ) { result in
+            guard let output = result, !output.isEmpty,
+                  let data = output.data(using: .utf8),
+                  let items = try? JSONDecoder().decode([SearchResult].self, from: data) else {
+                // silently ignore and clear suggestions on failure
+                searchResults = []
+                return
+            }
+            searchResults = items
         }
     }
 
