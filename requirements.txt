@@ -1,1 +1,2 @@
+std-nslog
 yt-dlp

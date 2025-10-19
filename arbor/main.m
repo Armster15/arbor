@@ -172,7 +172,7 @@ int start_python_runtime(int argc, char *argv[]) {
         @try {
             // Set the name of the python NSLog bootstrap script
             nslog_script = [
-                [[NSBundle mainBundle] pathForResource:@"app_packages/nslog"
+                [[NSBundle mainBundle] pathForResource:@"python_modules/nslog"
                                                 ofType:@"py"] cStringUsingEncoding:NSUTF8StringEncoding];
             if (nslog_script == NULL) {
                 NSLog(@"No Python NSLog handler found. stdout/stderr will not be captured.");
