@@ -49,6 +49,7 @@ class AudioPlayerWithReverb: ObservableObject {
         setupRemoteCommands()
         
         // Default parameters
+        reverbNode.wetDryMix = reverbMix
         pitchNode.rate = speedRate
     }
     
