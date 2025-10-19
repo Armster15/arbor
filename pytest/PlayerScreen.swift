@@ -571,11 +571,7 @@ struct PlayerScreen: View {
                                 .foregroundColor(.secondary)
                         }
                         
-                        Slider(
-                            value: $audioPlayer.currentTime,
-                            in: 0...audioPlayer.duration,
-                        )
-                        .disabled(true)
+                        ProgressView(value: audioPlayer.currentTime, total: audioPlayer.duration)
                     }
                 }
                 
