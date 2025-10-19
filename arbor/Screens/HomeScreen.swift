@@ -103,6 +103,7 @@ struct HomeScreen: View {
                 }
             }
         }
+        .navigationTitle("🌳 Arbor")
         .searchable(text: $searchQuery, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search by title, artist, etc.")
         .onSubmit(of: .search) {
             performSearch()

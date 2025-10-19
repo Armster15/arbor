@@ -64,7 +64,6 @@ struct ContentView: View {
             )
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .navigationTitle("🌳 Arbor")
             
             .navigationDestination(for: Route.self) { route in
                 switch route {
