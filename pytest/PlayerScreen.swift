@@ -204,7 +204,7 @@ class AudioPlayerWithReverb: ObservableObject {
         }
     }
     
-    func play() {
+    func play(shouldRampVolume: Bool = true) {
         if !engine.isRunning {
             try? engine.start()
         }
@@ -213,7 +213,9 @@ class AudioPlayerWithReverb: ObservableObject {
         isPlaying = true
         
         // Fade in over 300ms with exponential curve
-        rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+        if shouldRampVolume == true {
+            rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+        }
         
         updateNowPlayingInfo()
         startDisplayLink()
@@ -361,10 +363,10 @@ class AudioPlayerWithReverb: ObservableObject {
         
         // Check if playback has finished
         if currentTime >= duration {
-            stop()
+            self.stop()
 
             if isLooping {
-                play()
+                self.play(shouldRampVolume: false)
             }
         }
     }
