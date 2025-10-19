@@ -229,7 +229,9 @@ class AudioPlayerWithReverb: ObservableObject {
         
         rampVolume(from: engine.mainMixerNode.outputVolume, to: 0.0, duration: 0.3) { [weak self] in
             guard let self = self else { return }
-            self.playerNode.pause()
+            
+            // VERY IMPORTANT: you MUST use engine.pause() or otherwise the command center breaks and still marks
+            // the audio as playing, and then you can't control the audio via the command center or your AirPods
             self.engine.pause()
         }
     }
