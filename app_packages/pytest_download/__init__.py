@@ -57,6 +57,9 @@ def download(url: str):
         full_path = os.path.abspath(filename)
         print(f"Downloaded file: {full_path}")
 
+        if info is None:
+            raise Exception("Failed to retrieve video information (manually thrown)")
+
         title = info.get("title") or Path(full_path).stem
         # Prefer artist, then uploader/channel, then None
         artist = (
