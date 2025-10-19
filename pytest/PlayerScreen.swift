@@ -140,21 +140,6 @@ class AudioPlayerWithReverb: ObservableObject {
         }
     }
     
-    func loadAudio(url: URL, metaTitle: String? = nil, metaArtist: String? = nil, metaArtworkURL: URL? = nil) throws {
-        audioFile = try AVAudioFile(forReading: url)
-        self.metaTitle = metaTitle
-        self.metaArtist = metaArtist
-        self.metaArtworkURL = metaArtworkURL
-        
-        // Calculate duration
-        if let file = audioFile {
-            let sampleRate = file.processingFormat.sampleRate
-            let frameCount = file.length
-            duration = Double(frameCount) / sampleRate
-        }
-        
-        updateNowPlayingInfo()
-    }
     
     private func updateNowPlayingInfo() {
         var nowPlayingInfo = [String: Any]()
@@ -201,12 +186,33 @@ class AudioPlayerWithReverb: ObservableObject {
         }
     }
     
+    func loadAudio(url: URL) throws {
+        let file = try AVAudioFile(forReading: url)
+        loadAudio(file: file)
+    }
+    
+    func loadAudio(file: AVAudioFile) {
+        let sampleRate = file.processingFormat.sampleRate
+        let frameCount = file.length
+        
+        self.seekOffset = 0
+        self.duration = Double(frameCount) / sampleRate
+        self.audioFile = file
+        
+        playerNode.scheduleFile(file, at: nil)
+        
+        updateNowPlayingInfo()
+    }
+    
+    func loadMetadata(title: String? = nil, artist: String? = nil, artworkURL: URL? = nil) {
+        self.metaTitle = title
+        self.metaArtist = artist
+        self.metaArtworkURL = artworkURL
+        
+        updateNowPlayingInfo()
+    }
+    
     func play() {
-        // Reset seek offset when starting from the beginning
-        guard let audioFile = audioFile else { return }
-        seekOffset = 0
-        playerNode.scheduleFile(audioFile, at: nil)
-                
         if !engine.isRunning {
             try? engine.start()
         }
@@ -243,7 +249,7 @@ class AudioPlayerWithReverb: ObservableObject {
         isLooping = !isLooping
     }
     
-    func stop() {
+    func stop(queueAudio: Bool = true) {
         playerNode.stop()
         engine.stop()
         
@@ -253,6 +259,14 @@ class AudioPlayerWithReverb: ObservableObject {
         
         updateNowPlayingInfo()
         stopDisplayLink()
+        
+        if queueAudio == true {
+            // schedule file so when `.play()` is called we have it queued up. we have to
+            // put it here since we can't check if `playerNode` has a file scheduled or not
+            if let file = self.audioFile {
+                self.loadAudio(file: file)
+            }
+        }
     }
     
     func seek(to time: TimeInterval) {
@@ -303,7 +317,7 @@ class AudioPlayerWithReverb: ObservableObject {
     }
     
     func teardown() {
-        stop()
+        self.stop(queueAudio: false)
 
         engine.reset()
         engine.disconnectNodeInput(reverbNode)

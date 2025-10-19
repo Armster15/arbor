@@ -47,10 +47,14 @@ struct ContentView: View {
                     let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
                     try? newAudioPlayer.loadAudio(
                         url: URL(string: meta.path)!,
-                        metaTitle: meta.title,
-                        metaArtist: meta.artist,
-                        metaArtworkURL: artworkURL
                     )
+                    
+                    newAudioPlayer.loadMetadata(
+                        title: meta.title,
+                        artist: meta.artist,
+                        artworkURL: artworkURL
+                    )
+                    
                     audioPlayer = newAudioPlayer
                     
                     if navPath.last != .player { navPath.append(.player) }
