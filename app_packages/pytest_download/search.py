@@ -10,7 +10,11 @@ def search(query: str):
     results = []
 
     for result in raw_results:
+        title = result.get("title")
         videoId = result.get("videoId")
+
+        if not title or not videoId:
+            continue
 
         thumbnail = result.get("thumbnails") and result["thumbnails"][-1]
         thumbnail_width = thumbnail and thumbnail.get("width")
