@@ -68,6 +68,14 @@ class AudioPlayerWithReverb: ObservableObject {
             let audioSession = AVAudioSession.sharedInstance()
             try audioSession.setCategory(.playback, mode: .default)
             try audioSession.setActive(true)
+            
+            // Listen for audio session interruptions (e.g., when switching to another app)
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleAudioSessionInterruption),
+                name: AVAudioSession.interruptionNotification,
+                object: nil
+            )            
         } catch {
             print("Failed to set up audio session: \(error)")
         }
@@ -311,6 +319,8 @@ class AudioPlayerWithReverb: ObservableObject {
     }
     
     func teardown() {
+        NotificationCenter.default.removeObserver(self)
+        
         self.stop(queueAudio: false)
 
         engine.reset()
@@ -431,6 +441,33 @@ class AudioPlayerWithReverb: ObservableObject {
     }
 
     
+    @objc private func handleAudioSessionInterruption(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+        
+        switch type {
+        case .began:
+            // Audio was interrupted (e.g., phone call, another app taking audio)
+            if isPlaying {
+                self.pause()
+            }
+        case .ended:
+            // Audio interruption ended
+            if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume) {
+                    // Resume playback if it was playing before interruption
+                    self.play()
+                }
+            }
+        @unknown default:
+            break
+        }
+    }
+
     @MainActor deinit {
         teardown()
     }
