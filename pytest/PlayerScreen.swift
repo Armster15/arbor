@@ -109,8 +109,7 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.previousTrackCommand.isEnabled = true
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            self.stop()
-            self.play()
+            self.seek(to: 0)
             return .success
         }
         
@@ -118,8 +117,7 @@ class AudioPlayerWithReverb: ObservableObject {
         commandCenter.nextTrackCommand.isEnabled = true
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            self.stop()
-            self.play()
+            self.seek(to: 0)
             return .success
         }
         
@@ -500,8 +498,7 @@ struct PlayerScreen: View {
                     HStack(spacing: 24) {
                         // Rewind
                         Button(action: {
-                            audioPlayer.stop()
-                            audioPlayer.play()
+                            audioPlayer.seek(to: 0)
                             
                         }) {
                             Image(systemName: "backward.end.circle.fill")
