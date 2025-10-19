@@ -171,6 +171,8 @@ int start_python_runtime(int argc, char *argv[]) {
 
         @try {
             // Set the name of the python NSLog bootstrap script
+            // Source: https://github.com/beeware/std-nslog/blob/main/nslog.py
+            // This file is installed to `python_modules` by pip via the installation of the `std-nslog` PyPi package 
             nslog_script = [
                 [[NSBundle mainBundle] pathForResource:@"python_modules/nslog"
                                                 ofType:@"py"] cStringUsingEncoding:NSUTF8StringEncoding];
