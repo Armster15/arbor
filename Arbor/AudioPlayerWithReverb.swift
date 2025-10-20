@@ -336,7 +336,7 @@ class AudioPlayerWithReverb: ObservableObject {
                     self.seek(to: 0)
                     self.play(shouldRampVolume: false)
                 } else {
-                    self.stopDisplayAndTimersOnly()
+                    self.stop()
                 }
             }
         }
@@ -363,7 +363,7 @@ class AudioPlayerWithReverb: ObservableObject {
     
     private func startProgressTimer() {
         stopProgressTimer()
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             self?.updateCurrentTimeThrottled()
         }
         if let progressTimer {
@@ -403,12 +403,6 @@ class AudioPlayerWithReverb: ObservableObject {
         }
     }
 
-    private func stopDisplayAndTimersOnly() {
-        isPlaying = false
-        stopProgressTimer()
-        updateNowPlayingInfo()
-    }
-    
     // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
     func setPitchByCents(_ cents: Float) {
         let clamped = min(max(cents, -2400), 2400)
