@@ -31,8 +31,8 @@ class AudioPlayerWithReverb: ObservableObject {
     private var seekOffset: AVAudioFramePosition = 0 // to track which frame we seeked to
     private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
     private var displayLink: CADisplayLink?
-    private var lastPostedSecond: Int = -1
-    private var playbackGeneration: Int = 0
+    private var lastPostedSecond: Int = -1 // stores the last second that was posted to the now playing info so we don't spam updates
+    private var playbackGeneration: Int = 0 // multiple segments may be in flight at once (e.g. you seek to an arbitrary position), so this is used to ignore outdated callback invocations
     
     // now playing metadata
     private var metaTitle: String?
