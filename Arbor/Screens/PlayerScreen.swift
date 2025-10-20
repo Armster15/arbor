@@ -300,7 +300,8 @@ struct PlayerScreen: View {
                                         Double(audioPlayer.reverbMix)
                                     },
                                     set: { newVal in
-                                        audioPlayer.setReverbMix(Float(newVal))
+                                        let snapped = (newVal / 5.0).rounded() * 5.0
+                                        audioPlayer.setReverbMix(Float(snapped))
                                     }
                                 ),
                                 in: 0...100,
