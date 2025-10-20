@@ -8,7 +8,6 @@ import AVFoundation
 import MediaPlayer
 import SDWebImage
 
-@MainActor
 class AudioPlayerWithReverb: ObservableObject {
     private var engine: AVAudioEngine
     private var playerNode: AVAudioPlayerNode
@@ -473,7 +472,7 @@ class AudioPlayerWithReverb: ObservableObject {
         }
     }
 
-    @MainActor deinit {
+    deinit {
         teardown()
     }
 }
