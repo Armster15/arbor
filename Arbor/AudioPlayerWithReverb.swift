@@ -329,14 +329,6 @@ class AudioPlayerWithReverb: ObservableObject {
         
         self.stop(queueAudio: false)
 
-        engine.disconnectNodeOutput(reverbNode)
-        engine.disconnectNodeOutput(pitchNode)
-        engine.disconnectNodeOutput(playerNode)
-
-        engine.disconnectNodeInput(reverbNode)
-        engine.disconnectNodeInput(pitchNode)
-        engine.disconnectNodeInput(playerNode)
-
         engine.detach(reverbNode)
         engine.detach(pitchNode)
         engine.detach(playerNode)
