@@ -362,6 +362,7 @@ struct HomeScreen: View {
     @State private var searchIsActive = false
     @State private var isSearching = false
     @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
+    @State private var currentSearchTaskId: UUID = UUID()
 
     var body: some View {
         Group {
@@ -431,6 +432,9 @@ struct HomeScreen: View {
             return
         }
 
+        // Generate a new unique task ID for this search request
+        let taskId = UUID()
+        currentSearchTaskId = taskId
         isSearching = true
 
         // Escape backslashes and single quotes for safe embedding in Python string literal
@@ -447,6 +451,11 @@ result = search('\(escaped)')
             code.trimmingCharacters(in: .whitespacesAndNewlines),
             "result"
         ) { result in
+            // Only update UI if this is still the current search task
+            guard taskId == currentSearchTaskId else {
+                return // This request is outdated, ignore the result
+            }
+            
             defer { isSearching = false }
             guard let output = result, !output.isEmpty,
                   let data = output.data(using: .utf8),
