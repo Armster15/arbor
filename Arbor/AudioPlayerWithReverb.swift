@@ -28,9 +28,10 @@ class AudioPlayerWithReverb: ObservableObject {
     // properties just for showing the currentTime/duration
     @Published public var currentTime: TimeInterval = 0.0
     @Published public var duration: TimeInterval = 0.0
-    private var displayLink: CADisplayLink? // timer that synchronizes with the screen's refresh rate
     private var seekOffset: AVAudioFramePosition = 0 // to track which frame we seeked to
     private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
+    private var progressTimer: Timer?
+    private var lastPostedSecond: Int = -1
     
     // now playing metadata
     private var metaTitle: String?
@@ -48,6 +49,10 @@ class AudioPlayerWithReverb: ObservableObject {
         setupAudioEngine()
         setupAudioSession()
         setupRemoteCommands()
+        
+        // Observe app lifecycle to avoid background timer work
+        NotificationCenter.default.addObserver(self, selector: #selector(handleAppDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleAppWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
         
         // Default parameters
         reverbNode.wetDryMix = reverbMix
@@ -188,9 +193,10 @@ class AudioPlayerWithReverb: ObservableObject {
         self.seekOffset = 0
         self.duration = Double(frameCount) / sampleRate
         self.audioFile = file
-        
-        playerNode.scheduleFile(file, at: nil)
-        
+
+        // Schedule from the beginning with completion handler
+        schedule(from: 0)
+
         updateNowPlayingInfo()
     }
     
@@ -222,32 +228,26 @@ class AudioPlayerWithReverb: ObservableObject {
         // Fade in over 300ms with exponential curve, but *not* when starting from the beginning
         let justStarted = currentTime <= 0.05 && seekOffset == 0
         if shouldRampVolume == true && !justStarted {
-            rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+            // ramp down/up on resume to avoid pops while keeping CPU low
+            rampVolume(from: engine.mainMixerNode.outputVolume, to: 1.0, duration: 0.25)
         } else {
             // required to override any race conditions where we may already be ramping the volume at some point
             engine.mainMixerNode.outputVolume = 1.0
         }
         
         updateNowPlayingInfo()
-        startDisplayLink()
+        startProgressTimer()
     }
     
     func pause() {
         isPlaying = false
         
         updateNowPlayingInfo()
-        stopDisplayLink()
+        stopProgressTimer()
         
-        rampVolume(from: engine.mainMixerNode.outputVolume, to: 0.0, duration: 0.3) { [weak self] in
-            guard let self = self else { return }
-            
-            
-            // VERY IMPORTANT: you MUST also use engine.pause() or otherwise the command center breaks and still marks
-            // the audio as playing, and then you can't control the audio via the command center or your AirPods.
-            // playerNode.pause() is required for syncing the correct currentTime
-            playerNode.pause()
-            self.engine.pause()
-        }
+        playerNode.pause()
+        self.engine.pause()
+        
     }
 
     func toggleLoop() {
@@ -263,7 +263,7 @@ class AudioPlayerWithReverb: ObservableObject {
         seekOffset = 0
         
         updateNowPlayingInfo()
-        stopDisplayLink()
+        stopProgressTimer()
         
         if queueAudio == true {
             // schedule file so when `.play()` is called we have it queued up. we have to
@@ -292,22 +292,12 @@ class AudioPlayerWithReverb: ObservableObject {
         
         // Store the seek offset so updateCurrentTime can calculate correctly
         seekOffset = clampedFrame
-        
-        // Calculate the frames remaining from the seek position
-        let frameCount = AVAudioFrameCount(audioFile.length - clampedFrame)
-        
+                
         // Update current time
         currentTime = Double(clampedFrame) / sampleRate
         
         // Schedule the segment from the seek position to the end
-        if frameCount > 0 {
-            playerNode.scheduleSegment(
-                audioFile,
-                startingFrame: clampedFrame,
-                frameCount: frameCount,
-                at: nil
-            )
-        }
+        schedule(from: clampedFrame)
         
         // Resume playback if we were playing
         if wasPlaying {
@@ -315,10 +305,32 @@ class AudioPlayerWithReverb: ObservableObject {
                 try? engine.start()
             }
             playerNode.play()
-            startDisplayLink()
+            startProgressTimer()
         }
         
         updateNowPlayingInfo()
+    }
+
+    private func schedule(from frame: AVAudioFramePosition) {
+        guard let audioFile = audioFile else { return }
+        let remaining = AVAudioFrameCount(audioFile.length - frame)
+        guard remaining > 0 else { return }
+        playerNode.scheduleSegment(
+            audioFile,
+            startingFrame: frame,
+            frameCount: remaining,
+            at: nil
+        ) { [weak self] in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if self.isLooping {
+                    self.seek(to: 0)
+                    self.play(shouldRampVolume: false)
+                } else {
+                    self.stopDisplayAndTimersOnly()
+                }
+            }
+        }
     }
     
     func teardown() {
@@ -339,58 +351,75 @@ class AudioPlayerWithReverb: ObservableObject {
         metaTitle = title
         updateNowPlayingInfo()
     }
-        
-    private func startDisplayLink() {
-        stopDisplayLink()
-        displayLink = CADisplayLink(target: self, selector: #selector(updateCurrentTime))
-        displayLink?.add(to: .main, forMode: .common)
+    
+    private func startProgressTimer() {
+        stopProgressTimer()
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.updateCurrentTimeThrottled()
+        }
+        if let progressTimer {
+            RunLoop.main.add(progressTimer, forMode: .common)
+        }
+    }
+
+    private func stopProgressTimer() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+        lastPostedSecond = -1
     }
     
-    private func stopDisplayLink() {
-        displayLink?.invalidate()
-        displayLink = nil
-    }
-    
-    @objc private func updateCurrentTime() {
+    @objc private func updateCurrentTimeThrottled() {
         guard let nodeTime = playerNode.lastRenderTime,
               let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
               let audioFile = audioFile else {
             return
         }
-        
-        let sampleRate = audioFile.processingFormat.sampleRate
-        // Add seek offset to get the actual position in the file
-        let currentFrame = playerTime.sampleTime + seekOffset
-        
-        // Calculate elapsed time based on frames played
-        currentTime = Double(currentFrame) / sampleRate
-        
-        // Update Now Playing elapsed time
-        if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
-            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-        }
-        
-        // Check if playback has finished
-        if currentTime >= duration {
-            self.stop()
 
-            if isLooping {
-                self.play(shouldRampVolume: false)
+        let sampleRate = audioFile.processingFormat.sampleRate
+        let currentFrame = playerTime.sampleTime + seekOffset
+        let newTime = Double(currentFrame) / sampleRate
+
+        // Only update published time on second boundaries to reduce UI work
+        if Int(newTime) != Int(currentTime) {
+            currentTime = newTime
+        }
+
+        let currentSecond = Int(newTime.rounded(.down))
+        if currentSecond != lastPostedSecond {
+            lastPostedSecond = currentSecond
+            if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
+                nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = newTime
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
             }
         }
+    }
+
+    private func stopDisplayAndTimersOnly() {
+        isPlaying = false
+        stopProgressTimer()
+        updateNowPlayingInfo()
     }
     
     // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
     func setPitchByCents(_ cents: Float) {
-        pitchNode.pitch = min(max(cents, -2400), 2400)
-        pitchCents = pitchNode.pitch
+        let clamped = min(max(cents, -2400), 2400)
+        if pitchNode.pitch != clamped {
+            pitchNode.pitch = clamped
+        }
+        if pitchCents != pitchNode.pitch {
+            pitchCents = pitchNode.pitch
+        }
     }
     
     // Adjust playback speed (0.25x ... 2.0x)
     func setSpeedRate(_ newRate: Float) {
-        pitchNode.rate = min(max(newRate, 0.25), 2.0)
-        speedRate = pitchNode.rate
+        let clamped = min(max(newRate, 0.25), 2.0)
+        if pitchNode.rate != clamped {
+            pitchNode.rate = clamped
+        }
+        if speedRate != pitchNode.rate {
+            speedRate = pitchNode.rate
+        }
         
         // Update Now Playing info with new playback rate
         if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
@@ -401,16 +430,22 @@ class AudioPlayerWithReverb: ObservableObject {
         
     // Adjust reverb intensity (0-100)
     func setReverbMix(_ mix: Float) {
-        reverbNode.wetDryMix = min(max(mix, 0), 100)
-        reverbMix = reverbNode.wetDryMix
+        let clamped = min(max(mix, 0), 100)
+        if reverbNode.wetDryMix != clamped {
+            reverbNode.wetDryMix = clamped
+        }
+        if reverbMix != reverbNode.wetDryMix {
+            reverbMix = reverbNode.wetDryMix
+        }
     }
     
     private func rampVolume(from startVolume: Float, to endVolume: Float, duration: TimeInterval, completion: (() -> Void)? = nil) {
         // Cancel any existing ramp timer to prevent race conditions
         volumeRampTimer?.invalidate()
         
-        let steps = 60 // More steps for smoother transition
-        let stepDuration = duration / Double(steps)
+        let cappedDuration = min(duration, 0.25)
+        let steps = 24 // Fewer steps to reduce timer work
+        let stepDuration = cappedDuration / Double(steps)
         
         var currentStep = 0
         volumeRampTimer = Timer.scheduledTimer(withTimeInterval: stepDuration, repeats: true) { [weak self] timer in
@@ -474,6 +509,17 @@ class AudioPlayerWithReverb: ObservableObject {
 
     deinit {
         teardown()
+        stopProgressTimer()
+    }
+
+    @objc private func handleAppDidEnterBackground() {
+        stopProgressTimer()
+    }
+
+    @objc private func handleAppWillEnterForeground() {
+        if isPlaying {
+            startProgressTimer()
+        }
     }
 }
 
