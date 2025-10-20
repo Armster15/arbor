@@ -48,9 +48,7 @@ struct ContentView: View {
                     
                     let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
                     if let artworkURL = artworkURL {
-                        Task { // will not block the ui
-                            await newAudioPlayer.loadMetadataArtwork(url: artworkURL)
-                        }
+                        newAudioPlayer.loadMetadataArtwork(url: artworkURL)
                     }
                     
                     audioPlayer = newAudioPlayer
