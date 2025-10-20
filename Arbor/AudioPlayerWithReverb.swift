@@ -364,7 +364,7 @@ class AudioPlayerWithReverb: ObservableObject {
     
     private func startDisplayLink() {
         stopDisplayLink()
-        displayLink = CADisplayLink(target: self, selector: #selector(updateCurrentTimeThrottled))
+        displayLink = CADisplayLink(target: self, selector: #selector(updateCurrentTime))
         displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 2, maximum: 4, preferred: 3)
         displayLink?.add(to: .main, forMode: .common)
     }
@@ -375,7 +375,7 @@ class AudioPlayerWithReverb: ObservableObject {
         lastPostedSecond = -1
     }
     
-    @objc private func updateCurrentTimeThrottled() {
+    @objc private func updateCurrentTime() {
         guard let nodeTime = playerNode.lastRenderTime,
               let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
               let audioFile = audioFile else {
