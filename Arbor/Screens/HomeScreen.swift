@@ -33,13 +33,39 @@ struct SearchResult: Decodable, Equatable {
 
 struct SearchResultsView: View {
     let searchResults: [SearchResult]
+    let searchQuery: String
+    let isSearching: Bool
     let onResultSelected: (SearchResult) -> Void
     let onDismiss: () -> Void
     
     var body: some View {
         VStack(spacing: 0) {            
             // Results List
-            if searchResults.isEmpty {
+            if searchQuery.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    
+                    Text("Search for a song or artist")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+            } else if isSearching && searchResults.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    
+                    Text("Searching...")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+            } else if searchResults.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 48))
@@ -336,26 +362,25 @@ struct HomeScreen: View {
     @State private var searchQuery: String = ""
     @State private var searchResults: [SearchResult] = []
     @State private var searchIsActive = false
-    @State private var showSearchResults = false
     @State private var isSearching = false
     @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
 
     var body: some View {
         Group {
-            if showSearchResults {
+            if searchIsActive {
                 // Search Results View
                 SearchResultsView(
                     searchResults: searchResults,
+                    searchQuery: searchQuery,
+                    isSearching: isSearching,
                     onResultSelected: { result in
                         youtubeURL = result.youtubeURL
-                        showSearchResults = false
                         searchIsActive = false
                         searchQuery = ""
                         searchResults = []
                         isSearching = false
                     },
                     onDismiss: {
-                        showSearchResults = false
                         searchIsActive = false
                         searchQuery = ""
                         searchResults = []
@@ -380,20 +405,6 @@ struct HomeScreen: View {
             placement: .navigationBarDrawer(displayMode: .automatic),
             prompt: "Search for music"
         )
-        .searchSuggestions {
-            if isSearching && searchResults.isEmpty {
-                VStack {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Searching...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal)
-                }
-            }
-        }
         .onSubmit(of: .search) {
             performSearch()
         }
@@ -402,13 +413,11 @@ struct HomeScreen: View {
                 performSearch()
             } else {
                 searchResults = []
-                showSearchResults = false
                 isSearching = false
             }
         }
         .onChange(of: searchIsActive) { _, isActive in
             if !isActive {
-                showSearchResults = false
                 searchQuery = ""
                 searchResults = []
                 isSearching = false
@@ -420,7 +429,6 @@ struct HomeScreen: View {
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             searchResults = []
-            showSearchResults = false
             isSearching = false
             return
         }
@@ -447,11 +455,9 @@ result = search('\(escaped)')
                   let items = try? JSONDecoder().decode([SearchResult].self, from: data) else {
                 // silently ignore and clear suggestions on failure
                 searchResults = []
-                showSearchResults = false
                 return
             }
             searchResults = items
-            showSearchResults = true
         }
     }
 }
