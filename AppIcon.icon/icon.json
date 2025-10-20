@@ -62,13 +62,14 @@
               }
             }
           ],
+          "glass" : true,
           "image-name" : "tree 3.svg",
           "name" : "tree 3",
           "position" : {
-            "scale" : 3.3,
+            "scale" : 4.75,
             "translation-in-points" : [
-              0,
-              0
+              -53.1036845923968,
+              -73.88022554713393
             ]
           }
         }
