@@ -30,7 +30,7 @@ class AudioPlayerWithReverb: ObservableObject {
     @Published public var duration: TimeInterval = 0.0
     private var seekOffset: AVAudioFramePosition = 0 // to track which frame we seeked to
     private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
-    private var progressTimer: Timer?
+    private var displayLink: CADisplayLink?
     private var lastPostedSecond: Int = -1
     private var playbackGeneration: Int = 0
     
@@ -236,14 +236,14 @@ class AudioPlayerWithReverb: ObservableObject {
         }
         
         updateNowPlayingInfo()
-        startProgressTimer()
+        startDisplayLink()
     }
     
     func pause() {
         isPlaying = false
         
         updateNowPlayingInfo()
-        stopProgressTimer()
+        stopDisplayLink()
         
         rampVolume(from: engine.mainMixerNode.outputVolume, to: 0.0, duration: 0.3) { [weak self] in
             guard let self = self else { return }
@@ -270,7 +270,7 @@ class AudioPlayerWithReverb: ObservableObject {
         seekOffset = 0
         
         updateNowPlayingInfo()
-        stopProgressTimer()
+        stopDisplayLink()
         
         if queueAudio == true {
             // schedule file so when `.play()` is called we have it queued up. we have to
@@ -312,7 +312,7 @@ class AudioPlayerWithReverb: ObservableObject {
                 try? engine.start()
             }
             playerNode.play()
-            startProgressTimer()
+            startDisplayLink()
         }
         
         updateNowPlayingInfo()
@@ -354,6 +354,7 @@ class AudioPlayerWithReverb: ObservableObject {
         engine.reset()
 
         audioFile = nil
+        stopDisplayLink()
     }
 
     func updateTitle(title: String) {
@@ -361,19 +362,16 @@ class AudioPlayerWithReverb: ObservableObject {
         updateNowPlayingInfo()
     }
     
-    private func startProgressTimer() {
-        stopProgressTimer()
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            self?.updateCurrentTimeThrottled()
-        }
-        if let progressTimer {
-            RunLoop.main.add(progressTimer, forMode: .common)
-        }
+    private func startDisplayLink() {
+        stopDisplayLink()
+        displayLink = CADisplayLink(target: self, selector: #selector(updateCurrentTimeThrottled))
+        displayLink?.preferredFramesPerSecond = 10  // Limit to ~10 Hz for battery efficiency
+        displayLink?.add(to: .main, forMode: .common)
     }
 
-    private func stopProgressTimer() {
-        progressTimer?.invalidate()
-        progressTimer = nil
+    private func stopDisplayLink() {
+        displayLink?.invalidate()
+        displayLink = nil
         lastPostedSecond = -1
     }
     
@@ -388,11 +386,10 @@ class AudioPlayerWithReverb: ObservableObject {
         let currentFrame = playerTime.sampleTime + seekOffset
         let newTime = Double(currentFrame) / sampleRate
 
-        // Only update published time on second boundaries to reduce UI work
-        if Int(newTime) != Int(currentTime) {
-            currentTime = newTime
-        }
+        // Update published time on every frame for smooth UI
+        currentTime = newTime
 
+        // Throttle MPNowPlayingInfo updates to whole seconds only
         let currentSecond = Int(newTime.rounded(.down))
         if currentSecond != lastPostedSecond {
             lastPostedSecond = currentSecond
@@ -514,16 +511,15 @@ class AudioPlayerWithReverb: ObservableObject {
 
     deinit {
         teardown()
-        stopProgressTimer()
     }
 
     @objc private func handleAppDidEnterBackground() {
-        stopProgressTimer()
+        stopDisplayLink()
     }
 
     @objc private func handleAppWillEnterForeground() {
         if isPlaying {
-            startProgressTimer()
+            startDisplayLink()
         }
     }
 }
