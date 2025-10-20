@@ -14,6 +14,7 @@ Arbor's core app is built in Swift, but it uniquely ships an embedded version of
   
 ```
 curl -L -O https://github.com/beeware/Python-Apple-support/releases/download/3.14-b8/Python-3.14-iOS-support.b8.tar.gz
+echo "c00c95c6f53878f70fcd60013249af4f8d23a0d6d5d428fd5b273c1a7114cdc4  Python-3.14-iOS-support.b8.tar.gz" | shasum -a 256 -c
 tar -xzf Python-3.14-iOS-support.b8.tar.gz
 rm Python-3.14-iOS-support.b8.tar.gz
 ```
