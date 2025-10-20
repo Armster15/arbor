@@ -254,7 +254,7 @@ class AudioPlayerWithReverb: ObservableObject {
             // playerNode.pause() is required for syncing the correct currentTime
             playerNode.pause()
             self.engine.pause()
-        }        
+        }
     }
 
     func toggleLoop() {
