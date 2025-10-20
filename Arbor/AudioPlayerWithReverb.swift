@@ -229,8 +229,7 @@ class AudioPlayerWithReverb: ObservableObject {
         // Fade in over 300ms with exponential curve, but *not* when starting from the beginning
         let justStarted = currentTime <= 0.05 && seekOffset == 0
         if shouldRampVolume == true && !justStarted {
-            // ramp down/up on resume to avoid pops while keeping CPU low
-            rampVolume(from: engine.mainMixerNode.outputVolume, to: 1.0, duration: 0.25)
+            rampVolume(from: 0.0, to: 1.0, duration: 0.3)
         } else {
             // required to override any race conditions where we may already be ramping the volume at some point
             engine.mainMixerNode.outputVolume = 1.0
@@ -246,9 +245,16 @@ class AudioPlayerWithReverb: ObservableObject {
         updateNowPlayingInfo()
         stopProgressTimer()
         
-        playerNode.pause()
-        self.engine.pause()
-        
+        rampVolume(from: engine.mainMixerNode.outputVolume, to: 0.0, duration: 0.3) { [weak self] in
+            guard let self = self else { return }
+            
+            
+            // VERY IMPORTANT: you MUST also use engine.pause() or otherwise the command center breaks and still marks
+            // the audio as playing, and then you can't control the audio via the command center or your AirPods.
+            // playerNode.pause() is required for syncing the correct currentTime
+            playerNode.pause()
+            self.engine.pause()
+        }        
     }
 
     func toggleLoop() {
@@ -446,12 +452,11 @@ class AudioPlayerWithReverb: ObservableObject {
         // Cancel any existing ramp timer to prevent race conditions
         volumeRampTimer?.invalidate()
         
-        let cappedDuration = min(duration, 0.25)
-        let steps = 24 // Fewer steps to reduce timer work
-        let stepDuration = cappedDuration / Double(steps)
+        let steps = 60 // More steps for smoother transition
+        let stepDuration = duration / Double(steps)
         
         var currentStep = 0
-        volumeRampTimer = Timer.scheduledTimer(withTimeInterval: stepDuration, repeats: true) { [weak self] timer in
+        let timer = Timer(timeInterval: stepDuration, repeats: true) { [weak self] timer in
             guard let self = self else {
                 timer.invalidate()
                 return
@@ -480,6 +485,9 @@ class AudioPlayerWithReverb: ObservableObject {
                 completion?()
             }
         }
+        timer.tolerance = stepDuration * 0.2
+        RunLoop.main.add(timer, forMode: .common)
+        volumeRampTimer = timer
     }
 
     
