@@ -365,7 +365,7 @@ class AudioPlayerWithReverb: ObservableObject {
     private func startDisplayLink() {
         stopDisplayLink()
         displayLink = CADisplayLink(target: self, selector: #selector(updateCurrentTimeThrottled))
-        displayLink?.preferredFramesPerSecond = 10  // Limit to ~10 Hz for battery efficiency
+        displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 2, maximum: 4, preferred: 3)
         displayLink?.add(to: .main, forMode: .common)
     }
 
