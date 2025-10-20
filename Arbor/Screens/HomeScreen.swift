@@ -361,7 +361,7 @@ struct HomeScreen: View {
     @State private var searchResults: [SearchResult] = []
     @State private var searchIsActive = false
     @State private var isSearching = false
-    @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
+    @State private var youtubeURL: String = ""
     @State private var currentSearchTaskId: UUID = UUID()
     @State private var searchDebounceTimer: Timer?
 
