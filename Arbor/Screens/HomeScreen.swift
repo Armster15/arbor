@@ -351,6 +351,7 @@ struct HomeScreen: View {
     @State private var searchResults: [SearchResult] = []
     @State private var searchIsActive = false
     @State private var showSearchResults = false
+    @State private var isSearching = false
     @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
 
     var body: some View {
@@ -365,12 +366,14 @@ struct HomeScreen: View {
                         searchIsActive = false
                         searchQuery = ""
                         searchResults = []
+                        isSearching = false
                     },
                     onDismiss: {
                         showSearchResults = false
                         searchIsActive = false
                         searchQuery = ""
                         searchResults = []
+                        isSearching = false
                     }
                 )
             } else {
@@ -385,11 +388,39 @@ struct HomeScreen: View {
         }
         .navigationTitle("🌳 Arbor")
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if isSearching {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Searching")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
         .searchable(
             text: $searchQuery,
             isPresented: $searchIsActive,
             placement: .navigationBarDrawer(displayMode: .automatic),
+            prompt: isSearching ? "Searching..." : "Search for music"
         )
+        .searchSuggestions {
+            if isSearching && searchResults.isEmpty {
+                VStack {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Searching...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                }
+            }
+        }
         .onSubmit(of: .search) {
             performSearch()
         }
@@ -399,6 +430,7 @@ struct HomeScreen: View {
             } else {
                 searchResults = []
                 showSearchResults = false
+                isSearching = false
             }
         }
         .onChange(of: searchIsActive) { _, isActive in
@@ -406,6 +438,7 @@ struct HomeScreen: View {
                 showSearchResults = false
                 searchQuery = ""
                 searchResults = []
+                isSearching = false
             }
         }
     }
@@ -415,8 +448,11 @@ struct HomeScreen: View {
         guard !trimmed.isEmpty else {
             searchResults = []
             showSearchResults = false
+            isSearching = false
             return
         }
+
+        isSearching = true
 
         // Escape backslashes and single quotes for safe embedding in Python string literal
         let escaped = trimmed
@@ -432,6 +468,7 @@ result = search('\(escaped)')
             code.trimmingCharacters(in: .whitespacesAndNewlines),
             "result"
         ) { result in
+            defer { isSearching = false }
             guard let output = result, !output.isEmpty,
                   let data = output.data(using: .utf8),
                   let items = try? JSONDecoder().decode([SearchResult].self, from: data) else {
