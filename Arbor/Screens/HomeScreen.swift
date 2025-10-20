@@ -363,6 +363,7 @@ struct HomeScreen: View {
     @State private var isSearching = false
     @State private var youtubeURL: String = "https://www.youtube.com/watch?v=St0s7R_qDhY"
     @State private var currentSearchTaskId: UUID = UUID()
+    @State private var searchDebounceTimer: Timer?
 
     var body: some View {
         Group {
@@ -409,18 +410,38 @@ struct HomeScreen: View {
         }
         .onChange(of: searchQuery) { _, newValue in
             if !newValue.isEmpty {
-                performSearch()
+                performDebouncedSearch()
             } else {
+                // Cancel any pending search and clear results immediately
+                searchDebounceTimer?.invalidate()
+                searchDebounceTimer = nil
                 searchResults = []
                 isSearching = false
             }
         }
         .onChange(of: searchIsActive) { _, isActive in
             if !isActive {
+                // Cancel any pending search when dismissing search
+                searchDebounceTimer?.invalidate()
+                searchDebounceTimer = nil
                 searchQuery = ""
                 searchResults = []
                 isSearching = false
             }
+        }
+        .onDisappear {
+            // Clean up timer when view disappears
+            searchDebounceTimer?.invalidate()
+            searchDebounceTimer = nil
+        }
+    }
+
+    private func performDebouncedSearch() {
+        searchDebounceTimer?.invalidate()
+        
+        // Create a new timer with 0.25 second delay
+        searchDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { _ in
+            performSearch()
         }
     }
 
