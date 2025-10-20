@@ -58,6 +58,7 @@ struct SearchResultsView: View {
                     ProgressView()
                         .scaleEffect(1.5)
                         .progressViewStyle(CircularProgressViewStyle(tint: .secondary))
+                        .accessibilityLabel("Searching...")
                     
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
