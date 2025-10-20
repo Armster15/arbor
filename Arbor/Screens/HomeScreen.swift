@@ -5,7 +5,7 @@
 
 import SwiftUI
 
-struct SearchResult: Decodable {
+struct SearchResult: Decodable, Equatable {
     let title: String
     let artists: [String]?
     let youtubeURL: String
@@ -31,6 +31,176 @@ struct SearchResult: Decodable {
     }
 }
 
+struct SearchResultsView: View {
+    let searchResults: [SearchResult]
+    let onResultSelected: (SearchResult) -> Void
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Search Results")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Button("Done") {
+                    onDismiss()
+                }
+                .foregroundColor(.blue)
+            }
+            .background(Color(.systemBackground))
+            
+            Divider()
+            
+            // Results List
+            if searchResults.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    
+                    Text("No results found")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Try searching for a song title or artist")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(searchResults, id: \.youtubeURL) { result in
+                            SearchResultRow(result: result) {
+                                onResultSelected(result)
+                            }
+                            
+                            if result != searchResults.last {
+                                Divider()
+                                    .padding(.leading, 60)
+                            }
+                        }
+                    }
+                }
+                .background(Color(.systemBackground))
+            }
+        }
+        .background(Color(.systemBackground))
+    }
+}
+
+struct SearchResultRow: View {
+    let result: SearchResult
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                // Thumbnail
+                Group {
+                    if let urlString = result.thumbnailURL, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ZStack {
+                                    Color.gray.opacity(0.2)
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                }
+                                .frame(width: 50, height: 50)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            case .failure:
+                                ZStack {
+                                    Color.gray.opacity(0.2)
+                                    Image(systemName: "music.note")
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(width: 50, height: 50)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
+                    } else {
+                        ZStack {
+                            Color.gray.opacity(0.2)
+                            Image(systemName: "music.note")
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(width: 50, height: 50)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+                
+                // Content
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(result.title)
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    
+                    if let artists = result.artists {
+                        HStack(spacing: 6) {
+                            if result.isExplicit == true {
+                                Text("E")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(Color.secondary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                                    .accessibilityLabel("Explicit")
+                            }
+                            
+                            Text(artists.joined(separator: ", "))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    
+                    HStack(spacing: 8) {
+                        if let duration = result.duration {
+                            Text(duration)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        if let views = result.views {
+                            Text(views)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
 struct HomeScreen: View {
     let canOpenPlayer: Bool
     let openPlayerAction: () -> Void
@@ -43,170 +213,129 @@ struct HomeScreen: View {
 
     @State private var searchQuery: String = ""
     @State private var searchResults: [SearchResult] = []
+    @State private var searchIsActive = false
+    @State private var showSearchResults = false
 
     var body: some View {
-        VStack(spacing: 20) {
+        Group {
+            if showSearchResults {
+                // Search Results View
+                SearchResultsView(
+                    searchResults: searchResults,
+                    onResultSelected: { result in
+                        youtubeURL = result.youtubeURL
+                        showSearchResults = false
+                        searchIsActive = false
+                        searchQuery = ""
+                        searchResults = []
+                    },
+                    onDismiss: {
+                        showSearchResults = false
+                        searchIsActive = false
+                        searchQuery = ""
+                        searchResults = []
+                    }
+                )
+            } else {
+                // Main Home Screen Content
+                VStack(spacing: 20) {
+                    // URL Input Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("YouTube URL")
+                            .font(.headline)
 
-            // URL Input Section
-            VStack(alignment: .leading, spacing: 8) {
-                Text("YouTube URL")
-                    .font(.headline)
-
-                TextField("Enter YouTube URL", text: $youtubeURL)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .disabled(isLoading)
-                    .padding(.trailing, 36)
-                    .overlay(alignment: .trailing) {
-                        Button(action: {
-                            if let clipboard = UIPasteboard.general.string {
-                                youtubeURL = clipboard
+                        TextField("Enter YouTube URL", text: $youtubeURL)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .disabled(isLoading)
+                            .padding(.trailing, 36)
+                            .overlay(alignment: .trailing) {
+                                Button(action: {
+                                    if let clipboard = UIPasteboard.general.string {
+                                        youtubeURL = clipboard
+                                    }
+                                }) {
+                                    Image(systemName: "doc.on.clipboard")
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.trailing, 8)
+                                .accessibilityLabel("Paste from clipboard")
                             }
-                        }) {
-                            Image(systemName: "doc.on.clipboard")
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.trailing, 8)
-                        .accessibilityLabel("Paste from clipboard")
-                    }
-                    // select all text when text field is focused
-                    // https://stackoverflow.com/a/67502495
-                    .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { obj in
-                        if let textField = obj.object as? UITextField {
-                            textField.selectedTextRange = textField.textRange(from: textField.beginningOfDocument, to: textField.endOfDocument)
-                        }
-                    }
-            }
-
-            // Download Button
-            Button(action: downloadAudio) {
-                HStack {
-                    if isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    } else {
-                        Image(systemName: "arrow.down.circle.fill")
+                            // select all text when text field is focused
+                            // https://stackoverflow.com/a/67502495
+                            .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { obj in
+                                if let textField = obj.object as? UITextField {
+                                    textField.selectedTextRange = textField.textRange(from: textField.beginningOfDocument, to: textField.endOfDocument)
+                                }
+                            }
                     }
 
-                    Text(isLoading ? "Downloading..." : "Download Audio")
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(isLoading ? Color.gray : Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-            }
-            .disabled(isLoading)
+                    // Download Button
+                    Button(action: downloadAudio) {
+                        HStack {
+                            if isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Image(systemName: "arrow.down.circle.fill")
+                            }
 
-            if canOpenPlayer {
-                // Player Screen Navigation Trigger
-                VStack(spacing: 15) {
-                    Divider()
-                    Button(action: openPlayerAction) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "music.note.list")
-                            Text("Open Player")
+                            Text(isLoading ? "Downloading..." : "Download Audio")
                                 .fontWeight(.semibold)
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
+                        .background(isLoading ? Color.gray : Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .disabled(isLoading)
+
+                    if canOpenPlayer {
+                        // Player Screen Navigation Trigger
+                        VStack(spacing: 15) {
+                            Divider()
+                            Button(action: openPlayerAction) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "music.note.list")
+                                    Text("Open Player")
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
                 }
             }
         }
         .navigationTitle("🌳 Arbor")
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .searchable(text: $searchQuery, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search by title, artist, etc.")
+        .searchable(
+            text: $searchQuery,
+            isPresented: $searchIsActive,
+            placement: .navigationBarDrawer(displayMode: .automatic),
+        )
         .onSubmit(of: .search) {
             performSearch()
         }
-        .onChange(of: searchQuery) { newValue in
-            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty { searchResults = [] }
-        }
-        .searchSuggestions {
-            if searchResults.isEmpty {
-                Text("Try searching for a song title or artist")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        .onChange(of: searchQuery) { _, newValue in
+            if !newValue.isEmpty {
+                performSearch()
             } else {
-                ForEach(searchResults, id: \.youtubeURL) { item in
-                    Button {
-                        youtubeURL = item.youtubeURL
-                        // Close suggestions by clearing the query and results
-                        searchQuery = ""
-                        searchResults = []
-                    } label: {
-                        HStack(spacing: 10) {
-                            // Cover art thumbnail
-                            if let urlString = item.thumbnailURL, let url = URL(string: urlString) {
-                                AsyncImage(url: url) { phase in
-                                    switch phase {
-                                    case .empty:
-                                        ZStack {
-                                            Color.gray.opacity(0.2)
-                                            ProgressView().scaleEffect(0.7)
-                                        }
-                                        .frame(width: 40, height: 40)
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 40, height: 40)
-                                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                                    case .failure:
-                                        ZStack {
-                                            Color.gray.opacity(0.2)
-                                            Image(systemName: "music.note")
-                                                .foregroundColor(.secondary)
-                                        }
-                                        .frame(width: 40, height: 40)
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                                    @unknown default:
-                                        EmptyView()
-                                    }
-                                }
-                            } else {
-                                ZStack {
-                                    Color.gray.opacity(0.2)
-                                    Image(systemName: "music.note")
-                                        .foregroundColor(.secondary)
-                                }
-                                .frame(width: 40, height: 40)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                            }
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.title)
-                                    .lineLimit(1)
-                                if let artists = item.artists {
-                                    HStack(spacing: 6) {
-                                        if item.isExplicit == true {
-                                            Text("E")
-                                                .font(.system(size: 10, weight: .bold))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 4)
-                                                .padding(.vertical, 1)
-                                                .background(Color.secondary)
-                                                .clipShape(RoundedRectangle(cornerRadius: 3))
-                                                .accessibilityLabel("Explicit")
-                                        }
-                                        Text(artists.joined(separator: ", "))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .lineLimit(1)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                searchResults = []
+                showSearchResults = false
+            }
+        }
+        .onChange(of: searchIsActive) { _, isActive in
+            if !isActive {
+                showSearchResults = false
+                searchQuery = ""
+                searchResults = []
             }
         }
         .alert("Download Failed", isPresented: $showError) {
@@ -256,6 +385,7 @@ result = download('\(trimmed)')
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             searchResults = []
+            showSearchResults = false
             return
         }
 
@@ -278,9 +408,11 @@ result = search('\(escaped)')
                   let items = try? JSONDecoder().decode([SearchResult].self, from: data) else {
                 // silently ignore and clear suggestions on failure
                 searchResults = []
+                showSearchResults = false
                 return
             }
             searchResults = items
+            showSearchResults = true
         }
     }
 
