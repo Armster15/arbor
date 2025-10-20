@@ -9,6 +9,23 @@ I built this originally to easily pitch-shift, adjust speed, and add reverb on t
 
 Arbor's core app is built in Swift, but it uniquely ships an embedded version of the Python runtime. This enables Arbor to use battle-tested libraries like [yt-dlp](https://github.com/yt-dlp/yt-dlp) directly on device.
 
+## Local Setup
+1. Download Python.xcframework to the root of the repository
+  
+```
+curl -L -O https://github.com/beeware/Python-Apple-support/releases/download/3.14-b8/Python-3.14-iOS-support.b8.tar.gz
+tar -xzf Python-3.14-iOS-support.b8.tar.gz
+rm Python-3.14-iOS-support.b8.tar.gz
+```
+
+2. Install Python dependencies using your global installation of pip
+```
+pip3 install --target=./python_modules --platform=any --only-binary=:all: -r requirements.txt
+```
+
+3. Open the project in Xcode (`xed Arbor.xcodeproj`) and run
+
+
 ## FAQ
 
 Q. **Will Arbor be published to the App Store?**
