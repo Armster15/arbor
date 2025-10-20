@@ -329,23 +329,19 @@ class AudioPlayerWithReverb: ObservableObject {
         
         self.stop(queueAudio: false)
 
-        do {
-            try engine.disconnectNodeOutput(reverbNode)
-            try engine.disconnectNodeOutput(pitchNode)
-            try engine.disconnectNodeOutput(playerNode)
+        engine.disconnectNodeOutput(reverbNode)
+        engine.disconnectNodeOutput(pitchNode)
+        engine.disconnectNodeOutput(playerNode)
 
-            try engine.disconnectNodeInput(reverbNode)
-            try engine.disconnectNodeInput(pitchNode)
-            try engine.disconnectNodeInput(playerNode)
+        engine.disconnectNodeInput(reverbNode)
+        engine.disconnectNodeInput(pitchNode)
+        engine.disconnectNodeInput(playerNode)
 
-            try engine.detach(reverbNode)
-            try engine.detach(pitchNode)
-            try engine.detach(playerNode)
+        engine.detach(reverbNode)
+        engine.detach(pitchNode)
+        engine.detach(playerNode)
 
-            try engine.reset()
-        } catch {
-            print("Error during audio engine teardown: \(error)")
-        }
+        engine.reset()
 
         audioFile = nil
     }
