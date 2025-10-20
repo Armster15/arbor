@@ -1,3 +1,6 @@
+> [!CAUTION]
+> Arbor is currently in active development.
+
 # 🌳 Arbor
 
 Arbor is a native music player for Apple devices.
