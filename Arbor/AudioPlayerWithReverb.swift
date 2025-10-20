@@ -30,6 +30,7 @@ class AudioPlayerWithReverb: ObservableObject {
     @Published public var duration: TimeInterval = 0.0
     private var displayLink: CADisplayLink? // timer that synchronizes with the screen's refresh rate
     private var seekOffset: AVAudioFramePosition = 0 // to track which frame we seeked to
+    private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
     
     // now playing metadata
     private var metaTitle: String?
@@ -416,11 +417,14 @@ class AudioPlayerWithReverb: ObservableObject {
     }
     
     private func rampVolume(from startVolume: Float, to endVolume: Float, duration: TimeInterval, completion: (() -> Void)? = nil) {
+        // Cancel any existing ramp timer to prevent race conditions
+        volumeRampTimer?.invalidate()
+        
         let steps = 60 // More steps for smoother transition
         let stepDuration = duration / Double(steps)
         
         var currentStep = 0
-        Timer.scheduledTimer(withTimeInterval: stepDuration, repeats: true) { [weak self] timer in
+        volumeRampTimer = Timer.scheduledTimer(withTimeInterval: stepDuration, repeats: true) { [weak self] timer in
             guard let self = self else {
                 timer.invalidate()
                 return
@@ -444,6 +448,7 @@ class AudioPlayerWithReverb: ObservableObject {
             
             if currentStep >= steps {
                 timer.invalidate()
+                self.volumeRampTimer = nil
                 self.engine.mainMixerNode.outputVolume = endVolume
                 completion?()
             }
