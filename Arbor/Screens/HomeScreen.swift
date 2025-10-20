@@ -439,8 +439,8 @@ struct HomeScreen: View {
     private func performDebouncedSearch() {
         searchDebounceTimer?.invalidate()
         
-        // Create a new timer with 0.25 second delay
-        searchDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { _ in
+        // Debounce of 0.05 seconds
+        searchDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { _ in
             performSearch()
         }
     }
