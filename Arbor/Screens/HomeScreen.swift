@@ -169,9 +169,14 @@ struct SearchResultRow: View {
                         }
                         
                         if let views = result.views {
-                            Text(views)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            HStack(spacing: 2) {
+                                Image(systemName: "eye")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                Text(views)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                 }
