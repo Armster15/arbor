@@ -4,6 +4,8 @@
 //
 
 import SwiftUI
+import SDWebImage
+import SDWebImageSwiftUI
 
 struct PlayerScreen: View {
     let meta: DownloadMeta
@@ -36,7 +38,7 @@ struct PlayerScreen: View {
                         if let thumbnailUrl = meta.thumbnail_url, let isSquare = meta.thumbnail_is_square {
                             if isSquare == true {
                                 ZStack(alignment: .topTrailing) {
-                                    AsyncImage(url: URL(string: thumbnailUrl)) { image in
+                                    WebImage(url: URL(string: thumbnailUrl)) { image in
                                         image
                                             .resizable()
                                             .scaledToFill()
@@ -48,10 +50,11 @@ struct PlayerScreen: View {
                                         ProgressView()
                                             .frame(width: 180, height: 180)
                                     }
+                                    .transition(.fade(duration: 0.5))
                                 }
                             } else {
                                 ZStack(alignment: .topTrailing) {
-                                    AsyncImage(url: URL(string: thumbnailUrl)) { image in
+                                    WebImage(url: URL(string: thumbnailUrl)) { image in
                                         image
                                             .resizable()
                                             .scaledToFill()
@@ -63,6 +66,7 @@ struct PlayerScreen: View {
                                         ProgressView()
                                             .frame(height: 180)
                                     }
+                                    .transition(.fade(duration: 0.5))
                                 }
                             }
                         }

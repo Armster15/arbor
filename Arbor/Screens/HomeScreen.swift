@@ -4,6 +4,8 @@
 //
 
 import SwiftUI
+import SDWebImage
+import SDWebImageSwiftUI
 
 struct SearchResult: Decodable, Equatable {
     let title: String
@@ -117,34 +119,17 @@ struct SearchResultRow: View {
                 // Thumbnail
                 Group {
                     if let urlString = result.thumbnailURL, let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .empty:
-                                ZStack {
-                                    Color.gray.opacity(0.2)
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                }
-                                .frame(width: 50, height: 50)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 50, height: 50)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            case .failure:
-                                ZStack {
-                                    Color.gray.opacity(0.2)
-                                    Image(systemName: "music.note")
-                                        .foregroundColor(.secondary)
-                                }
-                                .frame(width: 50, height: 50)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                            @unknown default:
-                                EmptyView()
+                        WebImage(url: url) { image in
+                            image.resizable()
+                        } placeholder: {
+                            ZStack {
+                                Color.gray.opacity(0.2)
                             }
                         }
+                        .transition(.fade(duration: 0.5)) // Fade Transition with duration
+                        .scaledToFit()
+                        .frame(width: 50, height: 50)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     } else {
                         ZStack {
                             Color.gray.opacity(0.2)
