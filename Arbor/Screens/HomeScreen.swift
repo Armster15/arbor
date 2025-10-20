@@ -37,26 +37,7 @@ struct SearchResultsView: View {
     let onDismiss: () -> Void
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Search Results")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Button("Done") {
-                    onDismiss()
-                }
-                .foregroundColor(.blue)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
-            .background(Color(.systemBackground))
-            
-            Divider()
-            
+        VStack(spacing: 0) {            
             // Results List
             if searchResults.isEmpty {
                 VStack(spacing: 16) {
@@ -388,24 +369,11 @@ struct HomeScreen: View {
         }
         .navigationTitle("🌳 Arbor")
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if isSearching {
-                    HStack(spacing: 4) {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Searching")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-        }
         .searchable(
             text: $searchQuery,
             isPresented: $searchIsActive,
             placement: .navigationBarDrawer(displayMode: .automatic),
-            prompt: isSearching ? "Searching..." : "Search for music"
+            prompt: "Search for music"
         )
         .searchSuggestions {
             if isSearching && searchResults.isEmpty {
@@ -417,7 +385,7 @@ struct HomeScreen: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    .padding()
+                    .padding(.horizontal)
                 }
             }
         }
