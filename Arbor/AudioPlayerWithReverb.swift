@@ -6,6 +6,7 @@
 //
 import AVFoundation
 import MediaPlayer
+import SDWebImage
 
 @MainActor
 class AudioPlayerWithReverb: ObservableObject {
@@ -201,16 +202,13 @@ class AudioPlayerWithReverb: ObservableObject {
         updateNowPlayingInfo()
     }
     
-    func loadMetadataArtwork(url: URL) async {
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            if let image = UIImage(data: data) {
-                self.metaArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in
-                    return image
-                }
+    func loadMetadataArtwork(url: URL) {
+        SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
+            guard error == nil, finished, let image else {
+                print("Failed to load artwork via SDWebImage: \(error?.localizedDescription ?? "Unknown error")")
+                return
             }
-        } catch {
-            print("Failed to load artwork: \(error)")
+            self.metaArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
     }
     
