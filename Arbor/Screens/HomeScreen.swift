@@ -211,11 +211,10 @@ struct SearchResultRow: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 16)
-            .background(Color(.systemBackground))
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal)
+        .padding(.vertical, 16)
+        .background(Color(.systemBackground))
     }
 }
 
