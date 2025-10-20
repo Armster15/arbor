@@ -32,6 +32,7 @@ class AudioPlayerWithReverb: ObservableObject {
     private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
     private var progressTimer: Timer?
     private var lastPostedSecond: Int = -1
+    private var playbackGeneration: Int = 0
     
     // now playing metadata
     private var metaTitle: String?
@@ -315,6 +316,8 @@ class AudioPlayerWithReverb: ObservableObject {
         guard let audioFile = audioFile else { return }
         let remaining = AVAudioFrameCount(audioFile.length - frame)
         guard remaining > 0 else { return }
+        playbackGeneration &+= 1
+        let generation = playbackGeneration
         playerNode.scheduleSegment(
             audioFile,
             startingFrame: frame,
@@ -322,7 +325,7 @@ class AudioPlayerWithReverb: ObservableObject {
             at: nil
         ) { [weak self] in
             DispatchQueue.main.async {
-                guard let self = self else { return }
+                guard let self = self, generation == self.playbackGeneration else { return }
                 if self.isLooping {
                     self.seek(to: 0)
                     self.play(shouldRampVolume: false)
