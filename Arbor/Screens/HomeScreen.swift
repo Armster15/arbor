@@ -279,11 +279,9 @@ struct HomeContentView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(isLoading ? Color.gray : Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
             }
             .disabled(isLoading)
+            .buttonStyle(.glassProminent)
 
             if canOpenPlayer {
                 // Player Screen Navigation Trigger
@@ -298,7 +296,7 @@ struct HomeContentView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                 }
             }
         }
