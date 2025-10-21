@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct DownloadMeta: Decodable {
-    let path: String
+    let streaming_url: String
     let title: String
     let artist: String?
     let thumbnail_url: String?

@@ -5,66 +5,50 @@ import tempfile
 import json
 
 
-def download(url: str):
-    # Configuration options matching the command line flags
+def stream(url: str):
+    # Configuration options for streaming (no download)
     # Options: https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/__init__.py#L776
     ydl_opts = {
         "format": "bestaudio[ext=m4a]/bestaudio",
-        "nopostoverwrites": True,
-        "postprocessors": [],  # No post-processors at all
-        "verbose": True,  # Shows detailed output including ffmpeg usage'
-        #
-        # NOTE:
-        # The video appears longer because without ffmpeg (and with --fixup never, which is required for no ffmpeg/ffprobe), yt-dlp can't correct
-        # YouTube's mismatched duration metadata, so it keeps the raw stream length-this option is needed
-        # since ffmpeg isn't available to fix it automatically.
-        "fixup": "never",  # Disable all fixup post-processors
-        #
-        # Ensure only single videos are downloaded, no playlists
-        "playlistend": 1,  # Only download the first item (single video)
-        "noplaylist": True,  # Do not download playlists
+        "verbose": True,  # Shows detailed output
         "nocheckcertificate": True,  # Ignore certificate errors (happens on physical device)
+        # Ensure only single videos are processed, no playlists
+        "playlistend": 1,  # Only process the first item (single video)
+        "noplaylist": True,  # Do not process playlists
     }
 
-    # Select iOS-writable locations
-    home = Path.home()
-    tmp_dir = Path(tempfile.gettempdir())
-    caches_dir = home / "Library" / "Caches"
-    yt_cache_dir = caches_dir / "yt-dlp"
-    output_dir = tmp_dir  # Prefer tmp for downloads to avoid backups
-
-    # Ensure directories exist
-    output_dir.mkdir(parents=True, exist_ok=True)
-    yt_cache_dir.mkdir(parents=True, exist_ok=True)
-
-    # Tell yt-dlp where to write files and cache
-    ydl_opts.update(
-        {
-            "outtmpl": str(output_dir / "%(title)s.%(ext)s"),
-            "cachedir": str(yt_cache_dir),
-        }
-    )
-
-    # Download the video
+    # Extract video information and streaming URL without downloading
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        print(f"Downloading video from: {url}")
-        print(f"Downloading video to: {output_dir}")
-        print(f"Using cache dir: {yt_cache_dir}")
+        print(f"Extracting streaming info from: {url}")
 
-        info = ydl.extract_info(url, download=True)
-
-        filename = ydl.prepare_filename(info)
-        full_path = os.path.abspath(filename)
-        print(f"Downloaded file: {full_path}")
+        info = ydl.extract_info(url, download=False)
 
         if info is None:
-            raise Exception("Failed to retrieve video information (manually thrown)")
+            raise Exception("Failed to retrieve video information")
 
-        title = info.get("title") or Path(full_path).stem
+        # Get the streaming URL from the selected format
+        streaming_url = None
+        if "url" in info:
+            streaming_url = info["url"]
+        elif "formats" in info:
+            # Find the best audio format
+            audio_formats = [f for f in info["formats"] if f.get("acodec") != "none"]
+            if audio_formats:
+                # Sort by quality and select the best
+                audio_formats.sort(key=lambda x: x.get("abr", 0), reverse=True)
+                streaming_url = audio_formats[0].get("url")
+
+        if not streaming_url:
+            raise Exception("No streaming URL found for this video")
+
+        print(f"Streaming URL: {streaming_url}")
+
+        title = info.get("title", "Unknown Title")
         # Prefer artist, then uploader/channel, then None
         artist = (
             info.get("artist") or info.get("uploader") or info.get("channel") or None
         )
+
         # Choose thumbnail: prefer square art (common for music); else highest resolution
         thumbnails = info.get("thumbnails") or []
         thumbnail_info = None
@@ -115,7 +99,7 @@ def download(url: str):
                 thumb_h = None
 
         meta = {
-            "path": full_path,
+            "streaming_url": streaming_url,
             "title": title,
             "artist": artist,
             "thumbnail_url": thumbnail_url,
@@ -124,6 +108,7 @@ def download(url: str):
             "thumbnail_is_square": (
                 thumb_w is not None and thumb_h is not None and thumb_w == thumb_h
             ),
+            "duration": info.get("duration"),
         }
 
         return json.dumps(meta)
