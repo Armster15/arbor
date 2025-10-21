@@ -50,11 +50,7 @@ class AudioPlayerWithReverb: ObservableObject {
         setupAudioEngine()
         setupAudioSession()
         setupRemoteCommands()
-        
-        // Observe app lifecycle to avoid background timer work
-        NotificationCenter.default.addObserver(self, selector: #selector(handleAppDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleAppWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
-        
+                
         // Default parameters
         reverbNode.wetDryMix = reverbMix
         pitchNode.rate = speedRate
@@ -77,13 +73,9 @@ class AudioPlayerWithReverb: ObservableObject {
             try audioSession.setCategory(.playback, mode: .default)
             try audioSession.setActive(true)
             
-            // Listen for audio session interruptions (e.g., when switching to another app)
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(handleAudioSessionInterruption),
-                name: AVAudioSession.interruptionNotification,
-                object: nil
-            )            
+            NotificationCenter.default.addObserver(self, selector: #selector(handleAppDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(handleAppWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(handleAudioSessionInterruption), name: AVAudioSession.interruptionNotification, object: nil)
         } catch {
             print("Failed to set up audio session: \(error)")
         }
@@ -509,18 +501,20 @@ class AudioPlayerWithReverb: ObservableObject {
         }
     }
 
-    deinit {
-        teardown()
-    }
-
     @objc private func handleAppDidEnterBackground() {
         stopDisplayLink()
+        updateNowPlayingInfo()
     }
 
     @objc private func handleAppWillEnterForeground() {
         if isPlaying {
             startDisplayLink()
+            updateNowPlayingInfo()
         }
+    }
+
+    deinit {
+        teardown()
     }
 }
 
