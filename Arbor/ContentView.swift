@@ -27,40 +27,50 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationStack(path: $navPath) {
-            HomeScreen(
-                canOpenPlayer: lastDownloadMeta != nil,
-                openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
-                onDownloaded: { meta in
-                    debugPrint(meta)
-                    lastDownloadMeta = meta
-                    
-                    // Tear down any existing engine before creating a new one
-                    audioPlayer?.teardown()
-                    audioPlayer = nil
-
-                    let newAudioPlayer = AudioPlayerWithReverb()
-                    try? newAudioPlayer.loadAudio(
-                        url: URL(string: meta.path)!,
+        TabView {
+            Tab("Explore", systemImage: "text.rectangle.page") {
+                NavigationStack(path: $navPath) {
+                    HomeScreen(
+                        canOpenPlayer: lastDownloadMeta != nil,
+                        openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
+                        onDownloaded: { meta in
+                            debugPrint(meta)
+                            lastDownloadMeta = meta
+                            
+                            // Tear down any existing engine before creating a new one
+                            audioPlayer?.teardown()
+                            audioPlayer = nil
+                            
+                            let newAudioPlayer = AudioPlayerWithReverb()
+                            try? newAudioPlayer.loadAudio(
+                                url: URL(string: meta.path)!,
+                            )
+                            
+                            newAudioPlayer.loadMetadataStrings(title: meta.title, artist: meta.artist)
+                            
+                            let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
+                            if let artworkURL = artworkURL {
+                                newAudioPlayer.loadMetadataArtwork(url: artworkURL)
+                            }
+                            
+                            audioPlayer = newAudioPlayer
+                            
+                            if navPath.last != .player { navPath.append(.player) }
+                        }
                     )
                     
-                    newAudioPlayer.loadMetadataStrings(title: meta.title, artist: meta.artist)
-                    
-                    let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
-                    if let artworkURL = artworkURL {
-                        newAudioPlayer.loadMetadataArtwork(url: artworkURL)
+                    .navigationDestination(for: Route.self) { route in
+                        switch route {
+                        case .player:
+                            PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
+                        }
                     }
-                    
-                    audioPlayer = newAudioPlayer
-                    
-                    if navPath.last != .player { navPath.append(.player) }
                 }
-            )
+            }
             
-            .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .player:
-                    PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
+            Tab("My Library", systemImage: "music.note.square.stack") {
+                VStack {
+                    Text("TODO")
                 }
             }
         }
