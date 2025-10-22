@@ -5,7 +5,7 @@ import re
 ytmusic = YTMusic()
 
 
-def search(query: str):
+def search_youtube(query: str):
     print(f"Searching for {query}")
     raw_results = ytmusic.search(query, filter="songs", limit=15)
     print(f"Found {len(raw_results)} results")
@@ -45,7 +45,7 @@ def search(query: str):
             {
                 "title": result.get("title"),
                 "artists": artists,
-                "youtube_url": f"https://www.youtube.com/watch?v={videoId}",
+                "url": f"https://www.youtube.com/watch?v={videoId}",
                 "views": result.get("views"),
                 "duration": result.get("duration"),
                 "is_explicit": result.get("isExplicit"),

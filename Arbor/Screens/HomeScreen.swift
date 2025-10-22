@@ -10,7 +10,7 @@ import SDWebImageSwiftUI
 struct SearchResult: Decodable, Equatable {
     let title: String
     let artists: [String]?
-    let youtubeURL: String
+    let url: String
     let views: String?
     let duration: String?
     let isExplicit: Bool?
@@ -22,7 +22,7 @@ struct SearchResult: Decodable, Equatable {
     enum CodingKeys: String, CodingKey {
         case title
         case artists
-        case youtubeURL = "youtube_url"
+        case url
         case views
         case duration
         case isExplicit = "is_explicit"
@@ -102,7 +102,7 @@ struct SearchResultsView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(searchResults, id: \.youtubeURL) { result in
+                        ForEach(searchResults, id: \.url) { result in
                             SearchResultRow(result: result) {
                                 onResultSelected(result)
                             }
@@ -381,7 +381,7 @@ struct HomeScreen: View {
                     searchQuery: searchQuery,
                     isSearching: isSearching,
                     onResultSelected: { result in
-                        youtubeURL = result.youtubeURL
+                        youtubeURL = result.url
                         searchIsActive = false
                         searchQuery = ""
                         searchResults = []
