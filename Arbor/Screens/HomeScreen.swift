@@ -477,10 +477,19 @@ struct HomeScreen: View {
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
 
-        let code = """
-from pytest_download import search
-result = search('\(escaped)')
+        let code: String
+        switch searchProvider {
+        case .youtube:
+            code = """
+from pytest_download import search_youtube
+result = search_youtube('\(escaped)')
 """
+        case .soundcloud:
+            code = """
+from pytest_download import search_soundcloud
+result = search_soundcloud('\(escaped)')
+"""
+        }
 
         pythonExecAndGetStringAsync(
             code.trimmingCharacters(in: .whitespacesAndNewlines),
