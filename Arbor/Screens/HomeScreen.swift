@@ -33,15 +33,33 @@ struct SearchResult: Decodable, Equatable {
     }
 }
 
+enum SearchProvider: Hashable {
+    case youtube
+    case soundcloud
+}
+
+
 struct SearchResultsView: View {
     let searchResults: [SearchResult]
     let searchQuery: String
     let isSearching: Bool
     let onResultSelected: (SearchResult) -> Void
     let onDismiss: () -> Void
+    @Binding var searchProvider: SearchProvider
+    @State private var searchVisible: Bool = false
     
     var body: some View {
-        VStack(spacing: 0) {            
+        VStack(spacing: 0) {
+            Picker("Provider", selection: $searchProvider) {
+                Text("YouTube Music").tag(SearchProvider.youtube)
+                Text("SoundCloud").tag(SearchProvider.soundcloud)
+            }
+            .pickerStyle(.segmented)
+            .padding()
+            .opacity(searchVisible ? 1 : 0)
+            .offset(y: searchVisible ? 0 : -8)
+            .animation(.easeInOut(duration: 0.28), value: searchVisible)
+            
             // Results List
             if searchQuery.isEmpty {
                 VStack(spacing: 16) {
@@ -106,6 +124,12 @@ struct SearchResultsView: View {
         }
         .background(Color(.systemBackground))
         .ignoresSafeArea(.container, edges: .bottom)
+        .onAppear {
+            searchVisible = true
+        }
+        .onDisappear {
+            searchVisible = false
+        }
     }
 }
 
@@ -212,7 +236,7 @@ struct HomeContentView: View {
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
-    
+
     var body: some View {
         VStack(spacing: 20) {
             // URL Input Section
@@ -346,6 +370,7 @@ struct HomeScreen: View {
     @State private var youtubeURL: String = ""
     @State private var currentSearchTaskId: UUID = UUID()
     @State private var searchDebounceTimer: Timer?
+    @State var searchProvider: SearchProvider = .youtube
 
     var body: some View {
         Group {
@@ -367,7 +392,8 @@ struct HomeScreen: View {
                         searchQuery = ""
                         searchResults = []
                         isSearching = false
-                    }
+                    },
+                    searchProvider: $searchProvider
                 )
             } else {
                 // Main Home Screen Content
@@ -399,6 +425,11 @@ struct HomeScreen: View {
                 searchDebounceTimer = nil
                 searchResults = []
                 isSearching = false
+            }
+        }
+        .onChange(of: searchProvider) { _, _ in
+            if !searchQuery.isEmpty {
+                performSearch()
             }
         }
         .onChange(of: searchIsActive) { _, isActive in
