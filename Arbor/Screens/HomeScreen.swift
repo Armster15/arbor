@@ -428,6 +428,8 @@ struct HomeScreen: View {
             }
         }
         .onChange(of: searchProvider) { _, _ in
+            // Clear existing results when switching providers
+            searchResults = []
             if !searchQuery.isEmpty {
                 performSearch()
             }
