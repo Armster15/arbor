@@ -9,9 +9,9 @@ soundcloud = SoundCloud()
 
 
 def search_youtube(query: str):
-    print(f"Searching for {query}")
+    print(f"Searching YouTube for {query}")
     raw_results = ytmusic.search(query, filter="songs", limit=15)
-    print(f"Found {len(raw_results)} results")
+    print(f"Found {len(raw_results)} results from YouTube")
 
     results = []
 
@@ -67,8 +67,6 @@ def search_youtube(query: str):
 def search_soundcloud(query: str):
     print(f"Searching SoundCloud for {query}")
     raw_results = soundcloud.search_tracks(query, limit=15)
-
-    print(raw_results)
 
     results = []
 
@@ -152,5 +150,6 @@ def search_soundcloud(query: str):
             continue
 
     data = json.dumps(results)
-    print("SC DATA", data)
+    print(f"Found {count} results from SoundCloud")
+
     return data
