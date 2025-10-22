@@ -40,7 +40,7 @@ def download(url: str):
     # Tell yt-dlp where to write files and cache
     ydl_opts.update(
         {
-            "outtmpl": str(output_dir / "%(title)s.%(ext)s"),
+            "outtmpl": str(output_dir / "%(uploader_id)s-%(id)s.%(ext)s"),
             "cachedir": str(yt_cache_dir),
         }
     )
