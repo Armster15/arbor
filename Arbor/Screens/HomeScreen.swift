@@ -469,6 +469,14 @@ struct HomeScreen: View {
             return
         }
 
+        // Build cache key and return cached results if available
+        let cacheKey = ["search", searchProvider.rawValue, trimmed.lowercased()]
+        if let cached = QueryCache.shared.get(for: cacheKey) {
+            searchResults = cached
+            isSearching = false
+            return
+        }
+
         // Generate a new unique task ID for this search request
         let taskId = UUID()
         currentSearchTaskId = taskId
@@ -496,21 +504,30 @@ result = search_soundcloud('\(escaped)')
         pythonExecAndGetStringAsync(
             code.trimmingCharacters(in: .whitespacesAndNewlines),
             "result"
-        ) { result in
-            // Only update UI if this is still the current search task
-            guard taskId == currentSearchTaskId else {
-                return // This request is outdated, ignore the result
-            }
-            
-            defer { isSearching = false }
+        ) { result in            
+            defer { 
+                if taskId == currentSearchTaskId {
+                    isSearching = false
+                }
+             }
+             
             guard let output = result, !output.isEmpty,
                   let data = output.data(using: .utf8),
                   let items = try? JSONDecoder().decode([SearchResult].self, from: data) else {
                 // silently ignore and clear suggestions on failure
-                searchResults = []
+                
+                if taskId == currentSearchTaskId {
+                    searchResults = []
+                }
+                
                 return
             }
-            searchResults = items
+            
+            QueryCache.shared.set(items, for: cacheKey)
+
+            if taskId == currentSearchTaskId {
+                searchResults = items
+            }
         }
     }
 }
