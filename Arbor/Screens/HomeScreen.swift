@@ -33,7 +33,7 @@ struct SearchResult: Decodable, Equatable {
     }
 }
 
-enum SearchProvider: Hashable {
+enum SearchProvider: String, Hashable {
     case youtube
     case soundcloud
 }
@@ -370,7 +370,7 @@ struct HomeScreen: View {
     @State private var youtubeURL: String = ""
     @State private var currentSearchTaskId: UUID = UUID()
     @State private var searchDebounceTimer: Timer?
-    @State var searchProvider: SearchProvider = .youtube
+    @AppStorage("searchProvider") var searchProvider: SearchProvider = .youtube
 
     var body: some View {
         Group {
