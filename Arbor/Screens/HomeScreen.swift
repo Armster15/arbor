@@ -370,7 +370,7 @@ struct HomeScreen: View {
     @State private var youtubeURL: String = ""
     @State private var currentSearchTaskId: UUID = UUID()
     @State private var searchDebounceTimer: Timer?
-    @AppStorage("searchProvider") var searchProvider: SearchProvider = .youtube
+    @AppStorage("homeScreenSearchProvider") var searchProvider: SearchProvider = .youtube
 
     var body: some View {
         Group {
