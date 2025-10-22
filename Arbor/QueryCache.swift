@@ -11,16 +11,37 @@ final class QueryCache {
     private init() {}
 
     private var storage: [[String]: [SearchResult]] = [:]
+    private let queue = DispatchQueue(label: "QueryCache.storage.queue", attributes: .concurrent)
 
     func get(for key: [String]) -> [SearchResult]? {
-        return storage[key]
+        var result: [SearchResult]?
+        queue.sync {
+            result = storage[key]
+        }
+        return result
     }
 
     func set(_ value: [SearchResult], for key: [String]) {
-        storage[key] = value
+        queue.sync(flags: .barrier) {
+            storage[key] = value
+        }
     }
 
     func clear() {
-        storage.removeAll()
+        queue.sync(flags: .barrier) {
+            storage.removeAll()
+        }
+    }
+
+    func invalidateQueries(_ prefix: [String]) {
+        guard !prefix.isEmpty else { return }
+        queue.sync(flags: .barrier) {
+            let keysToRemove = storage.keys.filter { key in
+                key.starts(with: prefix)
+            }
+            for key in keysToRemove {
+                storage.removeValue(forKey: key)
+            }
+        }
     }
 }
