@@ -14,6 +14,7 @@ struct SearchResult: Decodable, Equatable {
     let views: String?
     let duration: String?
     let isExplicit: Bool?
+    let isVerified: Bool?
     let thumbnailURL: String?
     let thumbnailIsSquare: Bool?
     let thumbnailWidth: Int?
@@ -26,6 +27,7 @@ struct SearchResult: Decodable, Equatable {
         case views
         case duration
         case isExplicit = "is_explicit"
+        case isVerified = "verified"
         case thumbnailURL = "thumbnail_url"
         case thumbnailIsSquare = "thumbnail_is_square"
         case thumbnailWidth = "thumbnail_width"
@@ -186,11 +188,19 @@ struct SearchResultRow: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 3))
                                     .accessibilityLabel("Explicit")
                             }
-                            
-                            Text(artists.joined(separator: ", "))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
+
+                            HStack(spacing: 4) {
+                                Text(artists.joined(separator: ", "))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                if result.isVerified == true {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                        .accessibilityLabel("Verified artist")
+                                }
+                            }
                         }
                     }
                     

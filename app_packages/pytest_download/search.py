@@ -52,6 +52,7 @@ def search_youtube(query: str):
                 "views": result.get("views"),
                 "duration": result.get("duration"),
                 "is_explicit": result.get("isExplicit"),
+                "verified": False,  # youtube's search results doesn't expose if the uploader is verified
                 "thumbnail_url": thumbnail_url,
                 "thumbnail_is_square": thumbnail_is_square,
                 "thumbnail_width": thumbnail_width,
@@ -107,6 +108,17 @@ def search_soundcloud(query: str):
             )
             artists = [artist_name] if artist_name else None
 
+            # Verified flag (boolean)
+            verified = False
+            if user is not None:
+                try:
+                    verified = bool(
+                        getattr(user, "verified", False)
+                        or getattr(getattr(user, "badges", None), "verified", False)
+                    )
+                except Exception:
+                    verified = False
+
             # Views / plays (stringify to align with Swift model expecting String)
             views_val = getattr(track, "playback_count", None)
             views = f"{views_val:,}" if isinstance(views_val, int) else None
@@ -138,6 +150,7 @@ def search_soundcloud(query: str):
                     "views": views,
                     "duration": duration_str,
                     "is_explicit": None,
+                    "verified": verified,
                     "thumbnail_url": thumbnail_url,
                     "thumbnail_is_square": thumbnail_is_square,
                     "thumbnail_width": thumbnail_width,
