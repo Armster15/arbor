@@ -36,20 +36,13 @@ struct ContentView: View {
                     lastDownloadMeta = meta
                     
                     // Tear down any existing engine before creating a new one
-                    audioPlayer?.teardown()
+                    audioPlayer?.unsubscribeUpdates()
                     audioPlayer = nil
 
                     let newAudioPlayer = AudioPlayerWithReverb()
-                    try? newAudioPlayer.loadAudio(
-                        url: URL(string: meta.path)!,
-                    )
-                    
-                    newAudioPlayer.loadMetadataStrings(title: meta.title, artist: meta.artist)
-                    
                     let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
-                    if let artworkURL = artworkURL {
-                        newAudioPlayer.loadMetadataArtwork(url: artworkURL)
-                    }
+                    newAudioPlayer.startSavedAudio(filePath: meta.path)
+                    newAudioPlayer.setMetadata(title: meta.title, artist: meta.artist, artworkURL: artworkURL)
                     
                     audioPlayer = newAudioPlayer
                     

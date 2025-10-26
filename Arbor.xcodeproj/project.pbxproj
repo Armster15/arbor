@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0842E6F32EA5B89B00AAAB49 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0842E6F22EA5B89B00AAAB49 /* AppIcon.icon */; };
+		084FF1812EAEAEB30062D139 /* SwiftAudioPlayer in Frameworks */ = {isa = PBXBuildFile; productRef = 084FF1802EAEAEB30062D139 /* SwiftAudioPlayer */; };
 		0893EA0C2EA61E4B00E00181 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0893EA0B2EA61E4B00E00181 /* SDWebImageSwiftUI */; };
 		08C4FFF92EA1461C00F9F26C /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08C4FFF72EA1455D00F9F26C /* Python.xcframework */; };
 		08C4FFFA2EA1461C00F9F26C /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 08C4FFF72EA1455D00F9F26C /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -61,6 +62,7 @@
 			files = (
 				0893EA0C2EA61E4B00E00181 /* SDWebImageSwiftUI in Frameworks */,
 				08C4FFF92EA1461C00F9F26C /* Python.xcframework in Frameworks */,
+				084FF1812EAEAEB30062D139 /* SwiftAudioPlayer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -108,6 +110,7 @@
 			name = Arbor;
 			packageProductDependencies = (
 				0893EA0B2EA61E4B00E00181 /* SDWebImageSwiftUI */,
+				084FF1802EAEAEB30062D139 /* SwiftAudioPlayer */,
 			);
 			productName = Arbor;
 			productReference = 08C4FFE62EA1436F00F9F26C /* Arbor.app */;
@@ -140,6 +143,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				0893EA0A2EA61E4B00E00181 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
+				084FF17F2EAEAEB30062D139 /* XCRemoteSwiftPackageReference "SwiftAudioPlayer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 08C4FFE72EA1436F00F9F26C /* Products */;
@@ -415,6 +419,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		084FF17F2EAEAEB30062D139 /* XCRemoteSwiftPackageReference "SwiftAudioPlayer" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tanhakabir/SwiftAudioPlayer.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.6.0;
+			};
+		};
 		0893EA0A2EA61E4B00E00181 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI.git";
@@ -426,6 +438,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		084FF1802EAEAEB30062D139 /* SwiftAudioPlayer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 084FF17F2EAEAEB30062D139 /* XCRemoteSwiftPackageReference "SwiftAudioPlayer" */;
+			productName = SwiftAudioPlayer;
+		};
 		0893EA0B2EA61E4B00E00181 /* SDWebImageSwiftUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0893EA0A2EA61E4B00E00181 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
