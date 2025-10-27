@@ -156,16 +156,16 @@ struct PlayerScreen: View {
                                 .fontWeight(.medium)
                             
                                 Button("Reset") {
-                                    audioPlayer.setRate(1.0)
+                                    audioPlayer.setSpeedRate(1.0)
                                 }
                                 .font(.caption)
                                 .buttonStyle(.bordered)
                                 .tint(.blue)
-                                .opacity(audioPlayer.rate == 1.0 ? 0 : 1)
+                                .opacity(audioPlayer.speedRate == 1.0 ? 0 : 1)
                             
                             Spacer()
                             
-                            Text(String(format: "%.2fx", audioPlayer.rate))
+                            Text(String(format: "%.2fx", audioPlayer.speedRate))
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
@@ -174,12 +174,12 @@ struct PlayerScreen: View {
                             Slider(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.rate)
+                                        Double(audioPlayer.speedRate)
                                     },
                                     set: { newVal in
                                         // Slider sends continuous values while dragging, so we snap to the nearest 0.05 to enforce stepping.
                                         let snapped = (newVal / 0.05).rounded() * 0.05
-                                        audioPlayer.setRate(Float(snapped))
+                                        audioPlayer.setSpeedRate(Float(snapped))
                                     }
                                 ),
                                 in: 0.25...2.0,
@@ -191,10 +191,10 @@ struct PlayerScreen: View {
                             Stepper(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.rate)
+                                        Double(audioPlayer.speedRate)
                                     },
                                     set: { newVal in
-                                        audioPlayer.setRate(Float(newVal))
+                                        audioPlayer.setSpeedRate(Float(newVal))
                                     }
                                 ),
                                 in: 0.25...2.0,
@@ -213,16 +213,16 @@ struct PlayerScreen: View {
                                 .fontWeight(.medium)
                             
                                 Button("Reset") {
-                                    audioPlayer.setPitch(0.0)
+                                    audioPlayer.setPitchByCents(0.0)
                                 }
                                 .font(.caption)
                                 .buttonStyle(.bordered)
                                 .tint(.blue)
-                                .opacity(audioPlayer.pitch.isZero ? 0 : 1)
+                                .opacity(audioPlayer.pitchCents.isZero ? 0 : 1)
                             
                             Spacer()
                             
-                            Text("\(Int(audioPlayer.pitch)) cents")
+                            Text("\(Int(audioPlayer.pitchCents)) cents")
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
@@ -231,15 +231,15 @@ struct PlayerScreen: View {
                             Slider(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.pitch)
+                                        Double(audioPlayer.pitchCents)
                                     },
                                     set: { newVal in
                                         // Slider sends continuous values while dragging, so we snap to the nearest 50 to enforce stepping.
                                         let snapped = (newVal / 50.0).rounded() * 50.0
-                                        audioPlayer.setPitch(Float(snapped))
+                                        audioPlayer.setPitchByCents(Float(snapped))
                                     }
                                 ),
-                                in: -800...800,
+                                in: -800.0...800.0,
                                 step: 50
                             )
                             .frame(maxWidth: .infinity)
@@ -247,13 +247,13 @@ struct PlayerScreen: View {
                             Stepper(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.pitch)
+                                        Double(audioPlayer.pitchCents)
                                     },
                                     set: { newVal in
-                                        audioPlayer.setPitch(Float(newVal))
+                                        audioPlayer.setPitchByCents(Float(newVal))
                                     }
                                 ),
-                                in: -800...800,
+                                in: -800.0...800.0,
                                 step: 10,
                             ) {}
                             .fixedSize()
@@ -269,16 +269,16 @@ struct PlayerScreen: View {
                                 .fontWeight(.medium)
                             
                                 Button("Reset") {
-                                    audioPlayer.setReverbWetDryMix(0.0)
+                                    audioPlayer.setReverbMix(0.0)
                                 }
                                 .font(.caption)
                                 .buttonStyle(.bordered)
                                 .tint(.blue)
-                                .opacity(audioPlayer.reverbWetDryMix > 0 ? 1 : 0)
+                                .opacity(audioPlayer.reverbMix > 0 ? 1 : 0)
                             
                             Spacer()
                             
-                            Text(String(format: "%.0f%%", audioPlayer.reverbWetDryMix))
+                            Text("\(Int(audioPlayer.reverbMix))%")
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
@@ -287,14 +287,14 @@ struct PlayerScreen: View {
                             Slider(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.reverbWetDryMix)
+                                        Double(audioPlayer.reverbMix)
                                     },
                                     set: { newVal in
                                         let snapped = (newVal / 5.0).rounded() * 5.0
-                                        audioPlayer.setReverbWetDryMix(Float(snapped))
+                                        audioPlayer.setReverbMix(Float(snapped))
                                     }
                                 ),
-                                in: 0...100,
+                                in: 0.0...100.0,
                                 step: 5
                             )
                             .frame(maxWidth: .infinity)
@@ -302,13 +302,13 @@ struct PlayerScreen: View {
                             Stepper(
                                 value: Binding(
                                     get: {
-                                        Double(audioPlayer.reverbWetDryMix)
+                                        Double(audioPlayer.reverbMix)
                                     },
                                     set: { newVal in
-                                        audioPlayer.setReverbWetDryMix(Float(newVal))
+                                        audioPlayer.setReverbMix(Float(newVal))
                                     }
                                 ),
-                                in: 0...100,
+                                in: 0.0...100.0,
                                 step: 1,
                             ) {}
                             .fixedSize()

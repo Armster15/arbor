@@ -7,80 +7,50 @@ import AVFoundation
 import SwiftAudioPlayer
 import MediaPlayer
 import UIKit
-import Combine
+import SDWebImage
 
 final class AudioPlayerWithReverb: ObservableObject {
     @Published var isPlaying: Bool = false
     @Published var currentTime: Double = 0
     @Published var duration: Double = 0
-    @Published var rate: Float = 1.0
-    @Published var pitch: Float = 0.0
     @Published var isLooping: Bool = false
-    @Published var reverbWetDryMix: Float = 0.0
-    @Published var reverbPresetRaw: Int = AVAudioUnitReverbPreset.mediumHall.rawValue
-    @Published var displayTitle: String = "Audio"
-    @Published var displayArtist: String? = nil
-    @Published var displayArtwork: UIImage? = nil
-    @Published var isArtworkSquare: Bool? = nil
+    
+    @Published var speedRate: Float = 1.0
+    @Published var pitchCents: Float = 0.0
+    @Published var reverbMix: Float = 0.0
 
     private var elapsedSub: UInt?
     private var durationSub: UInt?
     private var statusSub: UInt?
 
     private var remoteCommandsConfigured: Bool = false
-    private var nowPlayingTitle: String = "Audio"
-    private var nowPlayingArtist: String? = nil
-    private var nowPlayingArtwork: MPMediaItemArtwork? = nil
-    private var nowPlayingArtworkImage: UIImage? = nil
     
-    private func setupAudioPlayer(filePath: String) {
-        // Initialize SAPlayer with saved file and attach TimePitch for speed/pitch and Reverb effect
-        let timePitch = AVAudioUnitTimePitch()
-        let reverb = AVAudioUnitReverb()
-        reverb.wetDryMix = 0
-        SAPlayer.shared.audioModifiers = [timePitch, reverb]
-        self.setRate(1.0)
-        self.setPitch(0.0)
-        self.setReverbWetDryMix(0.0)
-        self.startSavedAudio(filePath: filePath)
+    // now playing metadata
+    private var metaTitle: String?
+    private var metaArtist: String?
+    private var metaArtwork: MPMediaItemArtwork?
+    
+    private var pitchNode: AVAudioUnitTimePitch
+    private var reverbNode: AVAudioUnitReverb
+    
+    init() {
+        pitchNode = AVAudioUnitTimePitch()
+        reverbNode = AVAudioUnitReverb()
+                
+        // Default parameters
+        reverbNode.wetDryMix = reverbMix
+        pitchNode.rate = speedRate
+        
+        // Connect nodes: player -> pitch -> reverb -> output
+        SAPlayer.shared.audioModifiers = [pitchNode, reverbNode]
     }
 
     func startSavedAudio(filePath: String) {
-        // Ensure audio modifiers (time pitch and reverb) are configured before starting playback
-        let timePitch = AVAudioUnitTimePitch()
-        timePitch.rate = rate
-        timePitch.pitch = pitch
-        let reverb = AVAudioUnitReverb()
-        if let preset = AVAudioUnitReverbPreset(rawValue: reverbPresetRaw) {
-            reverb.loadFactoryPreset(preset)
-        }
-        reverb.wetDryMix = reverbWetDryMix
-        SAPlayer.shared.audioModifiers = [timePitch, reverb]
-
         let url = URL(fileURLWithPath: filePath)
         SAPlayer.shared.startSavedAudio(withSavedUrl: url, mediaInfo: nil)
-        nowPlayingTitle = url.deletingPathExtension().lastPathComponent
-        displayTitle = nowPlayingTitle
-        displayArtist = nowPlayingArtist
-        displayArtwork = nil
         configureRemoteCommandsIfNeeded()
         subscribeUpdates()
         updateNowPlayingInfo()
-    }
-
-    func setMetadata(title: String?, artist: String?, artworkURL: URL?) {
-        if let t = title, !t.isEmpty {
-            nowPlayingTitle = t
-        }
-        nowPlayingArtist = artist
-        if let url = artworkURL {
-            fetchArtwork(from: url)
-        } else {
-            nowPlayingArtwork = nil
-            nowPlayingArtworkImage = nil
-            isArtworkSquare = nil
-            updateNowPlayingInfo()
-        }
     }
 
     func play() {
@@ -107,54 +77,73 @@ final class AudioPlayerWithReverb: ObservableObject {
     }
 
     func toggleLoop() {
-        isLooping.toggle()
+        let new = !self.isLooping
+        
+        if new {
+            SAPlayer.Features.Loop.enable()
+        }
+        else {
+            SAPlayer.Features.Loop.disable()
+        }
+        
+        self.isLooping = new
     }
 
-    func setRate(_ newRate: Float) {
-        rate = newRate
-        if let node = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitTimePitch }).first {
-            node.rate = newRate
-            SAPlayer.shared.playbackRateOfAudioChanged(rate: newRate)
+    // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
+    func setPitchByCents(_ cents: Float) {
+        let clamped = min(max(cents, -2400), 2400)
+        if pitchNode.pitch != clamped {
+            pitchNode.pitch = clamped
         }
-        updateNowPlayingInfo()
+        if pitchCents != pitchNode.pitch {
+            pitchCents = pitchNode.pitch
+        }
+    }
+    
+    // Adjust playback speed (0.25x ... 2.0x)
+    func setSpeedRate(_ newRate: Float) {
+        let clamped = min(max(newRate, 0.25), 2.0)
+        if pitchNode.rate != clamped {
+            pitchNode.rate = clamped
+        }
+        if speedRate != pitchNode.rate {
+            speedRate = pitchNode.rate
+        }
+        
+        // Update Now Playing info with new playback rate
+        if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
+            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        }
+    }
+        
+    // Adjust reverb intensity (0-100)
+    func setReverbMix(_ mix: Float) {
+        let clamped = min(max(mix, 0), 100)
+        if reverbNode.wetDryMix != clamped {
+            reverbNode.wetDryMix = clamped
+        }
+        if reverbMix != reverbNode.wetDryMix {
+            reverbMix = reverbNode.wetDryMix
+        }
     }
 
-    func setPitch(_ newPitch: Float) {
-        let rounded = Float(round(Double(newPitch)))
-        pitch = rounded
-        if let node = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitTimePitch }).first {
-            node.pitch = rounded
-        }
-    }
-
-    func setReverbWetDryMix(_ newMix: Float) {
-        let clamped = max(0.0, min(100.0, newMix))
-        reverbWetDryMix = clamped
-        if let reverb = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitReverb }).first {
-            reverb.wetDryMix = clamped
-        }
-        updateNowPlayingInfo()
-    }
-
-    func setReverbPresetRaw(_ raw: Int) {
-        reverbPresetRaw = raw
-        if let preset = AVAudioUnitReverbPreset(rawValue: raw),
-           let reverb = SAPlayer.shared.audioModifiers.compactMap({ $0 as? AVAudioUnitReverb }).first {
-            reverb.loadFactoryPreset(preset)
-        }
-    }
 
     private func subscribeUpdates() {
         if elapsedSub == nil {
             elapsedSub = SAPlayer.Updates.ElapsedTime.subscribe { [weak self] time in
                 self?.currentTime = time
-                self?.updateNowPlayingInfo()
+                var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = time
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
             }
         }
         if durationSub == nil {
             durationSub = SAPlayer.Updates.Duration.subscribe { [weak self] dur in
                 self?.duration = dur
-                self?.updateNowPlayingInfo()
+                var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = dur
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
             }
         }
         if statusSub == nil {
@@ -163,24 +152,34 @@ final class AudioPlayerWithReverb: ObservableObject {
                 switch status {
                 case .playing:
                     self.isPlaying = true
-                    self.updateNowPlayingInfo()
+                    var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                    nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = self.speedRate
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
                 case .ended:
                     if self.isLooping {
                         SAPlayer.shared.seekTo(seconds: 0)
                         SAPlayer.shared.play()
                         self.isPlaying = true
                         self.currentTime = 0
-                        self.updateNowPlayingInfo()
+                        var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0
+                        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = self.speedRate
+                        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
                     } else {
                         self.isPlaying = false
                         SAPlayer.shared.pause()
                         SAPlayer.shared.seekTo(seconds: 0)
                         self.currentTime = 0
-                        self.updateNowPlayingInfo()
+                        var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0
+                        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+                        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
                     }
                 default:
                     self.isPlaying = false
-                    self.updateNowPlayingInfo()
+                    var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                    nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
                 }
             }
         }
@@ -209,142 +208,112 @@ final class AudioPlayerWithReverb: ObservableObject {
         commandCenter.seekBackwardCommand.isEnabled = true
         commandCenter.seekForwardCommand.isEnabled = true
 
+        // Play command
+        commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
-            SAPlayer.shared.play()
-            self?.updateNowPlayingInfo()
+            guard let self = self else { return .commandFailed }
+            self.play()
             return .success
         }
+        
+        // Pause command
+        commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
-            SAPlayer.shared.pause()
-            self?.updateNowPlayingInfo()
+            guard let self = self else { return .commandFailed }
+            self.pause()
             return .success
         }
+        
+        // Stop command
+        commandCenter.stopCommand.isEnabled = true
+        commandCenter.stopCommand.addTarget { [weak self] _ in
+            guard let self = self else { return .commandFailed }
+            self.stop()
+            return .success
+        }
+        
+        // Toggle play/pause
+        commandCenter.togglePlayPauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
-            SAPlayer.shared.togglePlayAndPause()
-            self?.updateNowPlayingInfo()
+            guard let self = self else { return .commandFailed }
+            if self.isPlaying {
+                self.pause()
+            } else {
+                self.play()
+            }
             return .success
         }
+        
+        // Previous track command (restart from beginning with fast rewind icon)
+        commandCenter.previousTrackCommand.isEnabled = true
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            SAPlayer.shared.seekTo(seconds: 0)
-            self?.updateNowPlayingInfo()
+            guard let self = self else { return .commandFailed }
+            self.seek(to: 0)
             return .success
         }
-
-        if #available(iOS 9.1, *) {
-            commandCenter.changePlaybackPositionCommand.isEnabled = true
-            commandCenter.changePlaybackPositionCommand.addTarget { event in
-                guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
-                SAPlayer.shared.seekTo(seconds: event.positionTime)
-                return .success
-            }
-        }
-
-
-        commandCenter.seekBackwardCommand.addTarget { [weak self] event in
+        
+        // Next track command (restart from beginning with fast forward icon)
+        commandCenter.nextTrackCommand.isEnabled = true
+        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
-            guard let event = event as? MPSeekCommandEvent else { return .commandFailed }
-            switch event.type {
-            case .beginSeeking:
-                SAPlayer.shared.seekTo(seconds: 0)
-                if self.isPlaying { SAPlayer.shared.play() }
-                self.updateNowPlayingInfo()
-                return .success
-            case .endSeeking:
-                return .success
-            @unknown default:
+            self.seek(to: 0)
+            return .success
+        }
+        
+        // Change playback position command (scrubbing)
+        commandCenter.changePlaybackPositionCommand.isEnabled = true
+        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let self = self,
+                  let event = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
             }
-        }
-        commandCenter.seekForwardCommand.addTarget { [weak self] event in
-            guard let self = self else { return .commandFailed }
-            guard let event = event as? MPSeekCommandEvent else { return .commandFailed }
-            switch event.type {
-            case .beginSeeking:
-                let target = min(self.currentTime + 15, self.duration > 0 ? self.duration : self.currentTime + 15)
-                SAPlayer.shared.seekTo(seconds: target)
-                if self.isPlaying { SAPlayer.shared.play() }
-                self.updateNowPlayingInfo()
-                return .success
-            case .endSeeking:
-                return .success
-            @unknown default:
-                return .commandFailed
-            }
+            self.seek(to: event.positionTime)
+            return .success
         }
     }
 
     private func updateNowPlayingInfo() {
-        var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
-        info[MPMediaItemPropertyTitle] = decoratedTitle()
-        if let artist = nowPlayingArtist {
-            info[MPMediaItemPropertyArtist] = artist
+        var nowPlayingInfo = [String: Any]()
+        
+        if let title = metaTitle {
+            nowPlayingInfo[MPMediaItemPropertyTitle] = title
         }
-        if let artwork = nowPlayingArtwork {
-            info[MPMediaItemPropertyArtwork] = artwork
+        
+        if let artist = metaArtist, !artist.isEmpty {
+            nowPlayingInfo[MPMediaItemPropertyArtist] = artist
         }
-        if duration.isFinite && duration > 0 {
-            info[MPMediaItemPropertyPlaybackDuration] = duration
+        
+        if let artwork = metaArtwork {
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
         }
-        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
-        info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
-        if #available(iOS 10.0, *) {
-            info[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.audio.rawValue
-            info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
-            info[MPNowPlayingInfoPropertyPlaybackQueueCount] = 1
-            info[MPNowPlayingInfoPropertyPlaybackQueueIndex] = 0
-            info[MPNowPlayingInfoPropertyIsLiveStream] = false
-        }
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-        let newTitle = nowPlayingTitle
-        let newArtist = nowPlayingArtist
-        let newArtwork = nowPlayingArtworkImage
-        DispatchQueue.main.async {
-            self.displayTitle = newTitle
-            self.displayArtist = newArtist
-            self.displayArtwork = newArtwork
-        }
+        
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
+        
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        
+        // Set playback rate + this also indicates if we're paused or playing
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
+        
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+    }
+    
+    func loadMetadataStrings(title: String? = nil, artist: String? = nil) {
+        self.metaTitle = title
+        self.metaArtist = artist
+        
+        updateNowPlayingInfo()
     }
 
-    private func fetchArtwork(from url: URL) {
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            guard let self = self else { return }
-            guard let data = data, let image = UIImage(data: data) else {
-                DispatchQueue.main.async {
-                    self.nowPlayingArtwork = nil
-                    self.nowPlayingArtworkImage = nil
-                    self.isArtworkSquare = nil
-                    self.updateNowPlayingInfo()
-                }
+    func loadMetadataArtwork(url: URL) {
+        SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
+            guard error == nil, finished, let image else {
+                print("Failed to load artwork via SDWebImage: \(error?.localizedDescription ?? "Unknown error")")
                 return
             }
-            let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-            let size = image.size
-            let square = abs(size.width - size.height) <= 2
-            DispatchQueue.main.async {
-                self.nowPlayingArtwork = artwork
-                self.nowPlayingArtworkImage = image
-                self.isArtworkSquare = square
-                print("[Swift] PlayerView artwork size: \(Int(size.width))x\(Int(size.height)) | square? \(square)")
-                self.updateNowPlayingInfo()
-            }
-        }.resume()
+            self.metaArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            
+            self.updateNowPlayingInfo()
+        }
     }
 
-    private func decoratedTitle() -> String {
-        var tags: [String] = []
-        if rate > 1.0 {
-            tags.append("sped up")
-        } else if rate < 1.0 {
-            tags.append("slowed down")
-        }
-        if reverbWetDryMix > 0.0 {
-            if tags.isEmpty {
-                tags.append("reverb")
-            } else {
-                tags.append("reverb")
-            }
-        }
-        guard !tags.isEmpty else { return nowPlayingTitle }
-        return "\(nowPlayingTitle) (\(tags.joined(separator: " + ")))"
-    }
 }

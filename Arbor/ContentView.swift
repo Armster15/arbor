@@ -41,8 +41,13 @@ struct ContentView: View {
 
                     let newAudioPlayer = AudioPlayerWithReverb()
                     let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
+                    
                     newAudioPlayer.startSavedAudio(filePath: meta.path)
-                    newAudioPlayer.setMetadata(title: meta.title, artist: meta.artist, artworkURL: artworkURL)
+                    
+                    newAudioPlayer.loadMetadataStrings(title: meta.title, artist: meta.artist)                    
+                    if let artworkURL = artworkURL {
+                        newAudioPlayer.loadMetadataArtwork(url: artworkURL)
+                    }
                     
                     audioPlayer = newAudioPlayer
                     
