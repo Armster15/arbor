@@ -44,9 +44,10 @@ struct ContentView: View {
                     
                     newAudioPlayer.startSavedAudio(filePath: meta.path)
                     
-                    newAudioPlayer.loadMetadataStrings(title: meta.title, artist: meta.artist)                    
+                    newAudioPlayer.updateMetadataTitle(meta.title)
+                    newAudioPlayer.updateMetadataArtist(meta.artist)
                     if let artworkURL = artworkURL {
-                        newAudioPlayer.loadMetadataArtwork(url: artworkURL)
+                        newAudioPlayer.updateMetadataArtwork(url: artworkURL)
                     }
                     
                     audioPlayer = newAudioPlayer

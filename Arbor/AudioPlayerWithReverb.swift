@@ -297,14 +297,17 @@ final class AudioPlayerWithReverb: ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
     
-    func loadMetadataStrings(title: String? = nil, artist: String? = nil) {
+    func updateMetadataTitle(_ title: String? = nil) {
         self.metaTitle = title
+        updateNowPlayingInfo()
+    }
+    
+    func updateMetadataArtist(_ artist: String? = nil) {
         self.metaArtist = artist
-        
         updateNowPlayingInfo()
     }
 
-    func loadMetadataArtwork(url: URL) {
+    func updateMetadataArtwork(url: URL) {
         SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
             guard error == nil, finished, let image else {
                 print("Failed to load artwork via SDWebImage: \(error?.localizedDescription ?? "Unknown error")")

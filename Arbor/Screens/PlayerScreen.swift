@@ -12,7 +12,21 @@ struct PlayerScreen: View {
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
 
     private func decoratedTitle() -> String {
-        meta.title
+        var tags: [String] = []
+        if audioPlayer.speedRate > 1.0 {
+            tags.append("sped up")
+        } else if audioPlayer.speedRate < 1.0 {
+            tags.append("slowed")
+        }
+        if audioPlayer.reverbMix > 0.0 {
+            if tags.isEmpty {
+                tags.append("reverb")
+            } else {
+                tags.append("reverb")
+            }
+        }
+        guard !tags.isEmpty else { return meta.title }
+        return "\(meta.title) (\(tags.joined(separator: " + ")))"
     }
 
     var body: some View {
@@ -318,7 +332,12 @@ struct PlayerScreen: View {
             }
             .padding()
         }
-        // Title decoration and now playing info are handled within the player
+        .onChange(of: audioPlayer.speedRate) { _, _ in
+            audioPlayer.updateMetadataTitle(decoratedTitle())
+        }
+        .onChange(of: audioPlayer.reverbMix) { _, _ in
+            audioPlayer.updateMetadataTitle(decoratedTitle())
+        }
     }
 }
 
