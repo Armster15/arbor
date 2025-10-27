@@ -33,6 +33,8 @@ final class AudioPlayerWithReverb: ObservableObject {
     private var pitchNode: AVAudioUnitTimePitch
     private var reverbNode: AVAudioUnitReverb
     
+    private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
+    
     init() {
         pitchNode = AVAudioUnitTimePitch()
         reverbNode = AVAudioUnitReverb()
@@ -53,16 +55,23 @@ final class AudioPlayerWithReverb: ObservableObject {
         updateNowPlayingInfo()
     }
 
-    func play() {
+    func play(shouldRampVolume: Bool = true) {
+        // Fade in over 300ms with exponential curve, but *not* when starting from the beginning
+        let justStarted = currentTime <= 0.05
+        if shouldRampVolume == true && !justStarted {
+            rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+        } else {
+            // required to override any race conditions where we may already be ramping the volume at some point
+            SAPlayer.shared.volume = 1.0
+        }
+        
         SAPlayer.shared.play()
     }
 
-    func pause() {
-        SAPlayer.shared.pause()
-    }
-
-    func toggle() {
-        SAPlayer.shared.togglePlayAndPause()
+    func pause() {        
+        rampVolume(from: SAPlayer.shared.volume ?? 0.0, to: 0.0, duration: 0.3) {
+            SAPlayer.shared.pause()
+        }
     }
 
     func seek(to seconds: Double) {
@@ -70,8 +79,8 @@ final class AudioPlayerWithReverb: ObservableObject {
     }
 
     func stop() {
-        SAPlayer.shared.pause()
-        SAPlayer.shared.seekTo(seconds: 0)
+        self.pause()
+        self.seek(to: 0)
         isPlaying = false
         currentTime = 0
     }
@@ -157,8 +166,8 @@ final class AudioPlayerWithReverb: ObservableObject {
                     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
                 case .ended:
                     if self.isLooping {
-                        SAPlayer.shared.seekTo(seconds: 0)
-                        SAPlayer.shared.play()
+                        self.seek(to: 0)
+                        self.play()
                         self.isPlaying = true
                         self.currentTime = 0
                         var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
@@ -167,8 +176,8 @@ final class AudioPlayerWithReverb: ObservableObject {
                         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
                     } else {
                         self.isPlaying = false
-                        SAPlayer.shared.pause()
-                        SAPlayer.shared.seekTo(seconds: 0)
+                        self.pause()
+                        self.seek(to: 0)
                         self.currentTime = 0
                         var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
                         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0
@@ -197,6 +206,10 @@ final class AudioPlayerWithReverb: ObservableObject {
     private func configureRemoteCommandsIfNeeded() {
         guard !remoteCommandsConfigured else { return }
         remoteCommandsConfigured = true
+        
+        // SAPlayer automatically adds commands, so we need to clear them to manually implement this
+        SAPlayer.shared.clearLockScreenInfo()
+        updateNowPlayingInfo()
 
         let commandCenter = MPRemoteCommandCenter.shared()
         commandCenter.playCommand.isEnabled = true
@@ -296,6 +309,49 @@ final class AudioPlayerWithReverb: ObservableObject {
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
+    
+    private func rampVolume(from startVolume: Float, to endVolume: Float, duration: TimeInterval, completion: (() -> Void)? = nil) {
+        // Cancel any existing ramp timer to prevent race conditions
+        volumeRampTimer?.invalidate()
+        
+        let steps = 60 // More steps for smoother transition
+        let stepDuration = duration / Double(steps)
+        
+        var currentStep = 0
+        let timer = Timer(timeInterval: stepDuration, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            currentStep += 1
+            let progress = Float(currentStep) / Float(steps)
+            
+            // Use exponential curve for more natural-sounding fade
+            let curvedProgress: Float
+            if endVolume > startVolume {
+                // Fade in: exponential curve
+                curvedProgress = progress * progress
+            } else {
+                // Fade out: inverse exponential curve
+                curvedProgress = 1.0 - (1.0 - progress) * (1.0 - progress)
+            }
+            
+            let newVolume = startVolume + (endVolume - startVolume) * curvedProgress
+            SAPlayer.shared.volume = newVolume
+            
+            if currentStep >= steps {
+                timer.invalidate()
+                self.volumeRampTimer = nil
+                SAPlayer.shared.volume = endVolume
+                completion?()
+            }
+        }
+        timer.tolerance = stepDuration * 0.2
+        RunLoop.main.add(timer, forMode: .common)
+        volumeRampTimer = timer
+    }
+
     
     func updateMetadataTitle(_ title: String? = nil) {
         self.metaTitle = title
