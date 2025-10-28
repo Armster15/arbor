@@ -2,88 +2,280 @@
 //  AudioPlayerWithReverb.swift
 //  arbor
 //
-//  Created by Armaan Aggarwal on 10/19/25.
-//
+
 import AVFoundation
+import SwiftAudioPlayer
 import MediaPlayer
+import UIKit
 import SDWebImage
 
-class AudioPlayerWithReverb: ObservableObject {
-    private var engine: AVAudioEngine
-    private var playerNode: AVAudioPlayerNode
-        
-    private var pitchNode: AVAudioUnitTimePitch
-    private var reverbNode: AVAudioUnitReverb
+final class AudioPlayerWithReverb: ObservableObject {
+    @Published var isPlaying: Bool = false
+    @Published var currentTime: Double = 0
+    @Published var duration: Double = 0
+    @Published var isLooping: Bool = false
     
-    // metadata related to the loaded audio file (including the actual audiofile)
-    private var audioFile: AVAudioFile?
+    @Published var speedRate: Float = 1.0
+    @Published var pitchCents: Float = 0.0
+    @Published var reverbMix: Float = 0.0
 
-    // publicly exposed properties
-    @Published public var isPlaying: Bool = false
-    @Published public var speedRate: Float = 1.0
-    @Published public var reverbMix: Float = 0.0
-    @Published public var pitchCents: Float = 0.0
-    @Published public var isLooping: Bool = false
+    private var elapsedSub: UInt?
+    private var durationSub: UInt?
+    private var statusSub: UInt?
 
-    // properties just for showing the currentTime/duration
-    @Published public var currentTime: TimeInterval = 0.0
-    @Published public var duration: TimeInterval = 0.0
-    private var seekOffset: AVAudioFramePosition = 0 // to track which frame we seeked to
-    private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
-    private var displayLink: CADisplayLink?
-    private var lastPostedSecond: Int = -1 // stores the last second that was posted to the now playing info so we don't spam updates
-    private var playbackGeneration: Int = 0 // multiple segments may be in flight at once (e.g. you seek to an arbitrary position), so this is used to ignore outdated callback invocations
+    private var remoteCommandsConfigured: Bool = false
     
     // now playing metadata
     private var metaTitle: String?
     private var metaArtist: String?
     private var metaArtwork: MPMediaItemArtwork?
-
-
+    
+    private var pitchNode: AVAudioUnitTimePitch
+    private var reverbNode: AVAudioUnitReverb
+    
+    private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
+    private var pendingSeekTarget: Double? // gate play after a seek until applied
+    private var microFadeInPending: Bool = false // request a short fade-in on next play
+    
     init() {
-        engine = AVAudioEngine()
-        playerNode = AVAudioPlayerNode()
-        
         pitchNode = AVAudioUnitTimePitch()
         reverbNode = AVAudioUnitReverb()
-        
-        setupAudioEngine()
-        setupAudioSession()
-        setupRemoteCommands()
                 
         // Default parameters
         reverbNode.wetDryMix = reverbMix
         pitchNode.rate = speedRate
-    }
-    
-    private func setupAudioEngine() {
-        engine.attach(playerNode)
-        engine.attach(pitchNode)
-        engine.attach(reverbNode)
-                
+        
         // Connect nodes: player -> pitch -> reverb -> output
-        engine.connect(playerNode, to: pitchNode, format: nil)
-        engine.connect(pitchNode, to: reverbNode, format: nil)
-        engine.connect(reverbNode, to: engine.mainMixerNode, format: nil)
+        SAPlayer.shared.audioModifiers = [pitchNode, reverbNode]
     }
-    
-    private func setupAudioSession() {
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback, mode: .default)
-            try audioSession.setActive(true)
-            
-            NotificationCenter.default.addObserver(self, selector: #selector(handleAppDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
-            NotificationCenter.default.addObserver(self, selector: #selector(handleAppWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
-            NotificationCenter.default.addObserver(self, selector: #selector(handleAudioSessionInterruption), name: AVAudioSession.interruptionNotification, object: nil)
-        } catch {
-            print("Failed to set up audio session: \(error)")
+
+    func startSavedAudio(filePath: String) {
+        let url = URL(fileURLWithPath: filePath)
+        SAPlayer.shared.startSavedAudio(withSavedUrl: url, mediaInfo: nil)
+        configureRemoteCommandsIfNeeded()
+        subscribeUpdates()
+        updateNowPlayingInfo()
+    }
+
+    func play(shouldRampVolume: Bool = true) {
+        // If there is a pending seek, apply it just before playing to avoid stale buffered frames
+        if let target = pendingSeekTarget {
+            SAPlayer.shared.seekTo(seconds: target)
+            if target <= 0.05 {
+                // Clear any internal DSP tails when starting from 0
+                pitchNode.reset()
+                reverbNode.reset()
+            }
+        }
+        // Fade in over 300ms with exponential curve, but *not* when starting from the beginning
+        let effectiveCurrentTime = pendingSeekTarget ?? currentTime
+        let justStarted = effectiveCurrentTime <= 0.05
+        if microFadeInPending {
+            // ensure we start from silence to avoid click
+            SAPlayer.shared.volume = 0.0
+            rampVolume(from: 0.0, to: 1.0, duration: 0.03)
+        } else if shouldRampVolume == true && !justStarted {
+            rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+        } else {
+            // required to override any race conditions where we may already be ramping the volume at some point
+            SAPlayer.shared.volume = 1.0
+        }
+        
+        SAPlayer.shared.play()
+        // Clear any pending seek target after attempting to play
+        pendingSeekTarget = nil
+        microFadeInPending = false
+    }
+
+    func pause() {        
+        rampVolume(from: SAPlayer.shared.volume ?? 0.0, to: 0.0, duration: 0.3) {
+            SAPlayer.shared.pause()
+        }
+    }
+
+    func seek(to seconds: Double) {
+        pendingSeekTarget = seconds
+        // If we're paused and seeking to the start, immediately halt audio and flush DSP to avoid a brief resume from old timestamp
+        if !isPlaying && seconds <= 0.05 {
+            // Cancel any ongoing volume ramp and ensure silence
+            volumeRampTimer?.invalidate()
+            volumeRampTimer = nil
+            SAPlayer.shared.volume = 0.0
+            SAPlayer.shared.pause()
+            SAPlayer.shared.seekTo(seconds: 0.0)
+            // Reset DSP nodes to clear internal buffers/tails
+            pitchNode.reset()
+            reverbNode.reset()
+            // Reflect the new position optimistically; subscriptions will keep it in sync
+            currentTime = 0.0
+        } else {
+            SAPlayer.shared.seekTo(seconds: seconds)
+            if seconds <= 0.05 {
+                // Clear DSP tails when jumping to start while playing
+                pitchNode.reset()
+                reverbNode.reset()
+            }
+        }
+    }
+
+    func stop() {
+        // Short fade-out to prevent click/pop, then pause + reset to start
+        let startVol = SAPlayer.shared.volume ?? 1.0
+        rampVolume(from: startVol, to: 0.0, duration: 0.02) { [weak self] in
+            guard let self = self else { return }
+            SAPlayer.shared.pause()
+            SAPlayer.shared.seekTo(seconds: 0.0)
+            self.pitchNode.reset()
+            self.reverbNode.reset()
+            self.isPlaying = false
+            self.currentTime = 0
+            self.pendingSeekTarget = 0.0
+            self.microFadeInPending = true
+            var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0
+            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        }
+    }
+
+    func toggleLoop() {
+        let new = !self.isLooping
+        
+        if new {
+            SAPlayer.Features.Loop.enable()
+        }
+        else {
+            SAPlayer.Features.Loop.disable()
+        }
+        
+        self.isLooping = new
+    }
+
+    // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
+    func setPitchByCents(_ cents: Float) {
+        let clamped = min(max(cents, -2400), 2400)
+        if pitchNode.pitch != clamped {
+            pitchNode.pitch = clamped
+        }
+        if pitchCents != pitchNode.pitch {
+            pitchCents = pitchNode.pitch
         }
     }
     
-    private func setupRemoteCommands() {
-        let commandCenter = MPRemoteCommandCenter.shared()
+    // Adjust playback speed (0.25x ... 2.0x)
+    func setSpeedRate(_ newRate: Float) {
+        let clamped = min(max(newRate, 0.25), 2.0)
+        if pitchNode.rate != clamped {
+            pitchNode.rate = clamped
+        }
+        if speedRate != pitchNode.rate {
+            speedRate = pitchNode.rate
+        }
         
+        // Update Now Playing info with new playback rate
+        if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
+            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        }
+    }
+        
+    // Adjust reverb intensity (0-100)
+    func setReverbMix(_ mix: Float) {
+        let clamped = min(max(mix, 0), 100)
+        if reverbNode.wetDryMix != clamped {
+            reverbNode.wetDryMix = clamped
+        }
+        if reverbMix != reverbNode.wetDryMix {
+            reverbMix = reverbNode.wetDryMix
+        }
+    }
+
+
+    private func subscribeUpdates() {
+        if elapsedSub == nil {
+            elapsedSub = SAPlayer.Updates.ElapsedTime.subscribe { [weak self] time in
+                self?.currentTime = time
+                var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = time
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+            }
+        }
+        if durationSub == nil {
+            durationSub = SAPlayer.Updates.Duration.subscribe { [weak self] dur in
+                self?.duration = dur
+                var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = dur
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+            }
+        }
+        if statusSub == nil {
+            statusSub = SAPlayer.Updates.PlayingStatus.subscribe { [weak self] status in
+                guard let self = self else { return }
+                switch status {
+                case .playing:
+                    self.isPlaying = true
+                    // Any pending seek is now applied
+                    self.pendingSeekTarget = nil
+                    var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                    nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = self.speedRate
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+                case .ended:
+                    if self.isLooping {
+                        self.seek(to: 0)
+                        self.play()
+                        self.isPlaying = true
+                        self.currentTime = 0
+                        var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0
+                        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = self.speedRate
+                        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+                    } else {
+                        self.isPlaying = false
+                        self.pause()
+                        self.seek(to: 0)
+                        self.currentTime = 0
+                        var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0
+                        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+                        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+                    }
+                default:
+                    self.isPlaying = false
+                    var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                    nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+                }
+            }
+        }
+    }
+
+    func unsubscribeUpdates() {
+        if let id = elapsedSub { SAPlayer.Updates.ElapsedTime.unsubscribe(id) }
+        if let id = durationSub { SAPlayer.Updates.Duration.unsubscribe(id) }
+        if let id = statusSub { SAPlayer.Updates.PlayingStatus.unsubscribe(id) }
+        elapsedSub = nil
+        durationSub = nil
+        statusSub = nil
+    }
+
+    private func configureRemoteCommandsIfNeeded() {
+        guard !remoteCommandsConfigured else { return }
+        remoteCommandsConfigured = true
+        
+        // SAPlayer automatically adds commands, so we need to clear them to manually implement this
+        SAPlayer.shared.clearLockScreenInfo()
+        updateNowPlayingInfo()
+
+        let commandCenter = MPRemoteCommandCenter.shared()
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+        commandCenter.previousTrackCommand.isEnabled = true
+        commandCenter.skipBackwardCommand.isEnabled = false
+        commandCenter.skipForwardCommand.isEnabled = false
+        commandCenter.seekBackwardCommand.isEnabled = true
+        commandCenter.seekForwardCommand.isEnabled = true
+
         // Play command
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
@@ -147,8 +339,7 @@ class AudioPlayerWithReverb: ObservableObject {
             return .success
         }
     }
-    
-    
+
     private func updateNowPlayingInfo() {
         var nowPlayingInfo = [String: Any]()
         
@@ -172,263 +363,6 @@ class AudioPlayerWithReverb: ObservableObject {
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-    }
-        
-    func loadAudio(url: URL) throws {
-        let file = try AVAudioFile(forReading: url)
-        loadAudio(file: file)
-    }
-    
-    func loadAudio(file: AVAudioFile) {
-        let sampleRate = file.processingFormat.sampleRate
-        let frameCount = file.length
-        
-        self.seekOffset = 0
-        self.duration = Double(frameCount) / sampleRate
-        self.audioFile = file
-
-        // Schedule from the beginning with completion handler
-        schedule(from: 0)
-
-        updateNowPlayingInfo()
-    }
-    
-    func loadMetadataStrings(title: String? = nil, artist: String? = nil) {
-        self.metaTitle = title
-        self.metaArtist = artist
-        
-        updateNowPlayingInfo()
-    }
-    
-    func loadMetadataArtwork(url: URL) {
-        SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
-            guard error == nil, finished, let image else {
-                print("Failed to load artwork via SDWebImage: \(error?.localizedDescription ?? "Unknown error")")
-                return
-            }
-            self.metaArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-        }
-    }
-    
-    func play(shouldRampVolume: Bool = true) {
-        if !engine.isRunning {
-            try? engine.start()
-        }
-        
-        playerNode.play()
-        isPlaying = true
-        
-        // Fade in over 300ms with exponential curve, but *not* when starting from the beginning
-        let justStarted = currentTime <= 0.05 && seekOffset == 0
-        if shouldRampVolume == true && !justStarted {
-            rampVolume(from: 0.0, to: 1.0, duration: 0.3)
-        } else {
-            // required to override any race conditions where we may already be ramping the volume at some point
-            engine.mainMixerNode.outputVolume = 1.0
-        }
-        
-        updateNowPlayingInfo()
-        startDisplayLink()
-    }
-    
-    func pause() {
-        isPlaying = false
-        
-        updateNowPlayingInfo()
-        stopDisplayLink()
-        
-        rampVolume(from: engine.mainMixerNode.outputVolume, to: 0.0, duration: 0.3) { [weak self] in
-            guard let self = self else { return }
-            
-            
-            // VERY IMPORTANT: you MUST also use engine.pause() or otherwise the command center breaks and still marks
-            // the audio as playing, and then you can't control the audio via the command center or your AirPods.
-            // playerNode.pause() is required for syncing the correct currentTime
-            playerNode.pause()
-            self.engine.pause()
-        }
-    }
-
-    func toggleLoop() {
-        isLooping = !isLooping
-    }
-    
-    func stop(queueAudio: Bool = true) {
-        playerNode.stop()
-        engine.stop()
-        
-        isPlaying = false
-        currentTime = 0
-        seekOffset = 0
-        
-        updateNowPlayingInfo()
-        stopDisplayLink()
-        
-        if queueAudio == true {
-            // schedule file so when `.play()` is called we have it queued up. we have to
-            // put it here since we can't check if `playerNode` has a file scheduled or not
-            if let file = self.audioFile {
-                self.loadAudio(file: file)
-            }
-        }
-    }
-    
-    func seek(to time: TimeInterval) {
-        guard let audioFile = audioFile else { return }
-        
-        // Store if we were playing
-        let wasPlaying = isPlaying
-        
-        // Stop current playback
-        playerNode.stop()
-        
-        // Calculate frame position from time
-        let sampleRate = audioFile.processingFormat.sampleRate
-        let framePosition = AVAudioFramePosition(time * sampleRate)
-        
-        // Clamp the frame position to valid range
-        let clampedFrame = min(max(framePosition, 0), audioFile.length)
-        
-        // Store the seek offset so updateCurrentTime can calculate correctly
-        seekOffset = clampedFrame
-                
-        // Update current time
-        currentTime = Double(clampedFrame) / sampleRate
-        
-        // Schedule the segment from the seek position to the end
-        schedule(from: clampedFrame)
-        
-        // Resume playback if we were playing
-        if wasPlaying {
-            if !engine.isRunning {
-                try? engine.start()
-            }
-            playerNode.play()
-            startDisplayLink()
-        }
-        
-        updateNowPlayingInfo()
-    }
-
-    private func schedule(from frame: AVAudioFramePosition) {
-        guard let audioFile = audioFile else { return }
-        let remaining = AVAudioFrameCount(audioFile.length - frame)
-        guard remaining > 0 else { return }
-        playbackGeneration &+= 1
-        let generation = playbackGeneration
-        playerNode.scheduleSegment(
-            audioFile,
-            startingFrame: frame,
-            frameCount: remaining,
-            at: nil
-        ) { [weak self] in
-            DispatchQueue.main.async {
-                guard let self = self, generation == self.playbackGeneration else { return }
-                if self.isLooping {
-                    self.seek(to: 0)
-                    self.play(shouldRampVolume: false)
-                } else {
-                    self.stop()
-                }
-            }
-        }
-    }
-    
-    func teardown() {
-        NotificationCenter.default.removeObserver(self)
-        
-        self.stop(queueAudio: false)
-
-        engine.detach(reverbNode)
-        engine.detach(pitchNode)
-        engine.detach(playerNode)
-
-        engine.reset()
-
-        audioFile = nil
-        stopDisplayLink()
-    }
-
-    func updateTitle(title: String) {
-        metaTitle = title
-        updateNowPlayingInfo()
-    }
-    
-    private func startDisplayLink() {
-        stopDisplayLink()
-        displayLink = CADisplayLink(target: self, selector: #selector(updateCurrentTime))
-        displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 2, maximum: 4, preferred: 3)
-        displayLink?.add(to: .main, forMode: .common)
-    }
-
-    private func stopDisplayLink() {
-        displayLink?.invalidate()
-        displayLink = nil
-        lastPostedSecond = -1
-    }
-    
-    @objc private func updateCurrentTime() {
-        guard let nodeTime = playerNode.lastRenderTime,
-              let playerTime = playerNode.playerTime(forNodeTime: nodeTime),
-              let audioFile = audioFile else {
-            return
-        }
-
-        let sampleRate = audioFile.processingFormat.sampleRate
-        let currentFrame = playerTime.sampleTime + seekOffset
-        let newTime = Double(currentFrame) / sampleRate
-
-        // Update published time on every frame for smooth UI
-        currentTime = newTime
-
-        // Throttle MPNowPlayingInfo updates to whole seconds only
-        let currentSecond = Int(newTime.rounded(.down))
-        if currentSecond != lastPostedSecond {
-            lastPostedSecond = currentSecond
-            if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
-                nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = newTime
-                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-            }
-        }
-    }
-
-    // Adjust pitch in cents (-2400...+2400). 100 cents = 1 semitone.
-    func setPitchByCents(_ cents: Float) {
-        let clamped = min(max(cents, -2400), 2400)
-        if pitchNode.pitch != clamped {
-            pitchNode.pitch = clamped
-        }
-        if pitchCents != pitchNode.pitch {
-            pitchCents = pitchNode.pitch
-        }
-    }
-    
-    // Adjust playback speed (0.25x ... 2.0x)
-    func setSpeedRate(_ newRate: Float) {
-        let clamped = min(max(newRate, 0.25), 2.0)
-        if pitchNode.rate != clamped {
-            pitchNode.rate = clamped
-        }
-        if speedRate != pitchNode.rate {
-            speedRate = pitchNode.rate
-        }
-        
-        // Update Now Playing info with new playback rate
-        if var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
-            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? speedRate : 0.0
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-        }
-    }
-        
-    // Adjust reverb intensity (0-100)
-    func setReverbMix(_ mix: Float) {
-        let clamped = min(max(mix, 0), 100)
-        if reverbNode.wetDryMix != clamped {
-            reverbNode.wetDryMix = clamped
-        }
-        if reverbMix != reverbNode.wetDryMix {
-            reverbMix = reverbNode.wetDryMix
-        }
     }
     
     private func rampVolume(from startVolume: Float, to endVolume: Float, duration: TimeInterval, completion: (() -> Void)? = nil) {
@@ -459,12 +393,12 @@ class AudioPlayerWithReverb: ObservableObject {
             }
             
             let newVolume = startVolume + (endVolume - startVolume) * curvedProgress
-            self.engine.mainMixerNode.outputVolume = newVolume
+            SAPlayer.shared.volume = newVolume
             
             if currentStep >= steps {
                 timer.invalidate()
                 self.volumeRampTimer = nil
-                self.engine.mainMixerNode.outputVolume = endVolume
+                SAPlayer.shared.volume = endVolume
                 completion?()
             }
         }
@@ -474,47 +408,26 @@ class AudioPlayerWithReverb: ObservableObject {
     }
 
     
-    @objc private func handleAudioSessionInterruption(notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
-            return
-        }
-        
-        switch type {
-        case .began:
-            // Audio was interrupted (e.g., phone call, another app taking audio)
-            if isPlaying {
-                self.pause()
-            }
-        case .ended:
-            // Audio interruption ended
-            if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
-                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
-                if options.contains(.shouldResume) {
-                    // Resume playback if it was playing before interruption
-                    self.play()
-                }
-            }
-        @unknown default:
-            break
-        }
+    func updateMetadataTitle(_ title: String? = nil) {
+        self.metaTitle = title
+        updateNowPlayingInfo()
     }
-
-    @objc private func handleAppDidEnterBackground() {
-        stopDisplayLink()
+    
+    func updateMetadataArtist(_ artist: String? = nil) {
+        self.metaArtist = artist
         updateNowPlayingInfo()
     }
 
-    @objc private func handleAppWillEnterForeground() {
-        if isPlaying {
-            startDisplayLink()
-            updateNowPlayingInfo()
+    func updateMetadataArtwork(url: URL) {
+        SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
+            guard error == nil, finished, let image else {
+                print("Failed to load artwork via SDWebImage: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+            self.metaArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            
+            self.updateNowPlayingInfo()
         }
     }
 
-    deinit {
-        teardown()
-    }
 }
-

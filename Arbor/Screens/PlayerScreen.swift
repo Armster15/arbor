@@ -253,7 +253,7 @@ struct PlayerScreen: View {
                                         audioPlayer.setPitchByCents(Float(snapped))
                                     }
                                 ),
-                                in: -800...800,
+                                in: -800.0...800.0,
                                 step: 50
                             )
                             .frame(maxWidth: .infinity)
@@ -267,7 +267,7 @@ struct PlayerScreen: View {
                                         audioPlayer.setPitchByCents(Float(newVal))
                                     }
                                 ),
-                                in: -800...800,
+                                in: -800.0...800.0,
                                 step: 10,
                             ) {}
                             .fixedSize()
@@ -292,7 +292,7 @@ struct PlayerScreen: View {
                             
                             Spacer()
                             
-                            Text(String(format: "%.0f%%", audioPlayer.reverbMix))
+                            Text("\(Int(audioPlayer.reverbMix))%")
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
@@ -308,7 +308,7 @@ struct PlayerScreen: View {
                                         audioPlayer.setReverbMix(Float(snapped))
                                     }
                                 ),
-                                in: 0...100,
+                                in: 0.0...100.0,
                                 step: 5
                             )
                             .frame(maxWidth: .infinity)
@@ -322,7 +322,7 @@ struct PlayerScreen: View {
                                         audioPlayer.setReverbMix(Float(newVal))
                                     }
                                 ),
-                                in: 0...100,
+                                in: 0.0...100.0,
                                 step: 1,
                             ) {}
                             .fixedSize()
@@ -333,10 +333,10 @@ struct PlayerScreen: View {
             .padding()
         }
         .onChange(of: audioPlayer.speedRate) { _, _ in
-            audioPlayer.updateTitle(title: decoratedTitle())
+            audioPlayer.updateMetadataTitle(decoratedTitle())
         }
         .onChange(of: audioPlayer.reverbMix) { _, _ in
-            audioPlayer.updateTitle(title: decoratedTitle())
+            audioPlayer.updateMetadataTitle(decoratedTitle())
         }
     }
 }
