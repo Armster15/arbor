@@ -58,7 +58,7 @@ final class AudioPlayerWithReverb: ObservableObject {
     }
     
     func startRemoteAudio(url: URL) {
-        SAPlayer.shared.startRemoteAudio(withRemoteUrl: URL(string: "https://github.com/rafaelreis-hotmart/Audio-Sample-files/raw/refs/heads/master/sample.mp3")!)
+        SAPlayer.shared.startRemoteAudio(withRemoteUrl: url)
         configureRemoteCommandsIfNeeded()
         subscribeUpdates()
         updateNowPlayingInfo()
