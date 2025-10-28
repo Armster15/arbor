@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct DownloadMeta: Decodable {
-    let path: String
+    let streaming_url: String
     let title: String
     let artist: String?
     let thumbnail_url: String?
@@ -40,9 +40,10 @@ struct ContentView: View {
                     audioPlayer = nil
 
                     let newAudioPlayer = AudioPlayerWithReverb()
+                    let streamingURL = URL(string: meta.streaming_url)!
                     let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
                     
-                    newAudioPlayer.startSavedAudio(filePath: meta.path)
+                    newAudioPlayer.startRemoteAudio(url: streamingURL)
                     
                     newAudioPlayer.updateMetadataTitle(meta.title)
                     newAudioPlayer.updateMetadataArtist(meta.artist)

@@ -340,8 +340,8 @@ struct HomeContentView: View {
         // tldr: import module and invoke function with args directly via obj-c. they have utils
         // for importing, invoking methods, passing args, etc.
         let code = """
-from pytest_download import download
-result = download('\(trimmed)')
+from pytest_download import stream
+result = stream('\(trimmed)')
 """
 
         pythonExecAndGetStringAsync(

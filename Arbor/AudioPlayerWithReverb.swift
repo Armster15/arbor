@@ -49,9 +49,16 @@ final class AudioPlayerWithReverb: ObservableObject {
         SAPlayer.shared.audioModifiers = [pitchNode, reverbNode]
     }
 
-    func startSavedAudio(filePath: String) {
+    func startLocalAudio(filePath: String) {
         let url = URL(fileURLWithPath: filePath)
         SAPlayer.shared.startSavedAudio(withSavedUrl: url, mediaInfo: nil)
+        configureRemoteCommandsIfNeeded()
+        subscribeUpdates()
+        updateNowPlayingInfo()
+    }
+    
+    func startRemoteAudio(url: URL) {
+        SAPlayer.shared.startRemoteAudio(withRemoteUrl: url)
         configureRemoteCommandsIfNeeded()
         subscribeUpdates()
         updateNowPlayingInfo()
