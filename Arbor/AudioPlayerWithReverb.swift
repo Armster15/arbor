@@ -34,6 +34,8 @@ final class AudioPlayerWithReverb: ObservableObject {
     private var reverbNode: AVAudioUnitReverb
     
     private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
+    private var pendingSeekTarget: Double? // gate play after a seek until applied
+    private var microFadeInPending: Bool = false // request a short fade-in on next play
     
     init() {
         pitchNode = AVAudioUnitTimePitch()
@@ -56,9 +58,23 @@ final class AudioPlayerWithReverb: ObservableObject {
     }
 
     func play(shouldRampVolume: Bool = true) {
+        // If there is a pending seek, apply it just before playing to avoid stale buffered frames
+        if let target = pendingSeekTarget {
+            SAPlayer.shared.seekTo(seconds: target)
+            if target <= 0.05 {
+                // Clear any internal DSP tails when starting from 0
+                pitchNode.reset()
+                reverbNode.reset()
+            }
+        }
         // Fade in over 300ms with exponential curve, but *not* when starting from the beginning
-        let justStarted = currentTime <= 0.05
-        if shouldRampVolume == true && !justStarted {
+        let effectiveCurrentTime = pendingSeekTarget ?? currentTime
+        let justStarted = effectiveCurrentTime <= 0.05
+        if microFadeInPending {
+            // ensure we start from silence to avoid click
+            SAPlayer.shared.volume = 0.0
+            rampVolume(from: 0.0, to: 1.0, duration: 0.03)
+        } else if shouldRampVolume == true && !justStarted {
             rampVolume(from: 0.0, to: 1.0, duration: 0.3)
         } else {
             // required to override any race conditions where we may already be ramping the volume at some point
@@ -66,6 +82,9 @@ final class AudioPlayerWithReverb: ObservableObject {
         }
         
         SAPlayer.shared.play()
+        // Clear any pending seek target after attempting to play
+        pendingSeekTarget = nil
+        microFadeInPending = false
     }
 
     func pause() {        
@@ -75,14 +94,48 @@ final class AudioPlayerWithReverb: ObservableObject {
     }
 
     func seek(to seconds: Double) {
-        SAPlayer.shared.seekTo(seconds: seconds)
+        pendingSeekTarget = seconds
+        // If we're paused and seeking to the start, immediately halt audio and flush DSP to avoid a brief resume from old timestamp
+        if !isPlaying && seconds <= 0.05 {
+            // Cancel any ongoing volume ramp and ensure silence
+            volumeRampTimer?.invalidate()
+            volumeRampTimer = nil
+            SAPlayer.shared.volume = 0.0
+            SAPlayer.shared.pause()
+            SAPlayer.shared.seekTo(seconds: 0.0)
+            // Reset DSP nodes to clear internal buffers/tails
+            pitchNode.reset()
+            reverbNode.reset()
+            // Reflect the new position optimistically; subscriptions will keep it in sync
+            currentTime = 0.0
+        } else {
+            SAPlayer.shared.seekTo(seconds: seconds)
+            if seconds <= 0.05 {
+                // Clear DSP tails when jumping to start while playing
+                pitchNode.reset()
+                reverbNode.reset()
+            }
+        }
     }
 
     func stop() {
-        self.pause()
-        self.seek(to: 0)
-        isPlaying = false
-        currentTime = 0
+        // Short fade-out to prevent click/pop, then pause + reset to start
+        let startVol = SAPlayer.shared.volume ?? 1.0
+        rampVolume(from: startVol, to: 0.0, duration: 0.02) { [weak self] in
+            guard let self = self else { return }
+            SAPlayer.shared.pause()
+            SAPlayer.shared.seekTo(seconds: 0.0)
+            self.pitchNode.reset()
+            self.reverbNode.reset()
+            self.isPlaying = false
+            self.currentTime = 0
+            self.pendingSeekTarget = 0.0
+            self.microFadeInPending = true
+            var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0
+            nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        }
     }
 
     func toggleLoop() {
@@ -161,6 +214,8 @@ final class AudioPlayerWithReverb: ObservableObject {
                 switch status {
                 case .playing:
                     self.isPlaying = true
+                    // Any pending seek is now applied
+                    self.pendingSeekTarget = nil
                     var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
                     nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = self.speedRate
                     MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
