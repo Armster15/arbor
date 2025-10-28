@@ -49,9 +49,16 @@ final class AudioPlayerWithReverb: ObservableObject {
         SAPlayer.shared.audioModifiers = [pitchNode, reverbNode]
     }
 
-    func startSavedAudio(filePath: String) {
+    func startLocalAudio(filePath: String) {
         let url = URL(fileURLWithPath: filePath)
         SAPlayer.shared.startSavedAudio(withSavedUrl: url, mediaInfo: nil)
+        configureRemoteCommandsIfNeeded()
+        subscribeUpdates()
+        updateNowPlayingInfo()
+    }
+    
+    func startRemoteAudio(url: URL) {
+        SAPlayer.shared.startRemoteAudio(withRemoteUrl: URL(string: "https://github.com/rafaelreis-hotmart/Audio-Sample-files/raw/refs/heads/master/sample.mp3")!)
         configureRemoteCommandsIfNeeded()
         subscribeUpdates()
         updateNowPlayingInfo()
