@@ -1,4 +1,5 @@
 soundcloud-v2>=1.0.0,<2.0.0
 std-nslog>=1.0.0,<2.0.0
-yt-dlp==2025.10.22
+yt-dlp[default]==2025.11.1.232827.dev0
 ytmusicapi>=1.0.0,<2.0.0
+yt-dlp-apple-webkit-jsi
