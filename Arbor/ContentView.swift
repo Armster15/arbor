@@ -112,7 +112,40 @@ struct ContentView: View {
         }
         .tabViewBottomAccessory {
             if canOpenPlayer {
-                Button("Open Player", action: openPlayer)
+                HStack {
+                    Button(action: openPlayer) {
+                        HStack(spacing: 12) {
+                            SongImage(
+                                width: 40,
+                                height: 40,
+                                thumbnailURL: lastDownloadMeta?.thumbnail_url,
+                                thumbnailIsSquare: lastDownloadMeta?.thumbnail_is_square
+                            )
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(lastDownloadMeta?.title ?? "Now Playing")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(1)
+                                
+                                if let artist = lastDownloadMeta?.artist, !artist.isEmpty {
+                                    Text(artist)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 6)
+                    
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
