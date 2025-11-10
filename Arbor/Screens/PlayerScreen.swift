@@ -33,57 +33,7 @@ struct PlayerScreen: View {
         ScrollView {
             VStack(spacing: 32) {
                 VStack(spacing: 20) {
-                    // Metadata header
-                    VStack(spacing: 16) {
-                        if let thumbnailUrl = meta.thumbnail_url, let isSquare = meta.thumbnail_is_square {
-                            if isSquare == true {
-                                ZStack(alignment: .topTrailing) {
-                                    WebImage(url: URL(string: thumbnailUrl)) { image in
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 180, height: 180)
-                                            .clipped()
-                                            .cornerRadius(12)
-                                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-                                    } placeholder: {
-                                        ProgressView()
-                                            .frame(width: 180, height: 180)
-                                    }
-                                    .transition(.fade(duration: 0.5))
-                                }
-                            } else {
-                                ZStack(alignment: .topTrailing) {
-                                    WebImage(url: URL(string: thumbnailUrl)) { image in
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(height: 180)
-                                            .clipped()
-                                            .cornerRadius(12)
-                                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-                                    } placeholder: {
-                                        ProgressView()
-                                            .frame(height: 180)
-                                    }
-                                    .transition(.fade(duration: 0.5))
-                                }
-                            }
-                        }
-                        
-                        VStack(spacing: 4) {
-                            Text(meta.title)
-                                .font(.headline)
-                                .multilineTextAlignment(.center)
-                            
-                            if let artist = meta.artist, !artist.isEmpty {
-                                Text(artist)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                    }
+                    SongInfo(title: meta.title, artist: meta.artist, thumbnailURL: meta.thumbnail_url, thumbnailIsSquare: meta.thumbnail_is_square)
                                         
                     // Action buttons
                     HStack(spacing: 24) {
