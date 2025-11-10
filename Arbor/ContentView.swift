@@ -22,6 +22,14 @@ struct ContentView: View {
     @State private var lastDownloadMeta: DownloadMeta? = nil
     @State private var audioPlayer: AudioPlayerWithReverb? = nil
     
+    init() {
+        let titleColor = UIColor(red: 3/255, green: 25/255, blue: 0/255, alpha: 1.0)
+        let font = UIFont(name: "Spicy Rice", size: 32)!
+        
+        UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: titleColor, .font: font]
+        UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: titleColor, .font: font]
+    }
+    
     private enum Route: Hashable {
         case player
     }
@@ -62,6 +70,17 @@ struct ContentView: View {
                     PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
                 }
             }
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 239/255, green: 242/255, blue: 225/255),
+                        Color(red: 249/255, green: 255/255, blue: 212/255),
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
         }
     }
 }

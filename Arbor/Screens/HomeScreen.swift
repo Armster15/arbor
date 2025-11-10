@@ -415,7 +415,7 @@ struct HomeScreen: View {
                 )
             }
         }
-        .navigationTitle("🌳 Arbor")
+        .navigationTitle("arbor")
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .searchable(
             text: $searchQuery,
