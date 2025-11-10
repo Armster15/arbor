@@ -31,6 +31,7 @@ struct ContentView: View {
     @State private var navPath: [Route] = []
     @State private var lastDownloadMeta: DownloadMeta? = nil
     @State private var audioPlayer: AudioPlayerWithReverb? = nil
+    @State private var searchText: String = "" // TODO: remove
     
     init() {
         let titleColor = UIColor(red: 3/255, green: 25/255, blue: 0/255, alpha: 1.0)
@@ -87,6 +88,17 @@ struct ContentView: View {
                 }
             }
             .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
+            .searchable(text: $searchText)
+            .toolbar {
+                ToolbarItem(placement: .bottomBar) {
+                    Button {} label: { Label("New", systemImage: "music.note.square.stack.fill") }
+                }
+                
+                ToolbarSpacer(placement: .bottomBar)
+                
+                DefaultToolbarItem(kind: .search, placement: .bottomBar)
+
+            }
         }
     }
 }
