@@ -74,7 +74,6 @@ struct SearchResultsView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
             } else if isSearching && searchResults.isEmpty {
                 VStack {
                     ProgressView()
@@ -84,7 +83,6 @@ struct SearchResultsView: View {
                     
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
             } else if searchResults.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "magnifyingglass")
@@ -100,7 +98,6 @@ struct SearchResultsView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -120,11 +117,9 @@ struct SearchResultsView: View {
                 .safeAreaInset(edge: .bottom) {
                     Color.clear.frame(height: 0) // Bottom safe area inset
                 }
-                .background(Color(.systemBackground))
                 .ignoresSafeArea(.container, edges: .bottom)
             }
         }
-        .background(Color(.systemBackground))
         .ignoresSafeArea(.container, edges: .bottom)
         .onAppear {
             searchVisible = true
@@ -233,7 +228,6 @@ struct SearchResultRow: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 16)
-        .background(Color(.systemBackground))
     }
 }
 

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct DownloadMeta: Decodable {
     let path: String
@@ -17,6 +18,15 @@ struct DownloadMeta: Decodable {
     let thumbnail_is_square: Bool?
 }
 
+let BackgroundColor = LinearGradient(
+    gradient: Gradient(colors: [
+        Color(red: 239/255, green: 242/255, blue: 225/255),
+        Color(red: 249/255, green: 255/255, blue: 212/255),
+    ]),
+    startPoint: .top,
+    endPoint: .bottom
+)
+
 struct ContentView: View {
     @State private var navPath: [Route] = []
     @State private var lastDownloadMeta: DownloadMeta? = nil
@@ -27,7 +37,7 @@ struct ContentView: View {
         let font = UIFont(name: "Spicy Rice", size: 32)!
         
         UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: titleColor, .font: font]
-        UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: titleColor, .font: font]
+        UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: titleColor, .font: font]        
     }
     
     private enum Route: Hashable {
@@ -63,24 +73,20 @@ struct ContentView: View {
                     if navPath.last != .player { navPath.append(.player) }
                 }
             )
-            
             .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .player:
-                    PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
+                ZStack {
+                    BackgroundColor // <- Background for all non root views
+                        .ignoresSafeArea()
+                    
+                    Group {
+                        switch route {
+                        case .player:
+                            PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
+                        }
+                    }
                 }
             }
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 239/255, green: 242/255, blue: 225/255),
-                        Color(red: 249/255, green: 255/255, blue: 212/255),
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
+            .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
         }
     }
 }
