@@ -232,8 +232,6 @@ struct SearchResultRow: View {
 }
 
 struct HomeContentView: View {
-    let canOpenPlayer: Bool
-    let openPlayerAction: () -> Void
     let onDownloaded: (DownloadMeta) -> Void
     @Binding var youtubeURL: String
     
@@ -294,23 +292,6 @@ struct HomeContentView: View {
             }
             .disabled(isLoading)
             .buttonStyle(.glassProminent)
-
-            if canOpenPlayer {
-                // Player Screen Navigation Trigger
-                VStack(spacing: 15) {
-                    Divider()
-                    Button(action: openPlayerAction) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "music.note.list")
-                            Text("Open Player")
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
         }
         .padding()
         .alert("Download Failed", isPresented: $showError) {
@@ -363,8 +344,6 @@ result = download('\(trimmed)')
 }
 
 struct HomeScreen: View {
-    let canOpenPlayer: Bool
-    let openPlayerAction: () -> Void
     let onDownloaded: (DownloadMeta) -> Void
 
     @State private var searchQuery: String = ""
@@ -402,8 +381,6 @@ struct HomeScreen: View {
             } else {
                 // Main Home Screen Content
                 HomeContentView(
-                    canOpenPlayer: canOpenPlayer,
-                    openPlayerAction: openPlayerAction,
                     onDownloaded: onDownloaded,
                     youtubeURL: $youtubeURL
                 )

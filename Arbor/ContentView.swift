@@ -32,6 +32,16 @@ struct ContentView: View {
     @State private var lastDownloadMeta: DownloadMeta? = nil
     @State private var audioPlayer: AudioPlayerWithReverb? = nil
     
+    private var canOpenPlayer: Bool {
+        lastDownloadMeta != nil
+    }
+    
+    private func openPlayer() {
+        if navPath.last != .player {
+            navPath.append(.player)
+        }
+    }
+    
     init() {
         let titleColor = UIColor(red: 3/255, green: 25/255, blue: 0/255, alpha: 1.0)
         let font = UIFont(name: "Spicy Rice", size: 32)!
@@ -49,8 +59,6 @@ struct ContentView: View {
             Tab("Search", systemImage: "magnifyingglass", role: .search) {
                 NavigationStack(path: $navPath) {
                     HomeScreen(
-                        canOpenPlayer: lastDownloadMeta != nil,
-                        openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
                         onDownloaded: { meta in
                             debugPrint(meta)
                             lastDownloadMeta = meta
@@ -72,7 +80,7 @@ struct ContentView: View {
                             
                             audioPlayer = newAudioPlayer
                             
-                            if navPath.last != .player { navPath.append(.player) }
+                            openPlayer()
                         }
                     )
                     .navigationDestination(for: Route.self) { route in
@@ -100,6 +108,11 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
                 }
+            }
+        }
+        .tabViewBottomAccessory {
+            if canOpenPlayer {
+                Button("Open Player", action: openPlayer)
             }
         }
     }
