@@ -451,7 +451,6 @@ struct HomeScreen: View {
                 searchQuery = ""
                 searchResults = []
                 isSearching = false
-				QueryCache.shared.invalidateQueries(["search"])
                 searchDebounceTimer?.invalidate()
                 searchDebounceTimer = nil
             }
