@@ -35,9 +35,13 @@ struct ContentView: View {
     private var canOpenPlayer: Bool {
         lastDownloadMeta != nil
     }
+
+    private var isPlayerScreenOpen: Bool {
+        navPath.last == .player
+    }
     
     private func openPlayer() {
-        if navPath.last != .player {
+        if !isPlayerScreenOpen {
             navPath.append(.player)
         }
     }
@@ -111,7 +115,7 @@ struct ContentView: View {
             }
         }
         .tabViewBottomAccessory {
-            if canOpenPlayer {
+            if canOpenPlayer && !isPlayerScreenOpen {
                 HStack {
                     Button(action: openPlayer) {
                         HStack(spacing: 12) {
