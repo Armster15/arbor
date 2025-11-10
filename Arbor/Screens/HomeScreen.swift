@@ -456,7 +456,7 @@ struct HomeScreen: View {
                 searchDebounceTimer = nil
             }
         }
-        .onDisappear() {
+        .onDisappear {
             searchDebounceTimer?.invalidate()
             searchDebounceTimer = nil
         }
