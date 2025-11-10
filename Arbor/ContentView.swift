@@ -31,7 +31,6 @@ struct ContentView: View {
     @State private var navPath: [Route] = []
     @State private var lastDownloadMeta: DownloadMeta? = nil
     @State private var audioPlayer: AudioPlayerWithReverb? = nil
-    @State private var searchText: String = "" // TODO: remove
     
     init() {
         let titleColor = UIColor(red: 3/255, green: 25/255, blue: 0/255, alpha: 1.0)
@@ -46,58 +45,61 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationStack(path: $navPath) {
-            HomeScreen(
-                canOpenPlayer: lastDownloadMeta != nil,
-                openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
-                onDownloaded: { meta in
-                    debugPrint(meta)
-                    lastDownloadMeta = meta
-                    
-                    // Tear down any existing engine before creating a new one
-                    audioPlayer?.unsubscribeUpdates()
-                    audioPlayer = nil
+        TabView {
+            Tab("Search", systemImage: "magnifyingglass", role: .search) {
+                NavigationStack(path: $navPath) {
+                    HomeScreen(
+                        canOpenPlayer: lastDownloadMeta != nil,
+                        openPlayerAction: { if navPath.last != .player { navPath.append(.player) } },
+                        onDownloaded: { meta in
+                            debugPrint(meta)
+                            lastDownloadMeta = meta
+                            
+                            // Tear down any existing engine before creating a new one
+                            audioPlayer?.unsubscribeUpdates()
+                            audioPlayer = nil
 
-                    let newAudioPlayer = AudioPlayerWithReverb()
-                    let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
-                    
-                    newAudioPlayer.startSavedAudio(filePath: meta.path)
-                    
-                    newAudioPlayer.updateMetadataTitle(meta.title)
-                    newAudioPlayer.updateMetadataArtist(meta.artist)
-                    if let artworkURL = artworkURL {
-                        newAudioPlayer.updateMetadataArtwork(url: artworkURL)
-                    }
-                    
-                    audioPlayer = newAudioPlayer
-                    
-                    if navPath.last != .player { navPath.append(.player) }
-                }
-            )
-            .navigationDestination(for: Route.self) { route in
-                ZStack {
-                    BackgroundColor // <- Background for all non root views
-                        .ignoresSafeArea()
-                    
-                    Group {
-                        switch route {
-                        case .player:
-                            PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
+                            let newAudioPlayer = AudioPlayerWithReverb()
+                            let artworkURL = meta.thumbnail_url.flatMap { URL(string: $0) }
+                            
+                            newAudioPlayer.startSavedAudio(filePath: meta.path)
+                            
+                            newAudioPlayer.updateMetadataTitle(meta.title)
+                            newAudioPlayer.updateMetadataArtist(meta.artist)
+                            if let artworkURL = artworkURL {
+                                newAudioPlayer.updateMetadataArtwork(url: artworkURL)
+                            }
+                            
+                            audioPlayer = newAudioPlayer
+                            
+                            if navPath.last != .player { navPath.append(.player) }
+                        }
+                    )
+                    .navigationDestination(for: Route.self) { route in
+                        ZStack {
+                            BackgroundColor // <- Background for all non root views
+                                .ignoresSafeArea()
+                            
+                            Group {
+                                switch route {
+                                case .player:
+                                    PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
+                                }
+                            }
                         }
                     }
+                    .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
                 }
             }
-            .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
-            .searchable(text: $searchText)
-            .toolbar {
-                ToolbarItem(placement: .bottomBar) {
-                    Button {} label: { Label("New", systemImage: "music.note.square.stack.fill") }
-                }
-                
-                ToolbarSpacer(placement: .bottomBar)
-                
-                DefaultToolbarItem(kind: .search, placement: .bottomBar)
 
+            Tab("Library", systemImage: "music.note.square.stack.fill") {
+                NavigationStack(path: $navPath) {
+                    VStack {
+                        Text("Library")
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
+                }
             }
         }
     }
