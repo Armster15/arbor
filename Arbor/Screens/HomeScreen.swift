@@ -372,7 +372,6 @@ struct HomeScreen: View {
     let canOpenPlayer: Bool
     let openPlayerAction: () -> Void
     let onDownloaded: (DownloadMeta) -> Void
-    
 
     @State private var searchQuery: String = ""
     @State private var searchResults: [SearchResult] = []
