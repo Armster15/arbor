@@ -138,29 +138,12 @@ struct SearchResultRow: View {
         Button(action: onTap) {
             HStack(spacing: 10) {
                 // Thumbnail
-                Group {
-                    if let urlString = result.thumbnailURL, let url = URL(string: urlString) {
-                        WebImage(url: url) { image in
-                            image.resizable()
-                        } placeholder: {
-                            ZStack {
-                                Color.gray.opacity(0.2)
-                            }
-                        }
-                        .transition(.fade(duration: 0.5)) // Fade Transition with duration
-                        .scaledToFit()
-                        .frame(width: 50, height: 50)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    } else {
-                        ZStack {
-                            Color.gray.opacity(0.2)
-                            Image(systemName: "music.note")
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(width: 50, height: 50)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                }
+                SongImage(
+                    width: 50,
+                    height: 50,
+                    thumbnailURL: result.thumbnailURL,
+                    thumbnailIsSquare: result.thumbnailIsSquare
+                )
                 
                 // Content
                 VStack(alignment: .leading, spacing: 2) {
