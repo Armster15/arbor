@@ -424,50 +424,48 @@ struct HomeScreen: View {
             prompt: "Search for music"
         )
         .onSubmit(of: .search) {
-            performSearch()
+            performDebouncedSearch()
         }
         .onChange(of: searchQuery) { _, newValue in
-            if !newValue.isEmpty {
-                performDebouncedSearch()
-            } else {
+            if newValue.isEmpty {
                 // Cancel any pending search and clear results immediately
-                searchDebounceTimer?.invalidate()
-                searchDebounceTimer = nil
                 searchResults = []
                 isSearching = false
+                searchDebounceTimer?.invalidate()
+                searchDebounceTimer = nil
+            } else {
+                performDebouncedSearch()
             }
         }
         .onChange(of: searchProvider) { _, _ in
             // Clear existing results when switching providers
             searchResults = []
+            
             if !searchQuery.isEmpty {
-                performSearch()
+                performDebouncedSearch()
             }
         }
         .onChange(of: searchIsActive) { _, isActive in
             if !isActive {
                 // Cancel any pending search when dismissing search
-                searchDebounceTimer?.invalidate()
-                searchDebounceTimer = nil
                 searchQuery = ""
                 searchResults = []
                 isSearching = false
 				QueryCache.shared.invalidateQueries(["search"])
+                searchDebounceTimer?.invalidate()
+                searchDebounceTimer = nil
             }
         }
         .onDisappear {
-            // Clean up timer when view disappears
             searchDebounceTimer?.invalidate()
             searchDebounceTimer = nil
         }
     }
-
+    
     private func performDebouncedSearch() {
-        searchDebounceTimer?.invalidate()
         isSearching = true
-        
-        // Debounce of 0.05 seconds
-        searchDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { _ in
+        searchDebounceTimer?.invalidate()
+        searchDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
             performSearch()
         }
     }
