@@ -372,6 +372,7 @@ struct HomeScreen: View {
     let canOpenPlayer: Bool
     let openPlayerAction: () -> Void
     let onDownloaded: (DownloadMeta) -> Void
+    
 
     @State private var searchQuery: String = ""
     @State private var searchResults: [SearchResult] = []
@@ -379,6 +380,7 @@ struct HomeScreen: View {
     @State private var isSearching = false
     @State private var youtubeURL: String = ""
     @State private var currentSearchTaskId: UUID = UUID()
+    @State private var searchDebounceTimer: Timer?
     @AppStorage("homeScreenSearchProvider") var searchProvider: SearchProvider = .youtube
 
     var body: some View {
@@ -423,22 +425,25 @@ struct HomeScreen: View {
             prompt: "Search for music"
         )
         .onSubmit(of: .search) {
-            performSearch()
+            performDebouncedSearch()
         }
         .onChange(of: searchQuery) { _, newValue in
-            if !newValue.isEmpty {
-                performSearch()
-            } else {
+            if newValue.isEmpty {
                 // Cancel any pending search and clear results immediately
                 searchResults = []
                 isSearching = false
+                searchDebounceTimer?.invalidate()
+                searchDebounceTimer = nil
+            } else {
+                performDebouncedSearch()
             }
         }
         .onChange(of: searchProvider) { _, _ in
             // Clear existing results when switching providers
             searchResults = []
+            
             if !searchQuery.isEmpty {
-                performSearch()
+                performDebouncedSearch()
             }
         }
         .onChange(of: searchIsActive) { _, isActive in
@@ -448,7 +453,21 @@ struct HomeScreen: View {
                 searchResults = []
                 isSearching = false
 				QueryCache.shared.invalidateQueries(["search"])
+                searchDebounceTimer?.invalidate()
+                searchDebounceTimer = nil
             }
+        }
+        .onDisappear() {
+            searchDebounceTimer?.invalidate()
+            searchDebounceTimer = nil
+        }
+    }
+    
+    private func performDebouncedSearch() {
+        isSearching = true
+        searchDebounceTimer?.invalidate()
+        searchDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
+            performSearch()
         }
     }
 
