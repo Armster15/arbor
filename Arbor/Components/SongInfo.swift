@@ -3,7 +3,7 @@ import SDWebImageSwiftUI
 
 struct SongInfo: View {
     let title: String
-    let artist: String?
+    let artist: String
     let thumbnailURL: String?
     let thumbnailIsSquare: Bool?
 
@@ -23,12 +23,10 @@ struct SongInfo: View {
                     .font(.headline)
                     .multilineTextAlignment(.center)
                 
-                if let artist = artist, !artist.isEmpty {
-                    Text(artist)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                Text(artist)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
         }
     }

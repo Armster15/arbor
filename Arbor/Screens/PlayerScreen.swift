@@ -8,18 +8,16 @@ import SDWebImage
 import SDWebImageSwiftUI
 
 struct PlayerScreen: View {
-    let meta: DownloadMeta
+    @Binding var meta: DownloadMeta
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
     
     @State private var isEditSheetPresented: Bool = false
-    @State private var overridenTitle: String
-    @State private var overridenArtist: String
+    @State private var draftTitle: String = ""
+    @State private var draftArtist: String = ""
     
-    init(meta: DownloadMeta, audioPlayer: AudioPlayerWithReverb) {
-        self.meta = meta
+    init(meta: Binding<DownloadMeta>, audioPlayer: AudioPlayerWithReverb) {
+        self._meta = meta
         self.audioPlayer = audioPlayer
-        _overridenTitle = State(initialValue: meta.title)
-        _overridenArtist = State(initialValue: meta.artist ?? "")
     }
 
     private func decoratedTitle() -> String {
@@ -36,15 +34,15 @@ struct PlayerScreen: View {
                 tags.append("reverb")
             }
         }
-        guard !tags.isEmpty else { return overridenTitle }
-        return "\(overridenTitle) (\(tags.joined(separator: " + ")))"
+        guard !tags.isEmpty else { return meta.title }
+        return "\(meta.title) (\(tags.joined(separator: " + ")))"
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
                 VStack(spacing: 20) {
-                    SongInfo(title: overridenTitle, artist: overridenArtist.isEmpty ? nil : overridenArtist, thumbnailURL: meta.thumbnail_url, thumbnailIsSquare: meta.thumbnail_is_square)
+                    SongInfo(title: meta.title, artist: meta.artist, thumbnailURL: meta.thumbnail_url, thumbnailIsSquare: meta.thumbnail_is_square)
                                         
                     // Action buttons
                     ZStack {
@@ -325,6 +323,8 @@ struct PlayerScreen: View {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
+                    draftTitle = meta.title
+                    draftArtist = meta.artist
                     isEditSheetPresented = true
                 } label: {
                     Label("Edit Metadata", systemImage: "pencil")
@@ -350,8 +350,7 @@ struct PlayerScreen: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color("PrimaryText"))
                         
-                        
-                        TextField("Title", text: $overridenTitle)
+                        TextField("Title", text: $draftTitle)
                             .textInputAutocapitalization(.words)
                             .padding(12)
                             .background(Color("Elevated"))
@@ -366,8 +365,7 @@ struct PlayerScreen: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color("PrimaryText"))
                         
-                        
-                        TextField("Artist", text: $overridenArtist)
+                        TextField("Artist", text: $draftArtist)
                             .textInputAutocapitalization(.words)
                             .padding(12)
                             .background(Color("Elevated"))
@@ -381,10 +379,13 @@ struct PlayerScreen: View {
 
                 HStack {
                     Button {
+                        // Commit edits to meta on Save
+                        meta.title = draftTitle
+                        meta.artist = draftArtist
+
                         // Update now playing metadata
                         audioPlayer.updateMetadataTitle(decoratedTitle())
-                        let artistToSet: String? = overridenArtist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : overridenArtist
-                        audioPlayer.updateMetadataArtist(artistToSet)
+                        audioPlayer.updateMetadataArtist(meta.artist)
                         isEditSheetPresented = false
                     } label: {
                         Text("Save")
@@ -421,7 +422,7 @@ private func formattedTime(_ seconds: Double) -> String {
 				.ignoresSafeArea()
 			
 			PlayerScreen(
-				meta: DownloadMeta(
+				meta: .constant(DownloadMeta(
 					path: "/Users/armaan/Library/Developer/CoreSimulator/Devices/2AF66DAD-484B-4967-8A7C-1E032023986B/data/Containers/Data/Application/23735F58-3B06-474F-8A01-E673F6ECE56D/tmp/NA-Sxu8wHE97Rk.m4a",
 					title: "Ude Dil Befikre (From \"Befikre\")",
 					artist: "Vishal and Sheykhar, Benny Dayal",
@@ -429,7 +430,7 @@ private func formattedTime(_ seconds: Double) -> String {
 					thumbnail_width: 544,
 					thumbnail_height: 544,
 					thumbnail_is_square: true
-				),
+				)),
 				audioPlayer: AudioPlayerWithReverb()
 			)
 		}

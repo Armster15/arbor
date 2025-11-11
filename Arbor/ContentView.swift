@@ -10,8 +10,8 @@ import UIKit
 
 struct DownloadMeta: Decodable {
     let path: String
-    let title: String
-    let artist: String?
+    var title: String
+    var artist: String
     let thumbnail_url: String?
     let thumbnail_width: Int?
     let thumbnail_height: Int?
@@ -95,7 +95,13 @@ struct ContentView: View {
                             Group {
                                 switch route {
                                 case .player:
-                                    PlayerScreen(meta: lastDownloadMeta!, audioPlayer: audioPlayer!)
+                                    PlayerScreen(
+                                        meta: Binding(
+                                            get: { lastDownloadMeta! },
+                                            set: { lastDownloadMeta = $0 }
+                                        ),
+                                        audioPlayer: audioPlayer!
+                                    )
                                 }
                             }
                         }

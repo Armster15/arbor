@@ -106,7 +106,7 @@ def search_soundcloud(query: str):
             artist_name = getattr(user, "username", None) or getattr(
                 user, "full_name", None
             )
-            artists = [artist_name] if artist_name else None
+            artists = [artist_name] if artist_name else ["Unknown Artist"]
 
             # Verified flag (boolean)
             verified = False

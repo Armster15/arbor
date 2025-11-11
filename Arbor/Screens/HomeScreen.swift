@@ -9,7 +9,7 @@ import SDWebImageSwiftUI
 
 struct SearchResult: Decodable, Equatable {
     let title: String
-    let artists: [String]?
+    let artists: [String]
     let url: String
     let views: String?
     let duration: String?
@@ -154,30 +154,28 @@ struct SearchResultRow: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     
-                    if let artists = result.artists {
-                        HStack(spacing: 6) {
-                            if result.isExplicit == true {
-                                Text("E")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(Color.secondary)
-                                    .clipShape(RoundedRectangle(cornerRadius: 3))
-                                    .accessibilityLabel("Explicit")
-                            }
+                    HStack(spacing: 6) {
+                        if result.isExplicit == true {
+                            Text("E")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.secondary)
+                                .clipShape(RoundedRectangle(cornerRadius: 3))
+                                .accessibilityLabel("Explicit")
+                        }
 
-                            HStack(spacing: 4) {
-                                Text(artists.joined(separator: ", "))
-                                    .font(.caption)
+                        HStack(spacing: 4) {
+                            Text(result.artists.joined(separator: ", "))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                            if result.isVerified == true {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.caption2)
                                     .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                if result.isVerified == true {
-                                    Image(systemName: "checkmark.seal.fill")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                        .accessibilityLabel("Verified artist")
-                                }
+                                    .accessibilityLabel("Verified artist")
                             }
                         }
                     }
@@ -230,7 +228,7 @@ struct HomeContentView: View {
                         if let result = selectedResult {
                             SongInfo(
                                 title: result.title,
-                                 artist: result.artists?.joined(separator: ", "),
+                                artist: result.artists.joined(separator: ", "),
                                 thumbnailURL: result.thumbnailURL,
                                 thumbnailIsSquare: result.thumbnailIsSquare
                             )

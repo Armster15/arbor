@@ -63,7 +63,10 @@ def download(url: str):
         title = info.get("title") or Path(full_path).stem
         # Prefer artist, then uploader/channel, then None
         artist = (
-            info.get("artist") or info.get("uploader") or info.get("channel") or None
+            info.get("artist")
+            or info.get("uploader")
+            or info.get("channel")
+            or "Unknown Artist"
         )
         # Choose thumbnail: prefer square art (common for music); else highest resolution
         thumbnails = info.get("thumbnails") or []
