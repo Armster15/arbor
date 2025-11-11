@@ -55,7 +55,12 @@ struct PlayerScreen: View {
                         }) {
                             Image(systemName: "backward.end.circle.fill")
                                 .font(.system(size: 44))
-                                .foregroundColor(Color("PrimaryBg"))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(
+                                    Color("PrimaryText"),
+                                    // TODO: abstract away as a secondary smth color
+                                    .black.opacity(0.05)
+                                )
                         }
                         
                         // Play / Pause
@@ -69,7 +74,7 @@ struct PlayerScreen: View {
                             Image(
                                 systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
                             )
-                            .font(.system(size: 44))
+                            .font(.system(size: 56))
                             .foregroundColor(Color("PrimaryBg"))
                         }
                         
@@ -79,7 +84,11 @@ struct PlayerScreen: View {
                         }) {
                             Image(systemName: "stop.circle.fill")
                                 .font(.system(size: 44))
-                                .foregroundColor(.red)
+                                .foregroundStyle(
+                                    Color("PrimaryText"),
+                                    // TODO: abstract away as a secondary smth color
+                                    .black.opacity(0.05)
+                                )
                         }
                         
                         // Loop
