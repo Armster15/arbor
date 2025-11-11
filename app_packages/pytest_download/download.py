@@ -119,6 +119,7 @@ def download(url: str):
 
         meta = {
             "path": full_path,
+            "original_url": url,
             "title": title,
             "artist": artist,
             "thumbnail_url": thumbnail_url,

@@ -10,6 +10,7 @@ import UIKit
 
 struct DownloadMeta: Decodable {
     let path: String
+    let original_url: String
     var title: String
     var artist: String
     let thumbnail_url: String?
