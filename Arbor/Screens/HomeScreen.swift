@@ -74,7 +74,6 @@ struct SearchResultsView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
             } else if isSearching && searchResults.isEmpty {
                 VStack {
                     ProgressView()
@@ -84,7 +83,6 @@ struct SearchResultsView: View {
                     
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
             } else if searchResults.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "magnifyingglass")
@@ -100,7 +98,6 @@ struct SearchResultsView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -120,11 +117,9 @@ struct SearchResultsView: View {
                 .safeAreaInset(edge: .bottom) {
                     Color.clear.frame(height: 0) // Bottom safe area inset
                 }
-                .background(Color(.systemBackground))
                 .ignoresSafeArea(.container, edges: .bottom)
             }
         }
-        .background(Color(.systemBackground))
         .ignoresSafeArea(.container, edges: .bottom)
         .onAppear {
             searchVisible = true
@@ -143,29 +138,12 @@ struct SearchResultRow: View {
         Button(action: onTap) {
             HStack(spacing: 10) {
                 // Thumbnail
-                Group {
-                    if let urlString = result.thumbnailURL, let url = URL(string: urlString) {
-                        WebImage(url: url) { image in
-                            image.resizable()
-                        } placeholder: {
-                            ZStack {
-                                Color.gray.opacity(0.2)
-                            }
-                        }
-                        .transition(.fade(duration: 0.5)) // Fade Transition with duration
-                        .scaledToFit()
-                        .frame(width: 50, height: 50)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    } else {
-                        ZStack {
-                            Color.gray.opacity(0.2)
-                            Image(systemName: "music.note")
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(width: 50, height: 50)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                }
+                SongImage(
+                    width: 50,
+                    height: 50,
+                    thumbnailURL: result.thumbnailURL,
+                    thumbnailIsSquare: result.thumbnailIsSquare
+                )
                 
                 // Content
                 VStack(alignment: .leading, spacing: 2) {
@@ -233,15 +211,12 @@ struct SearchResultRow: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 16)
-        .background(Color(.systemBackground))
     }
 }
 
 struct HomeContentView: View {
-    let canOpenPlayer: Bool
-    let openPlayerAction: () -> Void
     let onDownloaded: (DownloadMeta) -> Void
-    @Binding var youtubeURL: String
+    @Binding var selectedResult: SearchResult?
     
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
@@ -249,76 +224,45 @@ struct HomeContentView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            // URL Input Section
-            VStack(alignment: .leading, spacing: 8) {
-                Text("YouTube URL")
-                    .font(.headline)
-
-                TextField("Enter YouTube URL", text: $youtubeURL)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .disabled(isLoading)
-                    .padding(.trailing, 36)
-                    .overlay(alignment: .trailing) {
-                        Button(action: {
-                            if let clipboard = UIPasteboard.general.string {
-                                youtubeURL = clipboard
-                            }
-                        }) {
-                            Image(systemName: "doc.on.clipboard")
+            if isLoading {
+                ZStack {
+                    VStack(spacing: 32) {
+                        if let result = selectedResult {
+                            SongInfo(
+                                title: result.title,
+                                 artist: result.artists?.joined(separator: ", "),
+                                thumbnailURL: result.thumbnailURL,
+                                thumbnailIsSquare: result.thumbnailIsSquare
+                            )
+                        }
+                        
+                        HStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .secondary))
+                                .accessibilityLabel("Downloading...")
+                            Text("Downloading...")
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
-                        .padding(.trailing, 8)
-                        .accessibilityLabel("Paste from clipboard")
                     }
-                    // select all text when text field is focused
-                    // https://stackoverflow.com/a/67502495
-                    .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { obj in
-                        if let textField = obj.object as? UITextField {
-                            textField.selectedTextRange = textField.textRange(from: textField.beginningOfDocument, to: textField.endOfDocument)
-                        }
-                    }
-            }
-
-            // Download Button
-            Button(action: downloadAudio) {
-                HStack {
-                    if isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    } else {
-                        Image(systemName: "arrow.down.circle.fill")
-                    }
-
-                    Text(isLoading ? "Downloading..." : "Download Audio")
-                        .fontWeight(.semibold)
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .disabled(isLoading)
-            .buttonStyle(.glassProminent)
-
-            if canOpenPlayer {
-                // Player Screen Navigation Trigger
-                VStack(spacing: 15) {
-                    Divider()
-                    Button(action: openPlayerAction) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "music.note.list")
-                            Text("Open Player")
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                    }
-                    .buttonStyle(.bordered)
-                }
+            
+            // TODO: show something as a home page
+            else {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .padding()
+        .onAppear {
+            triggerDownloadIfPossible()
+        }
+        .onChange(of: selectedResult?.url) { _, _ in
+            triggerDownloadIfPossible()
+        }
         .alert("Download Failed", isPresented: $showError) {
             Button("OK") { }
         } message: {
@@ -326,14 +270,25 @@ struct HomeContentView: View {
         }
     }
     
-    private func downloadAudio() {
-        let trimmed = youtubeURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func triggerDownloadIfPossible() {
+        guard !isLoading, let url = selectedResult?.url else { return }
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        downloadAudio(with: trimmed)
+    }
+    
+    private func downloadAudio(with url: String) {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            showError(message: "Please enter a YouTube URL")
+            showError(message: "Invalid selection")
             return
         }
 
         isLoading = true
+        // Escape backslashes and single quotes for safe embedding in Python string literal
+        let escaped = trimmed
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
         
         // this is not the best way to do this but it works for now
         // how we should actually do it: see https://docs.python.org/3/extending/embedding.html
@@ -341,7 +296,7 @@ struct HomeContentView: View {
         // for importing, invoking methods, passing args, etc.
         let code = """
 from pytest_download import download
-result = download('\(trimmed)')
+result = download('\(escaped)')
 """
 
         pythonExecAndGetStringAsync(
@@ -359,6 +314,7 @@ result = download('\(trimmed)')
                     return
                 }
                 onDownloaded(meta)
+                selectedResult = nil
         }
     }
 
@@ -369,18 +325,16 @@ result = download('\(trimmed)')
 }
 
 struct HomeScreen: View {
-    let canOpenPlayer: Bool
-    let openPlayerAction: () -> Void
     let onDownloaded: (DownloadMeta) -> Void
 
     @State private var searchQuery: String = ""
     @State private var searchResults: [SearchResult] = []
     @State private var searchIsActive = false
     @State private var isSearching = false
-    @State private var youtubeURL: String = ""
     @State private var currentSearchTaskId: UUID = UUID()
     @State private var searchDebounceTimer: Timer?
     @AppStorage("homeScreenSearchProvider") var searchProvider: SearchProvider = .youtube
+    @State private var selectedResult: SearchResult? = nil
 
     var body: some View {
         Group {
@@ -391,7 +345,7 @@ struct HomeScreen: View {
                     searchQuery: searchQuery,
                     isSearching: isSearching,
                     onResultSelected: { result in
-                        youtubeURL = result.url
+                        selectedResult = result
                         searchIsActive = false
                         searchQuery = ""
                         searchResults = []
@@ -408,14 +362,12 @@ struct HomeScreen: View {
             } else {
                 // Main Home Screen Content
                 HomeContentView(
-                    canOpenPlayer: canOpenPlayer,
-                    openPlayerAction: openPlayerAction,
                     onDownloaded: onDownloaded,
-                    youtubeURL: $youtubeURL
+                    selectedResult: $selectedResult
                 )
             }
         }
-        .navigationTitle("🌳 Arbor")
+        .navigationTitle("arbor")
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .searchable(
             text: $searchQuery,
@@ -539,3 +491,4 @@ result = search_soundcloud('\(escaped)')
         }
     }
 }
+

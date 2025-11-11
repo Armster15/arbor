@@ -10,6 +10,17 @@ import SDWebImageSwiftUI
 struct PlayerScreen: View {
     let meta: DownloadMeta
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
+    
+    @State private var isEditSheetPresented: Bool = false
+    @State private var overridenTitle: String
+    @State private var overridenArtist: String
+    
+    init(meta: DownloadMeta, audioPlayer: AudioPlayerWithReverb) {
+        self.meta = meta
+        self.audioPlayer = audioPlayer
+        _overridenTitle = State(initialValue: meta.title)
+        _overridenArtist = State(initialValue: meta.artist ?? "")
+    }
 
     private func decoratedTitle() -> String {
         var tags: [String] = []
@@ -25,116 +36,85 @@ struct PlayerScreen: View {
                 tags.append("reverb")
             }
         }
-        guard !tags.isEmpty else { return meta.title }
-        return "\(meta.title) (\(tags.joined(separator: " + ")))"
+        guard !tags.isEmpty else { return overridenTitle }
+        return "\(overridenTitle) (\(tags.joined(separator: " + ")))"
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
                 VStack(spacing: 20) {
-                    // Metadata header
-                    VStack(spacing: 16) {
-                        if let thumbnailUrl = meta.thumbnail_url, let isSquare = meta.thumbnail_is_square {
-                            if isSquare == true {
-                                ZStack(alignment: .topTrailing) {
-                                    WebImage(url: URL(string: thumbnailUrl)) { image in
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 180, height: 180)
-                                            .clipped()
-                                            .cornerRadius(12)
-                                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-                                    } placeholder: {
-                                        ProgressView()
-                                            .frame(width: 180, height: 180)
-                                    }
-                                    .transition(.fade(duration: 0.5))
-                                }
-                            } else {
-                                ZStack(alignment: .topTrailing) {
-                                    WebImage(url: URL(string: thumbnailUrl)) { image in
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(height: 180)
-                                            .clipped()
-                                            .cornerRadius(12)
-                                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-                                    } placeholder: {
-                                        ProgressView()
-                                            .frame(height: 180)
-                                    }
-                                    .transition(.fade(duration: 0.5))
-                                }
-                            }
-                        }
-                        
-                        VStack(spacing: 4) {
-                            Text(meta.title)
-                                .font(.headline)
-                                .multilineTextAlignment(.center)
-                            
-                            if let artist = meta.artist, !artist.isEmpty {
-                                Text(artist)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                    }
+                    SongInfo(title: overridenTitle, artist: overridenArtist.isEmpty ? nil : overridenArtist, thumbnailURL: meta.thumbnail_url, thumbnailIsSquare: meta.thumbnail_is_square)
                                         
                     // Action buttons
-                    HStack(spacing: 24) {
-                        // Rewind
-                        Button(action: {
-                            audioPlayer.seek(to: 0)
-                            
-                        }) {
-                            Image(systemName: "backward.end.circle.fill")
-                                .font(.system(size: 44))
-                                .foregroundColor(.blue)
-                        }
-                        
-                        // Play / Pause
-                        Button(action: {
-                            if audioPlayer.isPlaying {
-                                audioPlayer.pause()
-                            } else {
-                                audioPlayer.play()
+                    ZStack {
+                        // Centered main controls
+                        HStack(spacing: 16) {
+                            // Rewind
+                            Button(action: {
+                                audioPlayer.seek(to: 0)
+                                
+                            }) {
+                                Image(systemName: "backward.end.circle.fill")
+                                    .font(.system(size: 44))
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(
+                                        Color("PrimaryText"),
+                                        // TODO: abstract away as a secondary smth color
+                                        .black.opacity(0.05)
+                                    )
                             }
-                        }) {
-                            Image(
-                                systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
-                            )
-                            .font(.system(size: 44))
-                            .foregroundColor(.blue)
+                            
+                            // Play / Pause
+                            Button(action: {
+                                if audioPlayer.isPlaying {
+                                    audioPlayer.pause()
+                                } else {
+                                    audioPlayer.play()
+                                }
+                            }) {
+                                Image(
+                                    systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
+                                )
+                                .font(.system(size: 56))
+                                .foregroundColor(Color("PrimaryBg"))
+                            }
+                            
+                            // Stop
+                            Button(action: {
+                                audioPlayer.stop()
+                            }) {
+                                Image(systemName: "stop.circle.fill")
+                                    .font(.system(size: 44))
+                                    .foregroundStyle(
+                                        Color("PrimaryText"),
+                                        // TODO: abstract away as a secondary smth color
+                                        .black.opacity(0.05)
+                                    )
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
                         
-                        // Stop
-                        Button(action: {
-                            audioPlayer.stop()
-                        }) {
-                            Image(systemName: "stop.circle.fill")
-                                .font(.system(size: 44))
-                                .foregroundColor(.red)
-                        }
-                        
-                        // Loop
-                        Button(action: {
-                            audioPlayer.toggleLoop()
-                        }) {
-                            Image(
-                                systemName: audioPlayer.isLooping ? "repeat.circle.fill" : "repeat.circle"
-                            )
-                            .font(.system(size: 44))
-                            .foregroundColor(
-                                audioPlayer.isLooping ? .green : .secondary
-                            )
-                            .accessibilityLabel(
-                                audioPlayer.isLooping ? "Disable Loop" : "Enable Loop"
-                            )
+                        // Trailing loop button
+                        HStack {
+                            Spacer()
+                            
+                            Button(action: {
+                                audioPlayer.toggleLoop()
+                            }) {
+                                Image(
+                                    systemName: audioPlayer.isLooping ? "repeat.1.circle.fill" : "repeat.circle.fill"
+                                )
+                                .font(.system(size: 40))
+                                .foregroundStyle(
+                                    Color("PrimaryText").opacity(0.8),
+                                    // TODO: abstract away as a secondary smth color
+                                    .clear
+                                )
+                                .accessibilityLabel(
+                                    audioPlayer.isLooping ? "Disable Loop" : "Enable Loop"
+                                )
+                            }
                         }
                     }
                     
@@ -199,6 +179,7 @@ struct PlayerScreen: View {
                                 in: 0.25...2.0,
                                 step: 0.05
                             )
+                            .accentColor(Color("PrimaryBg"))
                             // `flex: 1` (???)
                             .frame(maxWidth: .infinity)
                             
@@ -256,6 +237,7 @@ struct PlayerScreen: View {
                                 in: -800.0...800.0,
                                 step: 50
                             )
+                            .accentColor(Color("PrimaryBg"))
                             .frame(maxWidth: .infinity)
                             
                             Stepper(
@@ -311,6 +293,7 @@ struct PlayerScreen: View {
                                 in: 0.0...100.0,
                                 step: 5
                             )
+                            .accentColor(Color("PrimaryBg"))
                             .frame(maxWidth: .infinity)
                             
                             Stepper(
@@ -332,11 +315,93 @@ struct PlayerScreen: View {
             }
             .padding()
         }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                } label: {
+                    Label("Download", systemImage: "arrow.down.circle")
+                }
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    isEditSheetPresented = true
+                } label: {
+                    Label("Edit Metadata", systemImage: "pencil")
+                }
+            }
+        }
         .onChange(of: audioPlayer.speedRate) { _, _ in
             audioPlayer.updateMetadataTitle(decoratedTitle())
         }
         .onChange(of: audioPlayer.reverbMix) { _, _ in
             audioPlayer.updateMetadataTitle(decoratedTitle())
+        }
+        .sheet(isPresented: $isEditSheetPresented) {
+			VStack(spacing: 32) {
+                Text("Edit Metadata")
+                    .font(.headline)
+                    .padding(.top, 24)
+            
+                VStack(spacing: 24) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Title")
+                            .fontWeight(.semibold)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color("PrimaryText"))
+                        
+                        
+                        TextField("Title", text: $overridenTitle)
+                            .textInputAutocapitalization(.words)
+                            .padding(12)
+                            .background(Color("Elevated"))
+                            .cornerRadius(24)
+                            .foregroundColor(.black)
+                    }
+                    .padding(.horizontal)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Artist")
+                            .fontWeight(.semibold)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color("PrimaryText"))
+                        
+                        
+                        TextField("Artist", text: $overridenArtist)
+                            .textInputAutocapitalization(.words)
+                            .padding(12)
+                            .background(Color("Elevated"))
+                            .cornerRadius(24)
+                            .foregroundColor(.black)
+                    }
+                    .padding(.horizontal)
+                }
+
+				Spacer()
+
+                HStack {
+                    Button {
+                        // Update now playing metadata
+                        audioPlayer.updateMetadataTitle(decoratedTitle())
+                        let artistToSet: String? = overridenArtist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : overridenArtist
+                        audioPlayer.updateMetadataArtist(artistToSet)
+                        isEditSheetPresented = false
+                    } label: {
+                        Text("Save")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    }
+                }
+				.buttonStyle(.glassProminent)
+                .tint(Color("PrimaryBg"))
+				.padding(.horizontal)
+				.padding(.bottom)
+                
+			}
+			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
     }
 }
@@ -349,3 +414,24 @@ private func formattedTime(_ seconds: Double) -> String {
     return String(format: "%d:%02d", mins, secs)
 }
 
+#Preview {
+	NavigationStack {
+		ZStack {
+			BackgroundColor
+				.ignoresSafeArea()
+			
+			PlayerScreen(
+				meta: DownloadMeta(
+					path: "/Users/armaan/Library/Developer/CoreSimulator/Devices/2AF66DAD-484B-4967-8A7C-1E032023986B/data/Containers/Data/Application/23735F58-3B06-474F-8A01-E673F6ECE56D/tmp/NA-Sxu8wHE97Rk.m4a",
+					title: "Ude Dil Befikre (From \"Befikre\")",
+					artist: "Vishal and Sheykhar, Benny Dayal",
+					thumbnail_url: "https://lh3.googleusercontent.com/viaCZKRr1hCygO8JQS6lLmhBqUVFXctO_9sOE7hwI-rS_JlYcCdqel9sAaGdQoFEFUR2R6ldsrr_c2L5=w544-h544-l90-rj",
+					thumbnail_width: 544,
+					thumbnail_height: 544,
+					thumbnail_is_square: true
+				),
+				audioPlayer: AudioPlayerWithReverb()
+			)
+		}
+	}
+}
