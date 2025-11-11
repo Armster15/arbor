@@ -47,7 +47,7 @@ struct ContentView: View {
     }
     
     init() {
-        let titleColor = UIColor(named: "Primary")!
+        let titleColor = UIColor(named: "PrimaryText")!
         let font = UIFont(name: "Spicy Rice", size: 32)!
         
         UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: titleColor, .font: font]

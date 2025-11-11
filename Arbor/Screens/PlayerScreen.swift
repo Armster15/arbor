@@ -55,7 +55,7 @@ struct PlayerScreen: View {
                         }) {
                             Image(systemName: "backward.end.circle.fill")
                                 .font(.system(size: 44))
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color("PrimaryBg"))
                         }
                         
                         // Play / Pause
@@ -70,7 +70,7 @@ struct PlayerScreen: View {
                                 systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
                             )
                             .font(.system(size: 44))
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color("PrimaryBg"))
                         }
                         
                         // Stop
@@ -160,6 +160,7 @@ struct PlayerScreen: View {
                                 in: 0.25...2.0,
                                 step: 0.05
                             )
+                            .accentColor(Color("PrimaryBg"))
                             // `flex: 1` (???)
                             .frame(maxWidth: .infinity)
                             
@@ -217,6 +218,7 @@ struct PlayerScreen: View {
                                 in: -800.0...800.0,
                                 step: 50
                             )
+                            .accentColor(Color("PrimaryBg"))
                             .frame(maxWidth: .infinity)
                             
                             Stepper(
@@ -272,6 +274,7 @@ struct PlayerScreen: View {
                                 in: 0.0...100.0,
                                 step: 5
                             )
+                            .accentColor(Color("PrimaryBg"))
                             .frame(maxWidth: .infinity)
                             
                             Stepper(
@@ -336,7 +339,7 @@ struct PlayerScreen: View {
                         Text("Title")
                             .fontWeight(.semibold)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color("Primary"))
+                            .foregroundStyle(Color("PrimaryText"))
                         
                         
                         TextField("Title", text: $overridenTitle)
@@ -352,7 +355,7 @@ struct PlayerScreen: View {
                         Text("Artist")
                             .fontWeight(.semibold)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color("Primary"))
+                            .foregroundStyle(Color("PrimaryText"))
                         
                         
                         TextField("Artist", text: $overridenArtist)
@@ -382,6 +385,7 @@ struct PlayerScreen: View {
                     }
                 }
 				.buttonStyle(.glassProminent)
+                .tint(Color("PrimaryBg"))
 				.padding(.horizontal)
 				.padding(.bottom)
                 
