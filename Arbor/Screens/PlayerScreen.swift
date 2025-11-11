@@ -424,6 +424,7 @@ private func formattedTime(_ seconds: Double) -> String {
 			PlayerScreen(
 				meta: .constant(DownloadMeta(
 					path: "/Users/armaan/Library/Developer/CoreSimulator/Devices/2AF66DAD-484B-4967-8A7C-1E032023986B/data/Containers/Data/Application/23735F58-3B06-474F-8A01-E673F6ECE56D/tmp/NA-Sxu8wHE97Rk.m4a",
+                    original_url: "https://www.youtube.com/watch?v=Sxu8wHE97Rk",
 					title: "Ude Dil Befikre (From \"Befikre\")",
 					artist: "Vishal and Sheykhar, Benny Dayal",
 					thumbnail_url: "https://lh3.googleusercontent.com/viaCZKRr1hCygO8JQS6lLmhBqUVFXctO_9sOE7hwI-rS_JlYcCdqel9sAaGdQoFEFUR2R6ldsrr_c2L5=w544-h544-l90-rj",
