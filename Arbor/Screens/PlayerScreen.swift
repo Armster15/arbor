@@ -47,64 +47,74 @@ struct PlayerScreen: View {
                     SongInfo(title: overridenTitle, artist: overridenArtist.isEmpty ? nil : overridenArtist, thumbnailURL: meta.thumbnail_url, thumbnailIsSquare: meta.thumbnail_is_square)
                                         
                     // Action buttons
-                    HStack(spacing: 24) {
-                        // Rewind
-                        Button(action: {
-                            audioPlayer.seek(to: 0)
-                            
-                        }) {
-                            Image(systemName: "backward.end.circle.fill")
-                                .font(.system(size: 44))
-                                .symbolRenderingMode(.palette)
-                                .foregroundStyle(
-                                    Color("PrimaryText"),
-                                    // TODO: abstract away as a secondary smth color
-                                    .black.opacity(0.05)
-                                )
-                        }
-                        
-                        // Play / Pause
-                        Button(action: {
-                            if audioPlayer.isPlaying {
-                                audioPlayer.pause()
-                            } else {
-                                audioPlayer.play()
+                    ZStack {
+                        // Centered main controls
+                        HStack(spacing: 16) {
+                            // Rewind
+                            Button(action: {
+                                audioPlayer.seek(to: 0)
+                                
+                            }) {
+                                Image(systemName: "backward.end.circle.fill")
+                                    .font(.system(size: 44))
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(
+                                        Color("PrimaryText"),
+                                        // TODO: abstract away as a secondary smth color
+                                        .black.opacity(0.05)
+                                    )
                             }
-                        }) {
-                            Image(
-                                systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
-                            )
-                            .font(.system(size: 56))
-                            .foregroundColor(Color("PrimaryBg"))
-                        }
-                        
-                        // Stop
-                        Button(action: {
-                            audioPlayer.stop()
-                        }) {
-                            Image(systemName: "stop.circle.fill")
-                                .font(.system(size: 44))
-                                .foregroundStyle(
-                                    Color("PrimaryText"),
-                                    // TODO: abstract away as a secondary smth color
-                                    .black.opacity(0.05)
+                            
+                            // Play / Pause
+                            Button(action: {
+                                if audioPlayer.isPlaying {
+                                    audioPlayer.pause()
+                                } else {
+                                    audioPlayer.play()
+                                }
+                            }) {
+                                Image(
+                                    systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
                                 )
+                                .font(.system(size: 56))
+                                .foregroundColor(Color("PrimaryBg"))
+                            }
+                            
+                            // Stop
+                            Button(action: {
+                                audioPlayer.stop()
+                            }) {
+                                Image(systemName: "stop.circle.fill")
+                                    .font(.system(size: 44))
+                                    .foregroundStyle(
+                                        Color("PrimaryText"),
+                                        // TODO: abstract away as a secondary smth color
+                                        .black.opacity(0.05)
+                                    )
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
                         
-                        // Loop
-                        Button(action: {
-                            audioPlayer.toggleLoop()
-                        }) {
-                            Image(
-                                systemName: audioPlayer.isLooping ? "repeat.circle.fill" : "repeat.circle"
-                            )
-                            .font(.system(size: 44))
-                            .foregroundColor(
-                                audioPlayer.isLooping ? .green : .secondary
-                            )
-                            .accessibilityLabel(
-                                audioPlayer.isLooping ? "Disable Loop" : "Enable Loop"
-                            )
+                        // Trailing loop button
+                        HStack {
+                            Spacer()
+                            
+                            Button(action: {
+                                audioPlayer.toggleLoop()
+                            }) {
+                                Image(
+                                    systemName: audioPlayer.isLooping ? "repeat.1.circle.fill" : "repeat.circle.fill"
+                                )
+                                .font(.system(size: 40))
+                                .foregroundStyle(
+                                    Color("PrimaryText").opacity(0.8),
+                                    // TODO: abstract away as a secondary smth color
+                                    .clear
+                                )
+                                .accessibilityLabel(
+                                    audioPlayer.isLooping ? "Disable Loop" : "Enable Loop"
+                                )
+                            }
                         }
                     }
                     
