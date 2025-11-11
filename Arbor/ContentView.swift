@@ -20,8 +20,8 @@ struct DownloadMeta: Decodable {
 
 let BackgroundColor = LinearGradient(
     gradient: Gradient(colors: [
-        Color(red: 239/255, green: 242/255, blue: 225/255),
-        Color(red: 249/255, green: 255/255, blue: 212/255),
+        Color("GradientStart"),
+        Color("GradientEnd"),
     ]),
     startPoint: .top,
     endPoint: .bottom
@@ -47,7 +47,7 @@ struct ContentView: View {
     }
     
     init() {
-        let titleColor = UIColor(red: 3/255, green: 25/255, blue: 0/255, alpha: 1.0)
+        let titleColor = UIColor(named: "Primary")!
         let font = UIFont(name: "Spicy Rice", size: 32)!
         
         UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: titleColor, .font: font]

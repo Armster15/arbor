@@ -336,15 +336,13 @@ struct PlayerScreen: View {
                         Text("Title")
                             .fontWeight(.semibold)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color(.displayP3, red: 0.03120, green: 0.09596, blue: 0.00000, opacity: 1.0))
+                            .foregroundStyle(Color("Primary"))
                         
                         
                         TextField("Title", text: $overridenTitle)
                             .textInputAutocapitalization(.words)
                             .padding(12)
-                            .background(
-                                Color(.displayP3, red: 0.03120, green: 0.09596, blue: 0.00000, opacity: 0.1)
-                            )
+                            .background(Color("Elevated"))
                             .cornerRadius(24)
                             .foregroundColor(.black)
                     }
@@ -354,15 +352,13 @@ struct PlayerScreen: View {
                         Text("Artist")
                             .fontWeight(.semibold)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color(.displayP3, red: 0.03120, green: 0.09596, blue: 0.00000, opacity: 1.0))
+                            .foregroundStyle(Color("Primary"))
                         
                         
                         TextField("Artist", text: $overridenArtist)
                             .textInputAutocapitalization(.words)
                             .padding(12)
-                            .background(
-                                Color(.displayP3, red: 0.03120, green: 0.09596, blue: 0.00000, opacity: 0.1)
-                            )
+                            .background(Color("Elevated"))
                             .cornerRadius(24)
                             .foregroundColor(.black)
                     }
