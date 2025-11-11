@@ -317,29 +317,19 @@ struct PlayerScreen: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Menu(content: {
-                    Button {
-                        isEditSheetPresented = true
-                    } label: {
-                        Label("Edit Metadata", systemImage: "pencil")
-                    }
+                Button {
+                } label: {
+                    Label("Download", systemImage: "arrow.down.circle")
+                }
+            }
 
-                    Button {
-                        print("private listen")
-                    } label: {
-                        Label("Listen Privately", systemImage: "eye.slash.fill")
-                    }
-
-                    Button(role: .destructive) {
-                        print("cache")
-                    } label: {
-                        Label("Remove from Cache", systemImage: "trash.fill")
-                    }
-                }, label: {
-                    Image(systemName: "ellipsis")
-                })
-             }
-
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    isEditSheetPresented = true
+                } label: {
+                    Label("Edit Metadata", systemImage: "pencil")
+                }
+            }
         }
         .onChange(of: audioPlayer.speedRate) { _, _ in
             audioPlayer.updateMetadataTitle(decoratedTitle())
@@ -422,4 +412,26 @@ private func formattedTime(_ seconds: Double) -> String {
     let mins = s / 60
     let secs = s % 60
     return String(format: "%d:%02d", mins, secs)
+}
+
+#Preview {
+	NavigationStack {
+		ZStack {
+			BackgroundColor
+				.ignoresSafeArea()
+			
+			PlayerScreen(
+				meta: DownloadMeta(
+					path: "/Users/armaan/Library/Developer/CoreSimulator/Devices/2AF66DAD-484B-4967-8A7C-1E032023986B/data/Containers/Data/Application/23735F58-3B06-474F-8A01-E673F6ECE56D/tmp/NA-Sxu8wHE97Rk.m4a",
+					title: "Ude Dil Befikre (From \"Befikre\")",
+					artist: "Vishal and Sheykhar, Benny Dayal",
+					thumbnail_url: "https://lh3.googleusercontent.com/viaCZKRr1hCygO8JQS6lLmhBqUVFXctO_9sOE7hwI-rS_JlYcCdqel9sAaGdQoFEFUR2R6ldsrr_c2L5=w544-h544-l90-rj",
+					thumbnail_width: 544,
+					thumbnail_height: 544,
+					thumbnail_is_square: true
+				),
+				audioPlayer: AudioPlayerWithReverb()
+			)
+		}
+	}
 }
