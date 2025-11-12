@@ -49,10 +49,11 @@ struct ContentView: View {
     
     init() {
         let titleColor = UIColor(named: "PrimaryText")!
-        let font = UIFont(name: "Spicy Rice", size: 32)!
+        let normalTitleFont = UIFont(name: "Spicy Rice", size: 24)!
+        let largeTitleFont = UIFont(name: "Spicy Rice", size: 32)!
         
-        UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: titleColor, .font: font]
-        UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: titleColor, .font: font]        
+        UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: titleColor, .font: normalTitleFont]
+        UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: titleColor, .font: largeTitleFont]
     }
     
     private enum Route: Hashable {
@@ -113,11 +114,8 @@ struct ContentView: View {
 
             Tab("Library", systemImage: "music.note.square.stack.fill") {
                 NavigationStack(path: $navPath) {
-                    VStack {
-                        Text("Library")
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
+                    LibraryScreen()
+                        .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
                 }
             }
         }

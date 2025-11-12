@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import AVFoundation
+import SwiftData
 
 @main
 struct ArborApp: App {
@@ -17,5 +17,6 @@ struct ArborApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: LibraryItem.self)
     }
 }

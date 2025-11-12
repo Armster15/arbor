@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import SDWebImage
 import SDWebImageSwiftUI
 
@@ -14,6 +15,8 @@ struct PlayerScreen: View {
     @State private var isEditSheetPresented: Bool = false
     @State private var draftTitle: String = ""
     @State private var draftArtist: String = ""
+    
+    @Environment(\.modelContext) var modelContext
     
     init(meta: Binding<DownloadMeta>, audioPlayer: AudioPlayerWithReverb) {
         self._meta = meta
@@ -36,6 +39,23 @@ struct PlayerScreen: View {
         }
         guard !tags.isEmpty else { return meta.title }
         return "\(meta.title) (\(tags.joined(separator: " + ")))"
+    }
+    
+    private func saveToLibrary() {
+        let model = LibraryItem(
+            original_url: meta.original_url,
+            title: meta.title,
+            artist: meta.artist,
+            thumbnail_url: meta.thumbnail_url,
+            thumbnail_width: meta.thumbnail_width,
+            thumbnail_height: meta.thumbnail_height,
+            thumbnail_is_square: meta.thumbnail_is_square,
+            speedRate: audioPlayer.speedRate,
+            pitchCents: audioPlayer.pitchCents,
+            reverbMix: audioPlayer.reverbMix
+        )
+        
+        modelContext.insert(model)
     }
 
     var body: some View {
@@ -316,6 +336,7 @@ struct PlayerScreen: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
+                    saveToLibrary()
                 } label: {
                     Label("Download", systemImage: "arrow.down.circle")
                 }
