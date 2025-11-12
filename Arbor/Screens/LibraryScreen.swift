@@ -28,6 +28,8 @@ struct LibraryScreen: View {
                             .font(.headline)
                         Text(item.artist)
                             .font(.subheadline)
+                        Text(item.id.uuidString)
+                            .font(.caption)
                     }
                 }
                 .onDelete(perform: deleteLibraryItems)
