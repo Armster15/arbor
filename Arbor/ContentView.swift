@@ -29,21 +29,20 @@ let BackgroundColor = LinearGradient(
 )
 
 struct ContentView: View {
-    @State private var navPath: [Route] = []
+    @EnvironmentObject var player: PlayerCoordinator
+    
     @State private var lastDownloadMeta: DownloadMeta? = nil
     @State private var audioPlayer: AudioPlayerWithReverb? = nil
     
     private var canOpenPlayer: Bool {
-        lastDownloadMeta != nil
-    }
-
-    private var isPlayerScreenOpen: Bool {
-        navPath.last == .player
+        lastDownloadMeta != nil && audioPlayer != nil
     }
     
     private func openPlayer() {
-        if !isPlayerScreenOpen {
-            navPath.append(.player)
+        if lastDownloadMeta != nil && audioPlayer != nil {
+            player.open()
+        } else {
+            debugPrint("WARNING: did not open player")
         }
     }
     
@@ -63,7 +62,7 @@ struct ContentView: View {
     var body: some View {
         TabView {
             Tab("Search", systemImage: "magnifyingglass", role: .search) {
-                NavigationStack(path: $navPath) {
+                NavigationStack() {
                     HomeScreen(
                         onDownloaded: { meta in
                             debugPrint(meta)
@@ -89,38 +88,19 @@ struct ContentView: View {
                             openPlayer()
                         }
                     )
-                    .navigationDestination(for: Route.self) { route in
-                        ZStack {
-                            BackgroundColor // <- Background for all non root views
-                                .ignoresSafeArea()
-                            
-                            Group {
-                                switch route {
-                                case .player:
-                                    PlayerScreen(
-                                        meta: Binding(
-                                            get: { lastDownloadMeta! },
-                                            set: { lastDownloadMeta = $0 }
-                                        ),
-                                        audioPlayer: audioPlayer!
-                                    )
-                                }
-                            }
-                        }
-                    }
                     .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
                 }
             }
 
             Tab("Library", systemImage: "music.note.square.stack.fill") {
-                NavigationStack(path: $navPath) {
+                NavigationStack() {
                     LibraryScreen()
                         .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
                 }
             }
         }
         .tabViewBottomAccessory {
-            if canOpenPlayer && !isPlayerScreenOpen {
+            if canOpenPlayer {
                 HStack {
                     Button(action: openPlayer) {
                         HStack(spacing: 12) {
@@ -155,6 +135,27 @@ struct ContentView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .sheet(isPresented: $player.isPresented) {
+            if let ap = audioPlayer, let _ = lastDownloadMeta {
+                NavigationStack {
+                    ZStack {
+                        BackgroundColor
+                            .ignoresSafeArea()
+                        
+                        PlayerScreen(
+                            meta: Binding(
+                                get: { lastDownloadMeta! },
+                                set: { lastDownloadMeta = $0 }
+                            ),
+                            audioPlayer: ap
+                        )
+                    }
+                }
+                .id(ObjectIdentifier(ap))
+            } else {
+                EmptyView()
             }
         }
     }
