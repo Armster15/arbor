@@ -20,6 +20,6 @@ struct ArborApp: App {
             ContentView()
                 .environmentObject(player)
         }
-        .modelContainer(for: LibraryItem.self)
+        .modelContainer(for: [LibraryItem.self, LibraryLocalFile.self])
     }
 }

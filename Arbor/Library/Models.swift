@@ -67,6 +67,21 @@ class LibraryItem {
     }
 }
 
+// maps an original url (e.g. a youtube url) to a local file path
+@Model
+class LibraryLocalFile {
+    var id: UUID
+    
+    var originalUrl: String
+    var filePath: String
+    
+    init(originalUrl: String, filePath: String) {
+        self.id = UUID()
+        self.originalUrl = originalUrl
+        self.filePath = filePath
+    }
+}
+
 struct DownloadMeta: Decodable {
     let path: String
     let original_url: String

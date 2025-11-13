@@ -73,9 +73,18 @@ struct __PlayerScreen: View {
         libraryItem.pitchCents = audioPlayer.pitchCents
         libraryItem.reverbMix = audioPlayer.reverbMix
 
-        // here we want to move the temporary file to a permanent location and then update the library item with that new path
+        // copy audio file to more permanent location
+        let ext = URL(fileURLWithPath: filePath).pathExtension
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let newName = "\(libraryItem.title)\(timestamp).\(ext)"
+        let docsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let newPath = docsPath.appendingPathComponent(newName).path
+        try? FileManager.default.copyItem(atPath: filePath, toPath: newPath)
+        self.filePath = newPath
+        debugPrint("Saved audio file to more permanent location: \(newPath)")
         
         modelContext.insert(libraryItem)
+        modelContext.insert(LibraryLocalFile(originalUrl: libraryItem.original_url, filePath: newPath))
     }
 
     var body: some View {
