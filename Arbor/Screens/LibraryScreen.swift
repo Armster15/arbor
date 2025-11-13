@@ -45,6 +45,7 @@ struct LibraryScreen: View {
                         do {
                             let localFiles = try modelContext.fetch(fetchDescriptor)
                             if let localFile = localFiles.first {
+                                // TODO: also check if the file still exists
                                 player.startPlayback(libraryItem: item, filePath: localFile.filePath)
                             } else {
                                 alertMessage = "No local file found for '\(item.title)'. Please download it first."
