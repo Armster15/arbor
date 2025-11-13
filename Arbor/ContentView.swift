@@ -9,17 +9,6 @@ import SwiftUI
 import SwiftData
 import UIKit
 
-struct DownloadMeta: Decodable {
-    let path: String
-    let original_url: String
-    var title: String
-    var artist: String
-    let thumbnail_url: String?
-    let thumbnail_width: Int?
-    let thumbnail_height: Int?
-    let thumbnail_is_square: Bool?
-}
-
 let BackgroundColor = LinearGradient(
     gradient: Gradient(colors: [
         Color("GradientStart"),

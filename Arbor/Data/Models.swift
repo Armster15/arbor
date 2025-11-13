@@ -46,3 +46,42 @@ class LibraryItem {
         self.reverbMix = reverbMix
     }
 }
+
+struct DownloadMeta: Decodable {
+    let path: String
+    let original_url: String
+    var title: String
+    var artist: String
+    let thumbnail_url: String?
+    let thumbnail_width: Int?
+    let thumbnail_height: Int?
+    let thumbnail_is_square: Bool?
+}
+
+struct SearchResult: Decodable, Equatable {
+    let title: String
+    let artists: [String]
+    let url: String
+    let views: String?
+    let duration: String?
+    let isExplicit: Bool?
+    let isVerified: Bool?
+    let thumbnailURL: String?
+    let thumbnailIsSquare: Bool?
+    let thumbnailWidth: Int?
+    let thumbnailHeight: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case artists
+        case url
+        case views
+        case duration
+        case isExplicit = "is_explicit"
+        case isVerified = "verified"
+        case thumbnailURL = "thumbnail_url"
+        case thumbnailIsSquare = "thumbnail_is_square"
+        case thumbnailWidth = "thumbnail_width"
+        case thumbnailHeight = "thumbnail_height"
+    }
+}
