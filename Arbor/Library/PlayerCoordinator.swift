@@ -11,24 +11,34 @@ import SwiftUI
 final class PlayerCoordinator: ObservableObject {
     @Published var isPresented: Bool = false
     @Published var audioPlayer: AudioPlayerWithReverb? = nil
-    @Published var lastLibraryItem: LibraryItem? = nil
+    @Published var libraryItem: LibraryItem? = nil
+    @Published var filePath: String? = nil
 
-    func open()  { isPresented = true }
-    func close() { isPresented = false }
+    public func open()  {
+        if canShowPlayer {
+            isPresented = true
+        }
+    }
     
-    func startPlayback(libraryItem: LibraryItem, path: String) {
-        debugPrint(path, libraryItem)
+    public func close() { isPresented = false }
+    
+    public var canShowPlayer: Bool { audioPlayer != nil && libraryItem != nil && filePath != nil }
+    
+    public func startPlayback(libraryItem: LibraryItem, filePath: String) {
+        debugPrint(filePath, libraryItem)
+
+        self.filePath = filePath
+        self.libraryItem = libraryItem
         
         // Tear down any existing engine before creating a new one
         audioPlayer?.unsubscribeUpdates()
         audioPlayer = nil
         
         let newAudioPlayer = AudioPlayerWithReverb()
-        lastLibraryItem = libraryItem
         
         let artworkURL = libraryItem.thumbnail_url.flatMap { URL(string: $0) }
         
-        newAudioPlayer.startSavedAudio(filePath: path)
+        newAudioPlayer.startSavedAudio(filePath: filePath)
         
         newAudioPlayer.updateMetadataTitle(libraryItem.title)
         newAudioPlayer.updateMetadataArtist(libraryItem.artist)
@@ -40,7 +50,7 @@ final class PlayerCoordinator: ObservableObject {
         newAudioPlayer.setPitchByCents(libraryItem.pitchCents)
         newAudioPlayer.setReverbMix(libraryItem.reverbMix)
         
-        audioPlayer = newAudioPlayer
+        self.audioPlayer = newAudioPlayer
         
         open()
     }

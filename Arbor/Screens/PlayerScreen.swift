@@ -8,9 +8,35 @@ import SwiftData
 import SDWebImage
 import SDWebImageSwiftUI
 
+// this is so we can provide the actual PlayerScreen (__PlayerScreen)
+// with non-nullable values for libraryItem, audioPlayer, and filePath
 struct PlayerScreen: View {
+    @EnvironmentObject var player: PlayerCoordinator
+        
+    var body: some View {
+        Group {
+            if let libraryItem = player.libraryItem,
+               let audioPlayer = player.audioPlayer,
+               let filePath = player.filePath {
+                __PlayerScreen(
+                    libraryItem: libraryItem,
+                    audioPlayer: audioPlayer,
+                    filePath: Binding(
+                        get: { filePath },
+                        set: { player.filePath = $0 }
+                    )
+                )
+            } else {
+                EmptyView()
+            }
+        }
+    }
+}
+
+struct __PlayerScreen: View {
     @Bindable var libraryItem: LibraryItem
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
+    @Binding var filePath: String
     
     @State private var isEditSheetPresented: Bool = false
     @State private var draftTitle: String = ""
@@ -18,9 +44,10 @@ struct PlayerScreen: View {
     
     @Environment(\.modelContext) var modelContext
     
-    init(libraryItem: LibraryItem, audioPlayer: AudioPlayerWithReverb) {
+    init(libraryItem: LibraryItem, audioPlayer: AudioPlayerWithReverb, filePath: Binding<String>) {
         self.libraryItem = libraryItem
         self.audioPlayer = audioPlayer
+        self._filePath = filePath
     }
 
     private func decoratedTitle() -> String {
@@ -45,6 +72,8 @@ struct PlayerScreen: View {
         libraryItem.speedRate = audioPlayer.speedRate
         libraryItem.pitchCents = audioPlayer.pitchCents
         libraryItem.reverbMix = audioPlayer.reverbMix
+
+        // here we want to move the temporary file to a permanent location and then update the library item with that new path
         
         modelContext.insert(libraryItem)
     }
@@ -433,7 +462,7 @@ private func formattedTime(_ seconds: Double) -> String {
 			BackgroundColor
 				.ignoresSafeArea()
 			
-			PlayerScreen(
+			__PlayerScreen(
 				libraryItem: LibraryItem(
                     original_url: "https://www.youtube.com/watch?v=Sxu8wHE97Rk",
                     title: "Ude Dil Befikre (From \"Befikre\")",
@@ -443,7 +472,11 @@ private func formattedTime(_ seconds: Double) -> String {
                     thumbnail_height: 544,
                     thumbnail_is_square: true
                 ),
-				audioPlayer: AudioPlayerWithReverb()
+				audioPlayer: AudioPlayerWithReverb(),
+                filePath: Binding(
+                    get: { "" },
+                    set: { _ in }
+                )
 			)
 		}
 	}

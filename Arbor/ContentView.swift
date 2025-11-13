@@ -41,7 +41,7 @@ struct ContentView: View {
                     HomeScreen(
                         onDownloaded: { meta in
                             let item = LibraryItem(meta: meta)
-                            player.startPlayback(libraryItem: item, path: meta.path)
+                            player.startPlayback(libraryItem: item, filePath: meta.path)
                         }
                     )
                     .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
@@ -56,24 +56,24 @@ struct ContentView: View {
             }
         }
         .tabViewBottomAccessory {
-            if let lastLibraryItem = player.lastLibraryItem, let audioPlayer = player.audioPlayer {
+            if player.canShowPlayer == true, let libraryItem = player.libraryItem {
                 HStack {
                     Button(action: { player.open() }) {
                         HStack(spacing: 12) {
                             SongImage(
                                 width: 40,
                                 height: 40,
-                                thumbnailURL: lastLibraryItem.thumbnail_url,
-                                thumbnailIsSquare: lastLibraryItem.thumbnail_is_square
+                                thumbnailURL: libraryItem.thumbnail_url,
+                                thumbnailIsSquare: libraryItem.thumbnail_is_square
                             )
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(lastLibraryItem.title)
+                                Text(libraryItem.title)
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .lineLimit(1)
                                 
-                                Text(lastLibraryItem.artist)
+                                Text(libraryItem.artist)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)
@@ -92,19 +92,15 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $player.isPresented) {
-            if let audioPlayer = player.audioPlayer, let libraryItem = player.lastLibraryItem {
+            if player.canShowPlayer {
                 NavigationStack {
                     ZStack {
                         BackgroundColor
                             .ignoresSafeArea()
                         
-                        PlayerScreen(
-                            libraryItem: libraryItem,
-                            audioPlayer: audioPlayer
-                        )
+                        PlayerScreen()
                     }
                 }
-                .id(ObjectIdentifier(audioPlayer))
             } else {
                 EmptyView()
             }
