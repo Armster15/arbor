@@ -28,13 +28,32 @@ struct LibraryScreen: View {
         Group {
             List {
                 ForEach(libraryItems, id: \.persistentModelID) { item in
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(item.title)
                             .font(.headline)
                         Text(item.artist)
                             .font(.subheadline)
-                        Text(item.id.uuidString)
-                            .font(.caption)
+                        HStack(spacing: 12) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "gauge.with.dots.needle.67percent")
+                                    .font(.caption)
+                                Text(String(format: "%.2fx", item.speedRate))
+                                    .font(.caption)
+                            }
+                            HStack(spacing: 4) {
+                                Image(systemName: "tuningfork")
+                                    .font(.caption)
+                                Text(String(format: "%+.0f", item.pitchCents))
+                                    .font(.caption)
+                            }
+                            HStack(spacing: 4) {
+                                Image(systemName: "dot.radiowaves.left.and.right")
+                                    .font(.caption)
+                                Text(String(format: "%.0f%%", item.reverbMix * 100))
+                                    .font(.caption)
+                            }
+                        }
+                        .foregroundColor(.secondary)
                     }
                     .onTapGesture {
                         let originalUrl = item.original_url // required since you can't do item.original_url directly within the predicate
