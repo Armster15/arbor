@@ -40,7 +40,8 @@ struct ContentView: View {
                 NavigationStack() {
                     HomeScreen(
                         onDownloaded: { meta in
-                            player.startPlayback(from: meta)
+                            let item = LibraryItem(meta: meta)
+                            player.startPlayback(libraryItem: item, path: meta.path)
                         }
                     )
                     .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
@@ -103,7 +104,7 @@ struct ContentView: View {
                         )
                     }
                 }
-                .id(ObjectIdentifier(ap))
+                .id(ObjectIdentifier(audioPlayer))
             } else {
                 EmptyView()
             }

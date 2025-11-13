@@ -16,26 +16,29 @@ final class PlayerCoordinator: ObservableObject {
     func open()  { isPresented = true }
     func close() { isPresented = false }
     
-    func startPlayback(from meta: DownloadMeta) {
-        debugPrint(meta)
+    func startPlayback(libraryItem: LibraryItem, path: String) {
+        debugPrint(path, libraryItem)
         
         // Tear down any existing engine before creating a new one
         audioPlayer?.unsubscribeUpdates()
         audioPlayer = nil
         
         let newAudioPlayer = AudioPlayerWithReverb()
-        let newLibraryItem = LibraryItem(meta: meta)
-        lastLibraryItem = newLibraryItem
+        lastLibraryItem = libraryItem
         
-        let artworkURL = newLibraryItem.thumbnail_url.flatMap { URL(string: $0) }
+        let artworkURL = libraryItem.thumbnail_url.flatMap { URL(string: $0) }
         
-        newAudioPlayer.startSavedAudio(filePath: meta.path)
+        newAudioPlayer.startSavedAudio(filePath: path)
         
-        newAudioPlayer.updateMetadataTitle(newLibraryItem.title)
-        newAudioPlayer.updateMetadataArtist(newLibraryItem.artist)
+        newAudioPlayer.updateMetadataTitle(libraryItem.title)
+        newAudioPlayer.updateMetadataArtist(libraryItem.artist)
         if let artworkURL = artworkURL {
             newAudioPlayer.updateMetadataArtwork(url: artworkURL)
         }
+        // Apply audio parameters from the library item
+        newAudioPlayer.setSpeedRate(libraryItem.speedRate)
+        newAudioPlayer.setPitchByCents(libraryItem.pitchCents)
+        newAudioPlayer.setReverbMix(libraryItem.reverbMix)
         
         audioPlayer = newAudioPlayer
         
