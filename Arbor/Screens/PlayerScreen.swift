@@ -102,12 +102,25 @@ struct __PlayerScreen: View {
             debugPrint("Error checking for existing local file")
             return
         }
+
+        var fileFound = false
         
         if let existingFile = existingFiles.first {
             // File already exists, reuse it
             self.filePath = existingFile.filePath
-            debugPrint("Reusing existing local file: \(existingFile.filePath)")
-        } else {
+
+            // check if the file still exists because if it doesn't we need to delete this outdated library item
+            if !FileManager.default.fileExists(atPath: existingFile.filePath) {
+                debugPrint("Deleting outdated library item: \(item.title)")
+                modelContext.delete(item)
+            } else {
+                fileFound = true
+                debugPrint("Reusing existing local file: \(existingFile.filePath)")
+            }
+            
+        } 
+        
+        if !fileFound {
             // No existing file, copy to permanent location
             let ext = URL(fileURLWithPath: filePath).pathExtension
             let timestamp = Int(Date().timeIntervalSince1970)
