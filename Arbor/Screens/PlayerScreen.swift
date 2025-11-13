@@ -68,6 +68,20 @@ struct __PlayerScreen: View {
         return "\(libraryItem.title) (\(tags.joined(separator: " + ")))"
     }
     
+    private func sanitizeForFilename(_ string: String) -> String {
+        // Remove or replace characters that are unsafe for filenames
+        let unsafeCharacters = CharacterSet(charactersIn: "/\\:*?\"<>|")
+        let sanitized = string.components(separatedBy: unsafeCharacters).joined(separator: "_")
+        
+        // Also replace newlines and trim whitespace
+        let cleaned = sanitized.replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Limit length to avoid extremely long filenames (max 100 chars per field)
+        return String(cleaned.prefix(100))
+    }
+    
     private func saveToLibrary() {
         let SHOULD_COPY = true
 
@@ -78,7 +92,9 @@ struct __PlayerScreen: View {
         // copy audio file to more permanent location
         let ext = URL(fileURLWithPath: filePath).pathExtension
         let timestamp = Int(Date().timeIntervalSince1970)
-        let newName = "\(item.title)\(timestamp).\(ext)"
+        let safeTitle = sanitizeForFilename(item.title)
+        let safeArtist = sanitizeForFilename(item.artist)
+        let newName = "\(safeTitle)-\(safeArtist)-\(timestamp).\(ext)"
         let docsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let newPath = docsPath.appendingPathComponent(newName).path
         try? FileManager.default.copyItem(atPath: filePath, toPath: newPath)
