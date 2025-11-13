@@ -88,21 +88,44 @@ struct __PlayerScreen: View {
         // if SHOULD_COPY is true, it will save a new library item
         // else if false it will edit the existing library item
         let item = SHOULD_COPY ? LibraryItem(copyOf: libraryItem) : libraryItem
-
-        // copy audio file to more permanent location
-        let ext = URL(fileURLWithPath: filePath).pathExtension
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let safeTitle = sanitizeForFilename(item.title)
-        let safeArtist = sanitizeForFilename(item.artist)
-        let newName = "\(safeTitle)-\(safeArtist)-\(timestamp).\(ext)"
-        let docsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let newPath = docsPath.appendingPathComponent(newName).path
-        try? FileManager.default.copyItem(atPath: filePath, toPath: newPath)
-        self.filePath = newPath
-        debugPrint("Saved audio file to more permanent location: \(newPath)")
         
-        modelContext.insert(item)
-        modelContext.insert(LibraryLocalFile(originalUrl: item.original_url, filePath: newPath))
+        item.speedRate = audioPlayer.speedRate
+        item.pitchCents = audioPlayer.pitchCents
+        item.reverbMix = audioPlayer.reverbMix
+
+        let originalUrl = item.original_url
+        let fetchDescriptor = FetchDescriptor<LibraryLocalFile>(
+            predicate: #Predicate { $0.originalUrl == originalUrl }
+        )
+        
+        guard let existingFiles = try? modelContext.fetch(fetchDescriptor) else {
+            debugPrint("Error checking for existing local file")
+            return
+        }
+        
+        if let existingFile = existingFiles.first {
+            // File already exists, reuse it
+            self.filePath = existingFile.filePath
+            debugPrint("Reusing existing local file: \(existingFile.filePath)")
+        } else {
+            // No existing file, copy to permanent location
+            let ext = URL(fileURLWithPath: filePath).pathExtension
+            let timestamp = Int(Date().timeIntervalSince1970)
+            let safeTitle = sanitizeForFilename(item.title)
+            let safeArtist = sanitizeForFilename(item.artist)
+            let newName = "\(safeTitle)-\(safeArtist)-\(timestamp).\(ext)"
+            let docsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let newPath = docsPath.appendingPathComponent(newName).path
+            try? FileManager.default.copyItem(atPath: filePath, toPath: newPath)
+            self.filePath = newPath
+            debugPrint("Saved audio file to more permanent location: \(newPath)")
+            
+            modelContext.insert(LibraryLocalFile(originalUrl: item.original_url, filePath: newPath))
+        }
+        
+        if SHOULD_COPY {
+            modelContext.insert(item)
+        }
     }
 
     var body: some View {
