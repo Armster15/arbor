@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import UIKit
 
 struct DownloadMeta: Decodable {
@@ -162,5 +163,13 @@ struct ContentView: View {
 }
 
 #Preview {
+    @Previewable @StateObject var player = PlayerCoordinator()
+    
+    // dummy in-memory model container for preview environments
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: LibraryItem.self, configurations: config)
+    
     ContentView()
+        .modelContainer(container)
+        .environmentObject(player)
 }
