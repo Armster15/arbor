@@ -45,6 +45,26 @@ class LibraryItem {
         self.pitchCents = pitchCents
         self.reverbMix = reverbMix
     }
+    
+    convenience init(
+        meta: DownloadMeta,
+        speedRate: Float = 1.0,
+        pitchCents: Float = 0.0,
+        reverbMix: Float = 0.0
+    ) {
+        self.init(
+            original_url: meta.original_url,
+            title: meta.title,
+            artist: meta.artist,
+            thumbnail_url: meta.thumbnail_url,
+            thumbnail_width: meta.thumbnail_width,
+            thumbnail_height: meta.thumbnail_height,
+            thumbnail_is_square: meta.thumbnail_is_square,
+            speedRate: speedRate,
+            pitchCents: pitchCents,
+            reverbMix: reverbMix
+        )
+    }
 }
 
 struct DownloadMeta: Decodable {

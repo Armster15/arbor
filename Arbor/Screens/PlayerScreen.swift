@@ -9,7 +9,7 @@ import SDWebImage
 import SDWebImageSwiftUI
 
 struct PlayerScreen: View {
-    @Binding var meta: DownloadMeta
+    @Bindable var libraryItem: LibraryItem
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
     
     @State private var isEditSheetPresented: Bool = false
@@ -18,8 +18,8 @@ struct PlayerScreen: View {
     
     @Environment(\.modelContext) var modelContext
     
-    init(meta: Binding<DownloadMeta>, audioPlayer: AudioPlayerWithReverb) {
-        self._meta = meta
+    init(libraryItem: LibraryItem, audioPlayer: AudioPlayerWithReverb) {
+        self.libraryItem = libraryItem
         self.audioPlayer = audioPlayer
     }
 
@@ -37,32 +37,23 @@ struct PlayerScreen: View {
                 tags.append("reverb")
             }
         }
-        guard !tags.isEmpty else { return meta.title }
-        return "\(meta.title) (\(tags.joined(separator: " + ")))"
+        guard !tags.isEmpty else { return libraryItem.title }
+        return "\(libraryItem.title) (\(tags.joined(separator: " + ")))"
     }
     
     private func saveToLibrary() {
-        let model = LibraryItem(
-            original_url: meta.original_url,
-            title: meta.title,
-            artist: meta.artist,
-            thumbnail_url: meta.thumbnail_url,
-            thumbnail_width: meta.thumbnail_width,
-            thumbnail_height: meta.thumbnail_height,
-            thumbnail_is_square: meta.thumbnail_is_square,
-            speedRate: audioPlayer.speedRate,
-            pitchCents: audioPlayer.pitchCents,
-            reverbMix: audioPlayer.reverbMix
-        )
+        libraryItem.speedRate = audioPlayer.speedRate
+        libraryItem.pitchCents = audioPlayer.pitchCents
+        libraryItem.reverbMix = audioPlayer.reverbMix
         
-        modelContext.insert(model)
+        modelContext.insert(libraryItem)
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
                 VStack(spacing: 20) {
-                    SongInfo(title: meta.title, artist: meta.artist, thumbnailURL: meta.thumbnail_url, thumbnailIsSquare: meta.thumbnail_is_square)
+                    SongInfo(title: libraryItem.title, artist: libraryItem.artist, thumbnailURL: libraryItem.thumbnail_url, thumbnailIsSquare: libraryItem.thumbnail_is_square)
                                         
                     // Action buttons
                     ZStack {
@@ -344,8 +335,8 @@ struct PlayerScreen: View {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    draftTitle = meta.title
-                    draftArtist = meta.artist
+                    draftTitle = libraryItem.title
+                    draftArtist = libraryItem.artist
                     isEditSheetPresented = true
                 } label: {
                     Label("Edit Metadata", systemImage: "pencil")
@@ -401,12 +392,12 @@ struct PlayerScreen: View {
                 HStack {
                     Button {
                         // Commit edits to meta on Save
-                        meta.title = draftTitle
-                        meta.artist = draftArtist
+                        libraryItem.title = draftTitle
+                        libraryItem.artist = draftArtist
 
                         // Update now playing metadata
                         audioPlayer.updateMetadataTitle(decoratedTitle())
-                        audioPlayer.updateMetadataArtist(meta.artist)
+                        audioPlayer.updateMetadataArtist(libraryItem.artist)
                         isEditSheetPresented = false
                     } label: {
                         Text("Save")
@@ -443,16 +434,15 @@ private func formattedTime(_ seconds: Double) -> String {
 				.ignoresSafeArea()
 			
 			PlayerScreen(
-				meta: .constant(DownloadMeta(
-					path: "/Users/armaan/Library/Developer/CoreSimulator/Devices/2AF66DAD-484B-4967-8A7C-1E032023986B/data/Containers/Data/Application/23735F58-3B06-474F-8A01-E673F6ECE56D/tmp/NA-Sxu8wHE97Rk.m4a",
+				libraryItem: LibraryItem(
                     original_url: "https://www.youtube.com/watch?v=Sxu8wHE97Rk",
-					title: "Ude Dil Befikre (From \"Befikre\")",
-					artist: "Vishal and Sheykhar, Benny Dayal",
-					thumbnail_url: "https://lh3.googleusercontent.com/viaCZKRr1hCygO8JQS6lLmhBqUVFXctO_9sOE7hwI-rS_JlYcCdqel9sAaGdQoFEFUR2R6ldsrr_c2L5=w544-h544-l90-rj",
-					thumbnail_width: 544,
-					thumbnail_height: 544,
-					thumbnail_is_square: true
-				)),
+                    title: "Ude Dil Befikre (From \"Befikre\")",
+                    artist: "Vishal and Sheykhar, Benny Dayal",
+                    thumbnail_url: "https://lh3.googleusercontent.com/viaCZKRr1hCygO8JQS6lLmhBqUVFXctO_9sOE7hwI-rS_JlYcCdqel9sAaGdQoFEFUR2R6ldsrr_c2L5=w544-h544-l90-rj",
+                    thumbnail_width: 544,
+                    thumbnail_height: 544,
+                    thumbnail_is_square: true
+                ),
 				audioPlayer: AudioPlayerWithReverb()
 			)
 		}
