@@ -55,6 +55,7 @@ struct LibraryScreen: View {
                         }
                         .foregroundColor(.secondary)
                     }
+                    .listRowBackground(Color("SecondaryBg"))
                     .onTapGesture {
                         let originalUrl = item.original_url // required since you can't do item.original_url directly within the predicate
                         let fetchDescriptor = FetchDescriptor<LibraryLocalFile>(

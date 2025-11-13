@@ -161,8 +161,7 @@ struct __PlayerScreen: View {
                                     .symbolRenderingMode(.palette)
                                     .foregroundStyle(
                                         Color("PrimaryText"),
-                                        // TODO: abstract away as a secondary smth color
-                                        .black.opacity(0.05)
+                                        Color("SecondaryBg")
                                     )
                             }
                             
@@ -189,8 +188,7 @@ struct __PlayerScreen: View {
                                     .font(.system(size: 44))
                                     .foregroundStyle(
                                         Color("PrimaryText"),
-                                        // TODO: abstract away as a secondary smth color
-                                        .black.opacity(0.05)
+                                        Color("SecondaryBg")
                                     )
                             }
                         }
