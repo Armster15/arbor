@@ -65,6 +65,21 @@ class LibraryItem {
             reverbMix: reverbMix
         )
     }
+    
+    convenience init(copyOf item: LibraryItem) {
+        self.init(
+            original_url: item.original_url,
+            title: item.title,
+            artist: item.artist,
+            thumbnail_url: item.thumbnail_url,
+            thumbnail_width: item.thumbnail_width,
+            thumbnail_height: item.thumbnail_height,
+            thumbnail_is_square: item.thumbnail_is_square,
+            speedRate: item.speedRate,
+            pitchCents: item.pitchCents,
+            reverbMix: item.reverbMix
+        )
+    }
 }
 
 // maps an original url (e.g. a youtube url) to a local file path

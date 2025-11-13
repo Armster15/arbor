@@ -69,22 +69,24 @@ struct __PlayerScreen: View {
     }
     
     private func saveToLibrary() {
-        libraryItem.speedRate = audioPlayer.speedRate
-        libraryItem.pitchCents = audioPlayer.pitchCents
-        libraryItem.reverbMix = audioPlayer.reverbMix
+        let SHOULD_COPY = true
+
+        // if SHOULD_COPY is true, it will save a new library item
+        // else if false it will edit the existing library item
+        let item = SHOULD_COPY ? LibraryItem(copyOf: libraryItem) : libraryItem
 
         // copy audio file to more permanent location
         let ext = URL(fileURLWithPath: filePath).pathExtension
         let timestamp = Int(Date().timeIntervalSince1970)
-        let newName = "\(libraryItem.title)\(timestamp).\(ext)"
+        let newName = "\(item.title)\(timestamp).\(ext)"
         let docsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let newPath = docsPath.appendingPathComponent(newName).path
         try? FileManager.default.copyItem(atPath: filePath, toPath: newPath)
         self.filePath = newPath
         debugPrint("Saved audio file to more permanent location: \(newPath)")
         
-        modelContext.insert(libraryItem)
-        modelContext.insert(LibraryLocalFile(originalUrl: libraryItem.original_url, filePath: newPath))
+        modelContext.insert(item)
+        modelContext.insert(LibraryLocalFile(originalUrl: item.original_url, filePath: newPath))
     }
 
     var body: some View {
