@@ -49,7 +49,7 @@ struct LibraryScreen: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "dot.radiowaves.left.and.right")
                                     .font(.caption)
-                                Text(String(format: "%.0f%%", item.reverbMix * 100))
+                                Text("\(Int(item.reverbMix))%")
                                     .font(.caption)
                             }
                         }
