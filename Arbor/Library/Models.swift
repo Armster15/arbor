@@ -10,6 +10,8 @@ import SwiftData
 @Model
 class LibraryItem {
     var id: UUID
+    var createdAt: Date
+
     var original_url: String
     var title: String
     var artist: String
@@ -34,6 +36,8 @@ class LibraryItem {
         reverbMix: Float = 0.0
     ) {
         self.id = UUID()
+        self.createdAt = Date()
+
         self.original_url = original_url
         self.title = title
         self.artist = artist
@@ -86,12 +90,15 @@ class LibraryItem {
 @Model
 class LibraryLocalFile {
     var id: UUID
+    var createdAt: Date
     
     var originalUrl: String
     var filePath: String
     
     init(originalUrl: String, filePath: String) {
         self.id = UUID()
+        self.createdAt = Date()
+        
         self.originalUrl = originalUrl
         self.filePath = filePath
     }
