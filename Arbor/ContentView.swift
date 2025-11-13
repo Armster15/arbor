@@ -91,15 +91,15 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $player.isPresented) {
-            if let ap = player.audioPlayer, let item = player.lastLibraryItem {
+            if let audioPlayer = player.audioPlayer, let libraryItem = player.lastLibraryItem {
                 NavigationStack {
                     ZStack {
                         BackgroundColor
                             .ignoresSafeArea()
                         
                         PlayerScreen(
-                            libraryItem: item,
-                            audioPlayer: ap
+                            libraryItem: libraryItem,
+                            audioPlayer: audioPlayer
                         )
                     }
                 }
