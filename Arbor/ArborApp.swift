@@ -6,16 +6,20 @@
 //
 
 import SwiftUI
-import AVFoundation
+import SwiftData
 
 @main
 struct ArborApp: App {
+    @StateObject private var player = PlayerCoordinator()
+    
     init() {
         _ = start_python_runtime(CommandLine.argc, CommandLine.unsafeArgv)
     }
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(player)
         }
+        .modelContainer(for: [LibraryItem.self, LibraryLocalFile.self])
     }
 }

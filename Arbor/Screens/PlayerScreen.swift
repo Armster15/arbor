@@ -4,20 +4,50 @@
 //
 
 import SwiftUI
+import SwiftData
 import SDWebImage
 import SDWebImageSwiftUI
 
+// this is so we can provide the actual PlayerScreen (__PlayerScreen)
+// with non-nullable values for libraryItem, audioPlayer, and filePath
 struct PlayerScreen: View {
-    @Binding var meta: DownloadMeta
+    @EnvironmentObject var player: PlayerCoordinator
+        
+    var body: some View {
+        Group {
+            if let libraryItem = player.libraryItem,
+               let audioPlayer = player.audioPlayer,
+               let filePath = player.filePath {
+                __PlayerScreen(
+                    libraryItem: libraryItem,
+                    audioPlayer: audioPlayer,
+                    filePath: Binding(
+                        get: { filePath },
+                        set: { player.filePath = $0 }
+                    )
+                )
+            } else {
+                EmptyView()
+            }
+        }
+    }
+}
+
+struct __PlayerScreen: View {
+    @Bindable var libraryItem: LibraryItem
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
+    @Binding var filePath: String
     
     @State private var isEditSheetPresented: Bool = false
     @State private var draftTitle: String = ""
     @State private var draftArtist: String = ""
     
-    init(meta: Binding<DownloadMeta>, audioPlayer: AudioPlayerWithReverb) {
-        self._meta = meta
+    @Environment(\.modelContext) var modelContext
+    
+    init(libraryItem: LibraryItem, audioPlayer: AudioPlayerWithReverb, filePath: Binding<String>) {
+        self.libraryItem = libraryItem
         self.audioPlayer = audioPlayer
+        self._filePath = filePath
     }
 
     private func decoratedTitle() -> String {
@@ -34,15 +64,88 @@ struct PlayerScreen: View {
                 tags.append("reverb")
             }
         }
-        guard !tags.isEmpty else { return meta.title }
-        return "\(meta.title) (\(tags.joined(separator: " + ")))"
+        guard !tags.isEmpty else { return libraryItem.title }
+        return "\(libraryItem.title) (\(tags.joined(separator: " + ")))"
+    }
+    
+    private func sanitizeForFilename(_ string: String) -> String {
+        // Remove or replace characters that are unsafe for filenames
+        let unsafeCharacters = CharacterSet(charactersIn: "/\\:*?\"<>|")
+        let sanitized = string.components(separatedBy: unsafeCharacters).joined(separator: "_")
+        
+        // Also replace newlines and trim whitespace
+        let cleaned = sanitized.replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Limit length to avoid extremely long filenames (max 100 chars per field)
+        return String(cleaned.prefix(100))
+    }
+    
+    private func saveToLibrary() {
+        let SHOULD_COPY = true
+
+        // if SHOULD_COPY is true, it will save a new library item
+        // else if false it will edit the existing library item
+        let item = SHOULD_COPY ? LibraryItem(copyOf: libraryItem) : libraryItem
+        
+        item.speedRate = audioPlayer.speedRate
+        item.pitchCents = audioPlayer.pitchCents
+        item.reverbMix = audioPlayer.reverbMix
+
+        let originalUrl = item.original_url
+        let fetchDescriptor = FetchDescriptor<LibraryLocalFile>(
+            predicate: #Predicate { $0.originalUrl == originalUrl }
+        )
+        
+        guard let existingFiles = try? modelContext.fetch(fetchDescriptor) else {
+            debugPrint("Error checking for existing local file")
+            return
+        }
+
+        var fileFound = false
+        
+        if let existingFile = existingFiles.first {
+            // File already exists, reuse it
+            self.filePath = existingFile.filePath
+
+            // check if the file still exists because if it doesn't we need to delete this outdated library item
+            if !FileManager.default.fileExists(atPath: existingFile.filePath) {
+                debugPrint("Deleting outdated library item: \(item.title)")
+                modelContext.delete(item)
+            } else {
+                fileFound = true
+                debugPrint("Reusing existing local file: \(existingFile.filePath)")
+            }
+            
+        } 
+        
+        if !fileFound {
+            // No existing file, copy to permanent location
+            let ext = URL(fileURLWithPath: filePath).pathExtension
+            let timestamp = Int(Date().timeIntervalSince1970)
+            let safeTitle = sanitizeForFilename(item.title)
+            let safeArtist = sanitizeForFilename(item.artist)
+            let newName = "\(safeTitle)-\(safeArtist)-\(timestamp).\(ext)"
+            let docsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let newPath = docsPath.appendingPathComponent(newName).path
+            try? FileManager.default.copyItem(atPath: filePath, toPath: newPath)
+            self.filePath = newPath
+            debugPrint("Saved audio file to more permanent location: \(newPath)")
+            
+            modelContext.insert(LibraryLocalFile(originalUrl: item.original_url, filePath: newPath))
+        }
+        
+        if SHOULD_COPY {
+            modelContext.insert(item)
+        }
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
                 VStack(spacing: 20) {
-                    SongInfo(title: meta.title, artist: meta.artist, thumbnailURL: meta.thumbnail_url, thumbnailIsSquare: meta.thumbnail_is_square)
+                    SongInfo(title: libraryItem.title, artist: libraryItem.artist, thumbnailURL: libraryItem.thumbnail_url, thumbnailIsSquare: libraryItem.thumbnail_is_square)
                                         
                     // Action buttons
                     ZStack {
@@ -58,8 +161,7 @@ struct PlayerScreen: View {
                                     .symbolRenderingMode(.palette)
                                     .foregroundStyle(
                                         Color("PrimaryText"),
-                                        // TODO: abstract away as a secondary smth color
-                                        .black.opacity(0.05)
+                                        Color("SecondaryBg")
                                     )
                             }
                             
@@ -86,8 +188,7 @@ struct PlayerScreen: View {
                                     .font(.system(size: 44))
                                     .foregroundStyle(
                                         Color("PrimaryText"),
-                                        // TODO: abstract away as a secondary smth color
-                                        .black.opacity(0.05)
+                                        Color("SecondaryBg")
                                     )
                             }
                         }
@@ -316,6 +417,7 @@ struct PlayerScreen: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
+                    saveToLibrary()
                 } label: {
                     Label("Download", systemImage: "arrow.down.circle")
                 }
@@ -323,8 +425,8 @@ struct PlayerScreen: View {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    draftTitle = meta.title
-                    draftArtist = meta.artist
+                    draftTitle = libraryItem.title
+                    draftArtist = libraryItem.artist
                     isEditSheetPresented = true
                 } label: {
                     Label("Edit Metadata", systemImage: "pencil")
@@ -380,12 +482,12 @@ struct PlayerScreen: View {
                 HStack {
                     Button {
                         // Commit edits to meta on Save
-                        meta.title = draftTitle
-                        meta.artist = draftArtist
+                        libraryItem.title = draftTitle
+                        libraryItem.artist = draftArtist
 
                         // Update now playing metadata
                         audioPlayer.updateMetadataTitle(decoratedTitle())
-                        audioPlayer.updateMetadataArtist(meta.artist)
+                        audioPlayer.updateMetadataArtist(libraryItem.artist)
                         isEditSheetPresented = false
                     } label: {
                         Text("Save")
@@ -421,18 +523,21 @@ private func formattedTime(_ seconds: Double) -> String {
 			BackgroundColor
 				.ignoresSafeArea()
 			
-			PlayerScreen(
-				meta: .constant(DownloadMeta(
-					path: "/Users/armaan/Library/Developer/CoreSimulator/Devices/2AF66DAD-484B-4967-8A7C-1E032023986B/data/Containers/Data/Application/23735F58-3B06-474F-8A01-E673F6ECE56D/tmp/NA-Sxu8wHE97Rk.m4a",
+			__PlayerScreen(
+				libraryItem: LibraryItem(
                     original_url: "https://www.youtube.com/watch?v=Sxu8wHE97Rk",
-					title: "Ude Dil Befikre (From \"Befikre\")",
-					artist: "Vishal and Sheykhar, Benny Dayal",
-					thumbnail_url: "https://lh3.googleusercontent.com/viaCZKRr1hCygO8JQS6lLmhBqUVFXctO_9sOE7hwI-rS_JlYcCdqel9sAaGdQoFEFUR2R6ldsrr_c2L5=w544-h544-l90-rj",
-					thumbnail_width: 544,
-					thumbnail_height: 544,
-					thumbnail_is_square: true
-				)),
-				audioPlayer: AudioPlayerWithReverb()
+                    title: "Ude Dil Befikre (From \"Befikre\")",
+                    artist: "Vishal and Sheykhar, Benny Dayal",
+                    thumbnail_url: "https://lh3.googleusercontent.com/viaCZKRr1hCygO8JQS6lLmhBqUVFXctO_9sOE7hwI-rS_JlYcCdqel9sAaGdQoFEFUR2R6ldsrr_c2L5=w544-h544-l90-rj",
+                    thumbnail_width: 544,
+                    thumbnail_height: 544,
+                    thumbnail_is_square: true
+                ),
+				audioPlayer: AudioPlayerWithReverb(),
+                filePath: Binding(
+                    get: { "" },
+                    set: { _ in }
+                )
 			)
 		}
 	}
