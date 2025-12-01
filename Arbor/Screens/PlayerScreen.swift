@@ -145,7 +145,13 @@ struct __PlayerScreen: View {
         ScrollView {
             VStack(spacing: 32) {
                 VStack(spacing: 20) {
-                    SongInfo(title: libraryItem.title, artist: libraryItem.artist, thumbnailURL: libraryItem.thumbnail_url, thumbnailIsSquare: libraryItem.thumbnail_is_square)
+                    SongInfo(
+                        title: libraryItem.title,
+                        artist: libraryItem.artist,
+                        thumbnailURL: libraryItem.thumbnail_url,
+                        thumbnailIsSquare: libraryItem.thumbnail_is_square,
+                        thumbnailForceSquare: false,
+                    )
                                         
                     // Action buttons
                     ZStack {
