@@ -69,8 +69,8 @@ struct SearchResultsView: View {
                     SearchResultRow(result: result) {
                         onResultSelected(result)
                     }
-                    .padding()
                 }
+                .padding(.bottom, 16)
             } else if isSearching && searchResults.isEmpty {
                 VStack {
                     ProgressView()
