@@ -23,12 +23,15 @@ struct SearchResultsView: View {
     @State private var searchVisible: Bool = false
     
     var body: some View {
+        let isSearchQueryURL = isValidURL(searchQuery)
+        
         VStack(spacing: 0) {
             Picker("Provider", selection: $searchProvider) {
                 Text("YouTube Music").tag(SearchProvider.youtube)
                 Text("SoundCloud").tag(SearchProvider.soundcloud)
             }
             .pickerStyle(.segmented)
+            .disabled(isSearchQueryURL)
             .padding()
             .opacity(searchVisible ? 1 : 0)
             .offset(y: searchVisible ? 0 : -8)
@@ -46,6 +49,28 @@ struct SearchResultsView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if isSearchQueryURL {
+                // Show URL box for direct URL input
+                VStack(spacing: 16) {
+                    let result = SearchResult(
+                        title: searchQuery,
+                        artists: ["Raw URL"],
+                        url: searchQuery,
+                        views: nil,
+                        duration: nil,
+                        isExplicit: nil,
+                        isVerified: nil,
+                        thumbnailURL: nil,
+                        thumbnailIsSquare: nil,
+                        thumbnailWidth: nil,
+                        thumbnailHeight: nil
+                    )
+
+                    SearchResultRow(result: result) {
+                        onResultSelected(result)
+                    }
+                }
+                .padding(.bottom, 16)
             } else if isSearching && searchResults.isEmpty {
                 VStack {
                     ProgressView()
@@ -394,6 +419,13 @@ struct HomeScreen: View {
     private func performSearch() {
         let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
+            searchResults = []
+            isSearching = false
+            return
+        }
+
+        // If query is a URL, don't perform search
+        if isValidURL(trimmed) {
             searchResults = []
             isSearching = false
             return

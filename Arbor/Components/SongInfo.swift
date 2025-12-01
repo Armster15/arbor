@@ -82,6 +82,7 @@ struct SongImage: View {
                 Color.gray.opacity(0.2)
                 Image(systemName: "music.note")
                     .foregroundColor(.secondary)
+                    .font(.system(size: min(width, height) * 0.5))
             }
             .frame(width: width, height: height)
             .clipShape(RoundedRectangle(cornerRadius: 8))
