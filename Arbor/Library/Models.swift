@@ -86,43 +86,6 @@ class LibraryItem {
     }
 }
 
-// maps an original url (e.g. a youtube url) to a local file path
-struct LibraryLocalFile: Codable {
-    var id: UUID
-    var createdAt: Date
-    
-    var originalUrl: String
-    var relativePath: String // path relative to Documents folder
-        
-    init(originalUrl: String, relativePath: String) {
-        self.id = UUID()
-        self.createdAt = Date()
-        
-        self.originalUrl = originalUrl
-        self.relativePath = relativePath
-    }
-}
-
-func getLibraryLocalFile(originalUrl: String) -> LibraryLocalFile? {
-    if let saved = UserDefaults.standard.object(forKey: "LibraryLocalFile:" + originalUrl) as? Data {
-        let decoder = JSONDecoder()
-        if let data = try? decoder.decode(LibraryLocalFile.self, from: saved) {
-            return data
-        }
-    }
-    
-    return nil
-}
-
-func saveLibraryLocalFile(_ libraryLocalFile: LibraryLocalFile) {
-    let encoder = JSONEncoder()
-    let encoded = try! encoder.encode(libraryLocalFile)
-    UserDefaults.standard.set(encoded, forKey: "LibraryLocalFile:" + libraryLocalFile.originalUrl)
-}
-
-func deleteLibraryLocalFile(originalUrl: String) {
-    UserDefaults.standard.removeObject(forKey: "LibraryLocalFile:" + originalUrl)
-}
 
 
 struct DownloadMeta: Decodable {

@@ -28,20 +28,9 @@ struct LibraryScreen: View {
     }
     
     func onTap(_ item: LibraryItem) {
-        let localFile = getLibraryLocalFile(originalUrl: item.original_url)
-        
-        if let localFile = localFile {
-            let docsURL = URL.documentsDirectory
-            let fileURL = docsURL.appendingPathComponent(localFile.relativePath)
-            let absolutePath = fileURL.path
-            
-            if FileManager.default.fileExists(atPath: absolutePath) {
-                player.startPlayback(libraryItem: item, filePath: absolutePath)
-                return
-            } else {
-                // Local mapping exists but file is gone – clean up stale entry
-                deleteLibraryLocalFile(originalUrl: item.original_url)
-            }
+        if let absolutePath = getLocalAudioFilePath(originalUrl: item.original_url) {
+            player.startPlayback(libraryItem: item, filePath: absolutePath)
+            return
         }
         
         // No usable local file – fall back to re-downloading using the original URL.
