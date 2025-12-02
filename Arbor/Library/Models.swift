@@ -92,14 +92,14 @@ struct LibraryLocalFile: Codable {
     var createdAt: Date
     
     var originalUrl: String
-    var filePath: String
+    var relativePath: String // path relative to Documents folder
         
-    init(originalUrl: String, filePath: String) {
+    init(originalUrl: String, relativePath: String) {
         self.id = UUID()
         self.createdAt = Date()
         
         self.originalUrl = originalUrl
-        self.filePath = filePath
+        self.relativePath = relativePath
     }
 }
 

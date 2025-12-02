@@ -99,34 +99,44 @@ struct __PlayerScreen: View {
         var fileFound = false
         
         if let existingFile = localFile {
-            // File already exists, reuse it
-            self.filePath = existingFile.filePath
-
-            // check if the file still exists because if it doesn't we need to delete this outdated library item
-            if !FileManager.default.fileExists(atPath: existingFile.filePath) {
+            // Reconstruct absolute path from the stored relative path
+            let docsURL = URL.documentsDirectory
+            let fileURL = docsURL.appendingPathComponent(existingFile.relativePath)
+            let absolutePath = fileURL.path
+            
+            self.filePath = absolutePath
+            
+            // Check if the file still exists because if it doesn't we need to delete this outdated library item
+            if !FileManager.default.fileExists(atPath: absolutePath) {
                 debugPrint("Deleting outdated library item: \(item.title)")
                 modelContext.delete(item)
             } else {
                 fileFound = true
-                debugPrint("Reusing existing local file: \(existingFile.filePath)")
+                debugPrint("Reusing existing local file: \(absolutePath)")
             }
-            
-        } 
+        }
         
         if !fileFound {
             // No existing file, copy to permanent location
-            let ext = URL(fileURLWithPath: filePath).pathExtension
+            let sourceURL = URL(fileURLWithPath: filePath)
+            let ext = sourceURL.pathExtension
             let timestamp = Int(Date().timeIntervalSince1970)
             let safeTitle = sanitizeForFilename(item.title)
             let safeArtist = sanitizeForFilename(item.artist)
             let newName = "\(safeTitle)-\(safeArtist)-\(timestamp).\(ext)"
-            let docsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let newPath = docsPath.appendingPathComponent(newName).path
-            try? FileManager.default.copyItem(atPath: filePath, toPath: newPath)
-            self.filePath = newPath
-            debugPrint("Saved audio file to more permanent location: \(newPath)")
             
-            let model = LibraryLocalFile(originalUrl: item.original_url, filePath: newPath)
+            let docsURL = URL.documentsDirectory
+            let newURL = docsURL.appendingPathComponent(newName)
+            
+            try? FileManager.default.copyItem(at: sourceURL, to: newURL)
+            let absolutePath = newURL.path
+            self.filePath = absolutePath
+            
+            debugPrint("Saved audio file to more permanent location: \(absolutePath)")
+            
+            // Store only the path relative to the Documents directory
+            let relativePath = absolutePath.replacingOccurrences(of: docsURL.path + "/", with: "")
+            let model = LibraryLocalFile(originalUrl: item.original_url, relativePath: relativePath)
             saveLibraryLocalFile(model)
         }
         
