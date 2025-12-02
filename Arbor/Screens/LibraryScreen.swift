@@ -117,6 +117,17 @@ struct LibraryScreen: View {
             if let libraryItem = downloadingItem {
                 DownloadScreen(
                     onDownloaded: { meta in
+                        let _ = ensureLocalAudioFile(
+                            originalUrl: libraryItem.original_url,
+                            sourcePath: meta.path,
+                            title: libraryItem.title,
+                            artist: libraryItem.artist,
+                            onMissingPhysicalFile: {
+                                debugPrint("Deleting outdated library item: \(libraryItem.title)")
+                                modelContext.delete(libraryItem)
+                            }
+                        )
+                        
                         player.startPlayback(libraryItem: libraryItem, filePath: meta.path)
                     },
                     selectedResult: Binding(
