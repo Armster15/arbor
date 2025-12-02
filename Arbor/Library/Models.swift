@@ -86,8 +86,6 @@ class LibraryItem {
     }
 }
 
-
-
 struct DownloadMeta: Decodable {
     let path: String
     let original_url: String
