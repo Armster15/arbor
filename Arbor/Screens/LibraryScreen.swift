@@ -25,31 +25,21 @@ struct LibraryScreen: View {
     }
     
     func onTap(_ item: LibraryItem) {
-        let originalUrl = item.original_url // required since you can't do item.original_url directly within the predicate
-        let fetchDescriptor = FetchDescriptor<LibraryLocalFile>(
-            predicate: #Predicate { $0.originalUrl == originalUrl }
-        )
+        let localFile = getLibraryLocalFile(originalUrl: item.original_url)
         
-        do {
-            let localFiles = try modelContext.fetch(fetchDescriptor)
-            if let localFile = localFiles.first {
-                if !FileManager.default.fileExists(atPath: localFile.filePath) {
-                    modelContext.delete(localFile)
-                    alertMessage = "No local file found for '\(item.title)'. Please download it first."
-                    showAlert = true
-                    return
-                }
-                
-                player.startPlayback(libraryItem: item, filePath: localFile.filePath)
-            } else {
+        if let localFile = localFile {
+            if !FileManager.default.fileExists(atPath: localFile.filePath) {
+                deleteLibraryLocalFile(originalUrl: item.original_url)
                 alertMessage = "No local file found for '\(item.title)'. Please download it first."
                 showAlert = true
+                return
             }
-        } catch {
-            alertMessage = "Error loading file: \(error.localizedDescription)"
+            
+            player.startPlayback(libraryItem: item, filePath: localFile.filePath)
+        } else {
+            alertMessage = "No local file found for '\(item.title)'. Please download it first."
             showAlert = true
         }
-
     }
     
     var body: some View {

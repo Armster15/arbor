@@ -94,18 +94,11 @@ struct __PlayerScreen: View {
         item.reverbMix = audioPlayer.reverbMix
 
         let originalUrl = item.original_url
-        let fetchDescriptor = FetchDescriptor<LibraryLocalFile>(
-            predicate: #Predicate { $0.originalUrl == originalUrl }
-        )
+        let localFile = getLibraryLocalFile(originalUrl: originalUrl)
         
-        guard let existingFiles = try? modelContext.fetch(fetchDescriptor) else {
-            debugPrint("Error checking for existing local file")
-            return
-        }
-
         var fileFound = false
         
-        if let existingFile = existingFiles.first {
+        if let existingFile = localFile {
             // File already exists, reuse it
             self.filePath = existingFile.filePath
 
@@ -133,7 +126,8 @@ struct __PlayerScreen: View {
             self.filePath = newPath
             debugPrint("Saved audio file to more permanent location: \(newPath)")
             
-            modelContext.insert(LibraryLocalFile(originalUrl: item.original_url, filePath: newPath))
+            let model = LibraryLocalFile(originalUrl: item.original_url, filePath: newPath)
+            saveLibraryLocalFile(model)
         }
         
         if SHOULD_COPY {
