@@ -17,6 +17,9 @@ struct LibraryScreen: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     
+    @State private var downloadSource: SearchResult? = nil
+    @State private var downloadingItem: LibraryItem? = nil
+    
     func deleteLibraryItems(_ indexSet: IndexSet) {
         for index in indexSet {
             let model = libraryItems[index]
@@ -32,18 +35,32 @@ struct LibraryScreen: View {
             let fileURL = docsURL.appendingPathComponent(localFile.relativePath)
             let absolutePath = fileURL.path
             
-            if !FileManager.default.fileExists(atPath: absolutePath) {
-                deleteLibraryLocalFile(originalUrl: item.original_url)
-                alertMessage = "No local file found for '\(item.title)'. Please download it first."
-                showAlert = true
+            if FileManager.default.fileExists(atPath: absolutePath) {
+                player.startPlayback(libraryItem: item, filePath: absolutePath)
                 return
+            } else {
+                // Local mapping exists but file is gone – clean up stale entry
+                deleteLibraryLocalFile(originalUrl: item.original_url)
             }
-            
-            player.startPlayback(libraryItem: item, filePath: absolutePath)
-        } else {
-            alertMessage = "No local file found for '\(item.title)'. Please download it first."
-            showAlert = true
         }
+        
+        // No usable local file – fall back to re-downloading using the original URL.
+        let result = SearchResult(
+            title: item.title,
+            artists: [item.artist],
+            url: item.original_url,
+            views: nil,
+            duration: nil,
+            isExplicit: nil,
+            isVerified: nil,
+            thumbnailURL: item.thumbnail_url,
+            thumbnailIsSquare: item.thumbnail_is_square,
+            thumbnailWidth: item.thumbnail_width,
+            thumbnailHeight: item.thumbnail_height
+        )
+        
+        downloadSource = result
+        downloadingItem = item
     }
     
     var body: some View {
@@ -96,6 +113,34 @@ struct LibraryScreen: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(alertMessage)
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { downloadSource != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        downloadSource = nil
+                        downloadingItem = nil
+                    }
+                }
+            )
+        ) {
+            if let libraryItem = downloadingItem {
+                DownloadScreen(
+                    onDownloaded: { meta in
+                        player.startPlayback(libraryItem: libraryItem, filePath: meta.path)
+                    },
+                    selectedResult: Binding(
+                        get: { downloadSource },
+                        set: { newValue in
+                            downloadSource = newValue
+                        }
+                    )
+                )
+                .background(BackgroundColor.ignoresSafeArea(.all))
+            } else {
+                Color.clear
+            }
         }
     }
 }

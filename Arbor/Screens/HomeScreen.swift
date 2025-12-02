@@ -209,7 +209,7 @@ struct SearchResultRow: View {
     }
 }
 
-struct HomeContentView: View {
+struct DownloadScreen: View {
     let onDownloaded: (DownloadMeta) -> Void
     @Binding var selectedResult: SearchResult?
     
@@ -273,43 +273,36 @@ struct HomeContentView: View {
     }
     
     private func downloadAudio(with url: String) {
-        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            showError(message: "Invalid selection")
-            return
-        }
-
         isLoading = true
-        // Escape backslashes and single quotes for safe embedding in Python string literal
-        let escaped = trimmed
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "'", with: "\\'")
         
-        // this is not the best way to do this but it works for now
-        // how we should actually do it: see https://docs.python.org/3/extending/embedding.html
-        // tldr: import module and invoke function with args directly via obj-c. they have utils
-        // for importing, invoking methods, passing args, etc.
-        let code = """
-from pytest_download import download
-result = download('\(escaped)')
-"""
-
-        pythonExecAndGetStringAsync(
-            code.trimmingCharacters(in: .whitespacesAndNewlines),
-            "result"
-        ) { result in
-            defer { isLoading = false }
-            guard let output = result, !output.isEmpty else {
-                showError(message: "Failed to download audio. Please check the URL and try again.")
-                return
-            }
-            guard let data = output.data(using: .utf8),
-                let meta = try? JSONDecoder().decode(DownloadMeta.self, from: data) else {
-                    showError(message: "Invalid response from downloader.")
-                    return
+        AudioDownloader.download(from: url) { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success(let meta):
+                    self.onDownloaded(meta)
+                    self.selectedResult = nil
+                    
+                case .failure(let error):
+                    let message: String
+                    
+                    if let downloadError = error as? DownloadError {
+                        switch downloadError {
+                        case .invalidSelection:
+                            message = "Invalid selection"
+                        case .emptyResult:
+                            message = "Failed to download audio. Please check the URL and try again."
+                        case .invalidResponse:
+                            message = "Invalid response from downloader."
+                        }
+                    } else {
+                        message = "Failed to download audio. Please check the URL and try again."
+                    }
+                    
+                    self.showError(message: message)
                 }
-                onDownloaded(meta)
-                selectedResult = nil
+            }
         }
     }
 
@@ -355,8 +348,8 @@ struct HomeScreen: View {
                     searchProvider: $searchProvider
                 )
             } else {
-                // Main Home Screen Content
-                HomeContentView(
+                // Download / idle screen when no search is active
+                DownloadScreen(
                     onDownloaded: onDownloaded,
                     selectedResult: $selectedResult
                 )
