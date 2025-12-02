@@ -1,5 +1,5 @@
 // maps an original url (e.g. a youtube url) to a local file path
-struct LibraryLocalFile: Codable {
+public struct LibraryLocalFile: Codable {
     var id: UUID
     var createdAt: Date
     
@@ -15,7 +15,7 @@ struct LibraryLocalFile: Codable {
     }
 }
 
-func getLibraryLocalFile(originalUrl: String) -> LibraryLocalFile? {
+public func getLibraryLocalFile(originalUrl: String) -> LibraryLocalFile? {
     if let saved = UserDefaults.standard.object(forKey: "LibraryLocalFile:" + originalUrl) as? Data {
         let decoder = JSONDecoder()
         if let data = try? decoder.decode(LibraryLocalFile.self, from: saved) {
@@ -26,13 +26,15 @@ func getLibraryLocalFile(originalUrl: String) -> LibraryLocalFile? {
     return nil
 }
 
-func saveLibraryLocalFile(_ libraryLocalFile: LibraryLocalFile) {
+// private since you should be using ensureLocalAudioFile instead
+private func saveLibraryLocalFile(_ libraryLocalFile: LibraryLocalFile) {
     let encoder = JSONEncoder()
     let encoded = try! encoder.encode(libraryLocalFile)
     UserDefaults.standard.set(encoded, forKey: "LibraryLocalFile:" + libraryLocalFile.originalUrl)
 }
 
-func deleteLibraryLocalFile(originalUrl: String) {
+// also private since you should be using ensureLocalAudioFile instead
+private func deleteLibraryLocalFile(originalUrl: String) {
     UserDefaults.standard.removeObject(forKey: "LibraryLocalFile:" + originalUrl)
 }
 
@@ -42,7 +44,7 @@ func deleteLibraryLocalFile(originalUrl: String) {
 ///   - onMissingPhysicalFile: Optional hook that will be called if a mapping
 ///     exists but the underlying file is no longer present on disk.
 /// - Returns: The absolute file system path if the file exists, otherwise `nil`.
-func getLocalAudioFilePath(
+public func getLocalAudioFilePath(
     originalUrl: String,
     onMissingPhysicalFile: (() -> Void)? = nil
 ) -> String? {
@@ -70,7 +72,7 @@ func getLocalAudioFilePath(
 /// If a valid existing file is already saved, its path is returned. Otherwise,
 /// the file at `sourcePath` is copied into the app's Documents directory,
 /// a new `LibraryLocalFile` mapping is created, and the new path is returned.
-func ensureLocalAudioFile(
+public func ensureLocalAudioFile(
     originalUrl: String,
     sourcePath: String,
     title: String,
