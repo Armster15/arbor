@@ -28,14 +28,18 @@ struct LibraryScreen: View {
         let localFile = getLibraryLocalFile(originalUrl: item.original_url)
         
         if let localFile = localFile {
-            if !FileManager.default.fileExists(atPath: localFile.filePath) {
+            let docsURL = URL.documentsDirectory
+            let fileURL = docsURL.appendingPathComponent(localFile.relativePath)
+            let absolutePath = fileURL.path
+            
+            if !FileManager.default.fileExists(atPath: absolutePath) {
                 deleteLibraryLocalFile(originalUrl: item.original_url)
                 alertMessage = "No local file found for '\(item.title)'. Please download it first."
                 showAlert = true
                 return
             }
             
-            player.startPlayback(libraryItem: item, filePath: localFile.filePath)
+            player.startPlayback(libraryItem: item, filePath: absolutePath)
         } else {
             alertMessage = "No local file found for '\(item.title)'. Please download it first."
             showAlert = true
