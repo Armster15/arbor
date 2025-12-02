@@ -12,7 +12,7 @@ struct LibraryScreen: View {
     @Environment(\.modelContext) var modelContext
     @EnvironmentObject var player: PlayerCoordinator
     
-    @Query var libraryItems: [LibraryItem]
+    @Query(sort: \LibraryItem.createdAt, order: .reverse) var libraryItems: [LibraryItem]
     
     @State private var showAlert = false
     @State private var alertMessage = ""
