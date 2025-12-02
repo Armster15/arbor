@@ -59,36 +59,45 @@ struct LibraryScreen: View {
                     Button(action: {
                         onTap(item)
                     }) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.title)
-                                .font(.headline)
-                                .foregroundColor(Color("PrimaryText"))
+                        HStack(alignment: .center, spacing: 12) {
+                            SongImage(
+                                width: 60,
+                                height: 60,
+                                thumbnailURL: item.thumbnail_url,
+                                thumbnailIsSquare: item.thumbnail_is_square
+                            )
                             
-                            Text(item.artist)
-                                .font(.subheadline)
-                                .foregroundColor(Color("PrimaryText"))
-                            
-                            HStack(spacing: 12) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "gauge.with.dots.needle.67percent")
-                                        .font(.caption)
-                                    Text(String(format: "%.2fx", item.speedRate))
-                                        .font(.caption)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.title)
+                                    .font(.headline)
+                                    .foregroundColor(Color("PrimaryText"))
+                                
+                                Text(item.artist)
+                                    .font(.subheadline)
+                                    .foregroundColor(Color("PrimaryText"))
+                                
+                                HStack(spacing: 12) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "gauge.with.dots.needle.67percent")
+                                            .font(.caption)
+                                        Text(String(format: "%.2fx", item.speedRate))
+                                            .font(.caption)
+                                    }
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "tuningfork")
+                                            .font(.caption)
+                                        Text(String(format: "%+.0f", item.pitchCents))
+                                            .font(.caption)
+                                    }
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "dot.radiowaves.left.and.right")
+                                            .font(.caption)
+                                        Text("\(Int(item.reverbMix))%")
+                                            .font(.caption)
+                                    }
                                 }
-                                HStack(spacing: 4) {
-                                    Image(systemName: "tuningfork")
-                                        .font(.caption)
-                                    Text(String(format: "%+.0f", item.pitchCents))
-                                        .font(.caption)
-                                }
-                                HStack(spacing: 4) {
-                                    Image(systemName: "dot.radiowaves.left.and.right")
-                                        .font(.caption)
-                                    Text("\(Int(item.reverbMix))%")
-                                        .font(.caption)
-                                }
+                                .foregroundColor(.secondary)
                             }
-                            .foregroundColor(.secondary)
                         }
                     }
                     .listRowBackground(Color("SecondaryBg"))
