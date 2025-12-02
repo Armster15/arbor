@@ -3,7 +3,7 @@ public func isValidURL(_ string: String) -> Bool {
     let lowercased = trimmed.lowercased()
 
     if lowercased.hasPrefix("http://") || lowercased.hasPrefix("https://") {
-        if let url = URL(string: lowercased) {
+        if let _ = URL(string: lowercased) {
             return true
         }
     }

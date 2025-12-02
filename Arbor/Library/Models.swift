@@ -9,19 +9,21 @@ import SwiftData
 
 @Model
 class LibraryItem {
-    var id: UUID
-    var createdAt: Date
+    var id: UUID = UUID()
+    var createdAt: Date = Date()
 
-    var original_url: String
-    var title: String
-    var artist: String
+    // annoyingly, icloud sync'd models require all properties
+    // to have default values or be optional.
+    var original_url: String = "N/A"
+    var title: String = "N/A"
+    var artist: String = "N/A"
     var thumbnail_url: String?
     var thumbnail_width: Int?
     var thumbnail_height: Int?
     var thumbnail_is_square: Bool?
-    var speedRate: Float
-    var pitchCents: Float
-    var reverbMix: Float
+    var speedRate: Float = 1.0
+    var pitchCents: Float = 0.0
+    var reverbMix: Float = 0.0
     
     init(
         original_url: String,
@@ -35,8 +37,6 @@ class LibraryItem {
         pitchCents: Float = 0.0,
         reverbMix: Float = 0.0
     ) {
-        self.id = UUID()
-        self.createdAt = Date()
 
         self.original_url = original_url
         self.title = title
@@ -87,14 +87,13 @@ class LibraryItem {
 }
 
 // maps an original url (e.g. a youtube url) to a local file path
-@Model
-class LibraryLocalFile {
+struct LibraryLocalFile: Codable {
     var id: UUID
     var createdAt: Date
     
     var originalUrl: String
     var filePath: String
-    
+        
     init(originalUrl: String, filePath: String) {
         self.id = UUID()
         self.createdAt = Date()
@@ -103,6 +102,28 @@ class LibraryLocalFile {
         self.filePath = filePath
     }
 }
+
+func getLibraryLocalFile(originalUrl: String) -> LibraryLocalFile? {
+    if let saved = UserDefaults.standard.object(forKey: "LibraryLocalFile:" + originalUrl) as? Data {
+        let decoder = JSONDecoder()
+        if let data = try? decoder.decode(LibraryLocalFile.self, from: saved) {
+            return data
+        }
+    }
+    
+    return nil
+}
+
+func saveLibraryLocalFile(_ libraryLocalFile: LibraryLocalFile) {
+    let encoder = JSONEncoder()
+    let encoded = try! encoder.encode(libraryLocalFile)
+    UserDefaults.standard.set(encoded, forKey: "LibraryLocalFile:" + libraryLocalFile.originalUrl)
+}
+
+func deleteLibraryLocalFile(originalUrl: String) {
+    UserDefaults.standard.removeObject(forKey: "LibraryLocalFile:" + originalUrl)
+}
+
 
 struct DownloadMeta: Decodable {
     let path: String
