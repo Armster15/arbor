@@ -57,37 +57,37 @@ struct ContentView: View {
         }
         .tabViewBottomAccessory {
             if player.canShowPlayer == true, let libraryItem = player.libraryItem {
-                HStack {
-                    Button(action: { player.open() }) {
-                        HStack(spacing: 12) {
-                            SongImage(
-                                width: 40,
-                                height: 40,
-                                thumbnailURL: libraryItem.thumbnail_url,
-                                thumbnailIsSquare: libraryItem.thumbnail_is_square
-                            )
+                Button(action: { player.open() }) {
+                    HStack(spacing: 12) {
+                        SongImage(
+                            width: 40,
+                            height: 40,
+                            thumbnailURL: libraryItem.thumbnail_url,
+                            thumbnailIsSquare: libraryItem.thumbnail_is_square
+                        )
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(libraryItem.title)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .lineLimit(1)
                             
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(libraryItem.title)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .lineLimit(1)
-                                
-                                Text(libraryItem.artist)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
+                            Text(libraryItem.artist)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
                         }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
+                        
+                        Spacer()
                     }
-                    .buttonStyle(.plain)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 6)
-                    
-                    Spacer()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
