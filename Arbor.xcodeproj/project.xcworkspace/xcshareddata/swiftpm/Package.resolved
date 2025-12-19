@@ -1,5 +1,5 @@
 {
-  "originHash" : "f14c54365b6fe3ec0f3ddeb019a18f72cc8e36d5ecf0ec807b79b52428f5a6cc",
+  "originHash" : "3036f30c9596870cd76364efdd251e9bc6921c14b37114df2890ccf9f98a72ca",
   "pins" : [
     {
       "identity" : "imageviewer.swift",
@@ -26,6 +26,15 @@
       "state" : {
         "revision" : "451c6dfd5ecec2cf626d1d9ca81c2d4a60355172",
         "version" : "3.1.3"
+      }
+    },
+    {
+      "identity" : "spindicator",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ivanvorobei/SPIndicator",
+      "state" : {
+        "revision" : "e8a045f91757b32bb29c6feff1644ef79c8daedf",
+        "version" : "1.6.5"
       }
     },
     {

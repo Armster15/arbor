@@ -2,6 +2,7 @@ import SwiftUI
 import SDWebImage
 import SDWebImageSwiftUI
 import ImageViewer_swift
+import SPIndicator
 
 struct SongInfo: View {
     let title: String
@@ -123,10 +124,10 @@ struct SaveCoverToPhotosButton: View {
                 
                 let saver = ImageSaver()
                 saver.onSuccess = {
-                    showAlert(title: "Image Saved", message: "Saved to your Photos Library")
+                    SPIndicatorView(title: "Image Saved", preset: .done).present()
                 }
                 saver.onError = { error in
-                    showAlert(title: "Failed to Save Image", message: error.localizedDescription)
+                    SPIndicatorView(title: "Failed to Save Image", message: error.localizedDescription, preset: .error).present()
                 }
                 saver.save(image)
             }
