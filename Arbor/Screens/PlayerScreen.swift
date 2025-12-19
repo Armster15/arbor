@@ -407,41 +407,36 @@ struct __PlayerScreen: View {
                     .padding(.top, 24)
             
                 VStack(spacing: 24) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Title")
-                            .fontWeight(.semibold)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color("PrimaryText"))
-                        
-                        TextField("Title", text: $draftTitle)
-                            .textInputAutocapitalization(.words)
-                            .padding(12)
-                            .background(Color("Elevated"))
-                            .cornerRadius(24)
-                            .foregroundColor(.black)
-                    }
-                    .padding(.horizontal)
+                    LabeledTextField(
+                        label: "Title",
+                        placeholder: "Title",
+                        text: $draftTitle,
+                        isSecure: false,
+                        textContentType: nil,
+                        keyboardType: .default,
+                        autocapitalization: .words,
+                        disableAutocorrection: true
+                    )
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Artist")
-                            .fontWeight(.semibold)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color("PrimaryText"))
-                        
-                        TextField("Artist", text: $draftArtist)
-                            .textInputAutocapitalization(.words)
-                            .padding(12)
-                            .background(Color("Elevated"))
-                            .cornerRadius(24)
-                            .foregroundColor(.black)
-                    }
-                    .padding(.horizontal)
+                    LabeledTextField(
+                        label: "Artist",
+                        placeholder: "Artist",
+                        text: $draftArtist,
+                        isSecure: false,
+                        textContentType: nil,
+                        keyboardType: .default,
+                        autocapitalization: .words,
+                        disableAutocorrection: true
+                    )
                 }
 
 				Spacer()
 
-                HStack {
-                    Button {
+                PrimaryActionButton(
+                    title: "Save",
+                    isLoading: false,
+                    isDisabled: false,
+                    action: {
                         // Commit edits to meta on Save
                         libraryItem.title = draftTitle
                         libraryItem.artist = draftArtist
@@ -450,17 +445,8 @@ struct __PlayerScreen: View {
                         audioPlayer.updateMetadataTitle(decoratedTitle())
                         audioPlayer.updateMetadataArtist(libraryItem.artist)
                         isEditSheetPresented = false
-                    } label: {
-                        Text("Save")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding()
                     }
-                }
-				.buttonStyle(.glassProminent)
-                .tint(Color("PrimaryBg"))
-				.padding(.horizontal)
-				.padding(.bottom)
+                )
                 
 			}
 			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

@@ -1,5 +1,5 @@
 {
-  "originHash" : "77a41ad0b3ed75adc1d6e8090cdfba6aa0348eed3a5b901c28b77dca39ddc104",
+  "originHash" : "92ade0d4f1b68f778f4e5905f9b76c02040db6e174c0f1efd061fb48a9b11de6",
   "pins" : [
     {
       "identity" : "cloudkitsyncmonitor",
@@ -17,6 +17,24 @@
       "state" : {
         "revision" : "3274b5f549b9e4cc8ab9f3e9734ee9fc6109e8e8",
         "version" : "3.3.8"
+      }
+    },
+    {
+      "identity" : "keychain-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/evgenyneu/keychain-swift",
+      "state" : {
+        "revision" : "5e1b02b6a9dac2a759a1d5dbc175c86bd192a608",
+        "version" : "24.0.0"
+      }
+    },
+    {
+      "identity" : "scrobblekit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tfmart/ScrobbleKit",
+      "state" : {
+        "revision" : "e12df14677589e29919352e47a0c500cc2e81fde",
+        "version" : "1.1.1"
       }
     },
     {
