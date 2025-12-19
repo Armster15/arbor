@@ -157,7 +157,7 @@ struct TappableImageView: UIViewRepresentable {
         
         if let url = url {
             imageView.sd_setImage(with: url)
-            imageView.setupImageViewer(url: url)
+            imageView.setupImageViewer(url: url, options: [.theme(.dark)])
         }
         return container
     }
