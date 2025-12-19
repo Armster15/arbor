@@ -214,8 +214,6 @@ struct DownloadScreen: View {
     @Binding var selectedResult: SearchResult?
     
     @State private var isLoading: Bool = false
-    @State private var showError: Bool = false
-    @State private var errorMessage: String = ""
 
     var body: some View {
         VStack(spacing: 20) {
@@ -258,11 +256,6 @@ struct DownloadScreen: View {
         .onChange(of: selectedResult?.url) { _, _ in
             triggerDownloadIfPossible()
         }
-        .alert("Download Failed", isPresented: $showError) {
-            Button("OK") { }
-        } message: {
-            Text(errorMessage)
-        }
     }
     
     private func triggerDownloadIfPossible() {
@@ -300,15 +293,14 @@ struct DownloadScreen: View {
                         message = "Failed to download audio. Please check the URL and try again."
                     }
                     
-                    self.showError(message: message)
+                    self.onError(message: message)
                 }
             }
         }
     }
 
-    private func showError(message: String) {
-        errorMessage = message
-        showError = true
+    private func onError(message: String) {
+        showAlert(title: "Download Failed", message: message)
     }
 }
 

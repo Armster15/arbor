@@ -14,9 +14,6 @@ struct LibraryScreen: View {
     
     @Query(sort: \LibraryItem.createdAt, order: .reverse) var libraryItems: [LibraryItem]
     
-    @State private var showAlert = false
-    @State private var alertMessage = ""
-    
     @State private var downloadSource: SearchResult? = nil
     @State private var downloadingItem: LibraryItem? = nil
     
@@ -107,11 +104,6 @@ struct LibraryScreen: View {
             .scrollContentBackground(.hidden)
         }
         .navigationTitle("Library")
-        .alert("Unable to Play", isPresented: $showAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(alertMessage)
-        }
         .sheet(
             isPresented: Binding(
                 get: { downloadSource != nil },
