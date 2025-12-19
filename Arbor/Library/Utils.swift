@@ -1,3 +1,5 @@
+import UIKit
+
 public func isValidURL(_ string: String) -> Bool {
     let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
     let lowercased = trimmed.lowercased()
@@ -32,4 +34,43 @@ public func sanitizeForFilename(_ string: String) -> String {
     
     // Limit length to avoid extremely long filenames (max 100 chars per field)
     return String(cleaned.prefix(100))
+}
+
+// Saving images to photos library is at its core simply just UIImageWriteToSavedPhotosAlbum(uiImage, nil, nil, nil),
+// but because of some historic Objective-C lore, we need a class for other functionality like error handling.
+// https://www.hackingwithswift.com/books/ios-swiftui/how-to-save-images-to-the-users-photo-library
+public class ImageSaver: NSObject {
+    var onSuccess: (() -> Void)?
+    var onError: ((Error) -> Void)?
+    
+    func save(_ image: UIImage) {
+        UIImageWriteToSavedPhotosAlbum(image, self, #selector(saveCompleted), nil)
+    }
+    
+    @objc func saveCompleted(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
+        if let error = error {
+            onError?(error)
+        } else {
+            onSuccess?()
+        }
+    }
+}
+
+
+// Imperatively show alerts like we can with JavaScript
+public func showAlert(title: String, message: String, dismissButtonTitle: String = "OK") {
+    DispatchQueue.main.async {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else { return }
+        
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: dismissButtonTitle, style: .default))
+        
+        // Find the topmost presented view controller
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController {
+            topVC = presented
+        }
+        topVC.present(alert, animated: true)
+    }
 }

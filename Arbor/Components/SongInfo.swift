@@ -36,27 +36,7 @@ struct SongInfo: View {
             )
             .contextMenu {
                 Group {
-                    Button {
-                        let url = self.thumbnailURL.flatMap { URL(string: $0) }
-                        
-                        guard let url = url else {
-                            return
-                        }
-                        
-                        SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
-                            guard error == nil, finished, let image else {
-                                print("Failed to load artwork via SDWebImage: \(error?.localizedDescription ?? "Unknown error")")
-                                return
-                            }
-                            
-                            // saves UIImage to user's photo library
-                            // https://www.hackingwithswift.com/books/ios-swiftui/how-to-save-images-to-the-users-photo-library
-                            UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-                        }
-
-                    } label: {
-                        Label("Save Cover to Photos", systemImage: "photo.badge.arrow.down")
-                    }
+                    SaveCoverToPhotosButton(url: self.thumbnailURL.flatMap { URL(string: $0) })
                 }
             }
             
@@ -142,6 +122,37 @@ struct SongImage: View {
                 height: thumbnailForceSquare ? squareSide : height
             )
             .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+    }
+}
+
+struct SaveCoverToPhotosButton: View {
+    let url: URL?
+        
+    var body: some View {
+        Button {            
+            guard let url = url else {
+                return
+            }
+            
+            SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
+                guard error == nil, finished, let image else {
+                    showAlert(title: "Failed to Save Image", message: error?.localizedDescription ?? "Failed to load image")
+                    return
+                }
+                
+                let saver = ImageSaver()
+                saver.onSuccess = {
+                    showAlert(title: "Image Saved", message: "Saved to your Photos Library")
+                }
+                saver.onError = { error in
+                    showAlert(title: "Failed to Save Image", message: error.localizedDescription)
+                }
+                saver.save(image)
+            }
+
+        } label: {
+            Label("Save Cover to Photos", systemImage: "photo.badge.arrow.down")
         }
     }
 }
