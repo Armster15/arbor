@@ -118,7 +118,7 @@ struct SaveCoverToPhotosButton: View {
             
             SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
                 guard error == nil, finished, let image else {
-                    showAlert(title: "Failed to Save Image", message: error?.localizedDescription ?? "Failed to load image")
+                    SPIndicatorView(title: "Failed to save image", message: error?.localizedDescription ?? "Failed to load image", preset: .error).present()
                     return
                 }
                 
@@ -127,7 +127,7 @@ struct SaveCoverToPhotosButton: View {
                     SPIndicatorView(title: "Image Saved", preset: .done).present()
                 }
                 saver.onError = { error in
-                    SPIndicatorView(title: "Failed to Save Image", message: error.localizedDescription, preset: .error).present()
+                    SPIndicatorView(title: "Failed to save image", message: error.localizedDescription, preset: .error).present()
                 }
                 saver.save(image)
             }
