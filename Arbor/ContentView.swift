@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 import UIKit
 
-let BackgroundColor = LinearGradient(
+public let BackgroundColor = LinearGradient(
     gradient: Gradient(colors: [
         Color("GradientStart"),
         Color("GradientEnd"),
@@ -29,11 +29,7 @@ struct ContentView: View {
         UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: titleColor, .font: normalTitleFont]
         UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: titleColor, .font: largeTitleFont]
     }
-    
-    private enum Route: Hashable {
-        case player
-    }
-    
+        
     var body: some View {
         TabView {
             Tab("Search", systemImage: "magnifyingglass", role: .search) {

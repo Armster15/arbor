@@ -16,6 +16,7 @@ struct LibraryScreen: View {
     
     @State private var downloadSource: SearchResult? = nil
     @State private var downloadingItem: LibraryItem? = nil
+    @State private var showSettings = false
     
     func deleteLibraryItems(_ indexSet: IndexSet) {
         for index in indexSet {
@@ -112,9 +113,19 @@ struct LibraryScreen: View {
         .navigationTitle("Library")
         .toolbar {
             Button {
-                print("Settings button was tapped")
+                showSettings = true
             } label: {
                 Image(systemName: "gear")
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                ZStack {
+                    BackgroundColor
+                        .ignoresSafeArea()
+                    
+                    SettingsScreen()
+                }
             }
         }
         .sheet(

@@ -10,7 +10,7 @@ import SwiftUI
 
 struct SettingsScreen: View {
     var body: some View {
-        Group {
+        ZStack {            
             Text("Content")
         }
         .navigationTitle("Settings")
