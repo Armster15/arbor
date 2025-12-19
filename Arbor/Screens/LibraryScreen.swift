@@ -110,6 +110,13 @@ struct LibraryScreen: View {
             .scrollContentBackground(.hidden)
         }
         .navigationTitle("Library")
+        .toolbar {
+            Button {
+                print("Settings button was tapped")
+            } label: {
+                Image(systemName: "gear")
+            }
+        }
         .sheet(
             isPresented: Binding(
                 get: { downloadSource != nil },
