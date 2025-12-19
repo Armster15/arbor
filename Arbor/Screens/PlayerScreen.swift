@@ -183,13 +183,13 @@ struct __PlayerScreen: View {
                     }
                     
                     // Scrubber
-                    MusicProgressSlider(
+                    Scrubber(
                         value: $audioPlayer.currentTime,
                         inRange: 0...max(audioPlayer.duration, 0.01),
                         activeFillColor: Color("PrimaryBg"),
                         fillColor: Color("PrimaryBg").opacity(0.8),
                         emptyColor: Color("PrimaryBg").opacity(0.2),
-                        height: 36,
+                        height: 30,
                         onEditingChanged: { editing in
                             isScrubbing = editing
                             if !editing {

@@ -1,3 +1,4 @@
+// Most source comes from
 // https://github.com/pratikg29/Custom-Slider-Control/blob/main/AppleMusicSlider/AppleMusicSlider/MusicProgressSlider.swift
 
 //
@@ -9,7 +10,7 @@
 
 import SwiftUI
 
-struct MusicProgressSlider<T: BinaryFloatingPoint>: View {
+struct Scrubber<T: BinaryFloatingPoint>: View {
     @Binding var value: T
     let inRange: ClosedRange<T>
     let activeFillColor: Color
@@ -46,6 +47,20 @@ struct MusicProgressSlider<T: BinaryFloatingPoint>: View {
         GeometryReader { bounds in
             ZStack {
                 VStack {
+                    // Time labels
+                    HStack {
+                        Text(formattedTime(Double(progressDuration)))
+                            .font(.caption)
+                            .foregroundColor(isActive ? fillColor : .secondary)
+                        
+                        Spacer()
+                        
+                        Text(formattedTime(Double(inRange.upperBound)))
+                            .font(.caption)
+                            .foregroundColor(isActive ? fillColor : .secondary)
+                    }
+
+                    // The actual scrubber
                     ZStack(alignment: .center) {
                         Capsule()
                             .fill(emptyColor)
@@ -60,14 +75,6 @@ struct MusicProgressSlider<T: BinaryFloatingPoint>: View {
                             })
                     }
                     
-                    HStack {
-                        Text(formattedTime(Double(progressDuration)))
-                        Spacer(minLength: 0)
-                        Text("-" + formattedTime(Double(inRange.upperBound - progressDuration)))
-                    }
-                    .font(.system(.headline, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundColor(isActive ? fillColor : emptyColor)
                 }
                 .scaleEffect(isActive ? 1.04 : 1.0)
                 .animation(animation, value: isActive)
