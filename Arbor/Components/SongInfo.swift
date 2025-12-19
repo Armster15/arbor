@@ -1,4 +1,5 @@
 import SwiftUI
+import SDWebImage
 import SDWebImageSwiftUI
 
 struct SongInfo: View {
@@ -33,6 +34,31 @@ struct SongInfo: View {
                 thumbnailIsSquare: thumbnailIsSquare,
                 thumbnailForceSquare: thumbnailForceSquare,
             )
+            .contextMenu {
+                Group {
+                    Button {
+                        let url = self.thumbnailURL.flatMap { URL(string: $0) }
+                        
+                        guard let url = url else {
+                            return
+                        }
+                        
+                        SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
+                            guard error == nil, finished, let image else {
+                                print("Failed to load artwork via SDWebImage: \(error?.localizedDescription ?? "Unknown error")")
+                                return
+                            }
+                            
+                            // saves UIImage to user's photo library
+                            // https://www.hackingwithswift.com/books/ios-swiftui/how-to-save-images-to-the-users-photo-library
+                            UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                        }
+
+                    } label: {
+                        Label("Save Cover to Photos", systemImage: "photo.badge.arrow.down")
+                    }
+                }
+            }
             
             VStack(spacing: 4) {
                 Text(title)
