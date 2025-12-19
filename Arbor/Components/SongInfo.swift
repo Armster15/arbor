@@ -1,6 +1,7 @@
 import SwiftUI
 import SDWebImage
 import SDWebImageSwiftUI
+import ImageViewer_swift
 
 struct SongInfo: View {
     let title: String
@@ -36,6 +37,7 @@ struct SongInfo: View {
                 thumbnailURL: thumbnailURL,
                 thumbnailIsSquare: thumbnailIsSquare,
                 thumbnailForceSquare: thumbnailForceSquare,
+                tappableForViewer: thumbnailHasContextMenu
             )
             .contextMenu(
                 thumbnailHasContextMenu
@@ -67,65 +69,38 @@ struct SongImage: View {
     let thumbnailURL: String?
     let thumbnailIsSquare: Bool?
     var thumbnailForceSquare: Bool = true
+    var tappableForViewer: Bool = false
 
-    private var squareSide: CGFloat {
-        min(width, height)
-    }
+    private var squareSide: CGFloat { min(width, height) }
+    private var cornerRadiusValue: CGFloat { isLarge ? 12 : 8 }
+    private var frameWidth: CGFloat { thumbnailForceSquare ? squareSide : width }
+    private var frameHeight: CGFloat { thumbnailForceSquare ? squareSide : height }
 
     var body: some View {
-        if let thumbnailUrl = thumbnailURL, let isSquare = thumbnailIsSquare {
-            ZStack(alignment: .topTrailing) {
+        if let thumbnailUrl = thumbnailURL, thumbnailIsSquare != nil {
+            if tappableForViewer {
+                TappableImageView(url: URL(string: thumbnailUrl), cornerRadius: cornerRadiusValue)
+                    .frame(width: frameWidth, height: frameHeight)
+                    .shadow(color: .black.opacity(isLarge ? 0.15 : 0), radius: 6, x: 0, y: 2)
+            } else {
                 WebImage(url: URL(string: thumbnailUrl)) { image in
-                    let base = image
-                        .resizable()
-                        .scaledToFill()
-
-                    if thumbnailForceSquare {
-                        base
-                            .frame(width: squareSide, height: squareSide)
-                            .clipped()
-                            .cornerRadius(isLarge ? 12 : 8)
-                            .shadow(color: .black.opacity(isLarge ? 0.15 : 0), radius: 6, x: 0, y: 2)
-                    } else if isSquare {
-                        base
-                            .frame(width: width, height: height)
-                            .clipped()
-                            .cornerRadius(isLarge ? 12 : 8)
-                            .shadow(color: .black.opacity(isLarge ? 0.15 : 0), radius: 6, x: 0, y: 2)
-                    } else {
-                        base
-                            .frame(height: height)
-                            .clipped()
-                            .cornerRadius(12)
-                            .shadow(color: .black.opacity(isLarge ? 0.15 : 0), radius: 6, x: 0, y: 2)
-                    }
+                    image.resizable().scaledToFill()
                 } placeholder: {
-                    if thumbnailForceSquare {
-                        ProgressView()
-                            .frame(width: squareSide, height: squareSide)
-                    } else if isSquare {
-                        ProgressView()
-                            .frame(width: width, height: height)
-                    } else {
-                        ProgressView()
-                            .frame(height: height)
-                    }
+                    ProgressView()
                 }
-                .transition(.fade(duration: 0.5))
+                .frame(width: frameWidth, height: frameHeight)
+                .clipped()
+                .cornerRadius(cornerRadiusValue)
+                .shadow(color: .black.opacity(isLarge ? 0.15 : 0), radius: 6, x: 0, y: 2)
             }
-        }
-        
-        else {
+        } else {
             ZStack {
                 Color.gray.opacity(0.2)
                 Image(systemName: "music.note")
                     .foregroundColor(.secondary)
                     .font(.system(size: min(width, height) * 0.5))
             }
-            .frame(
-                width: thumbnailForceSquare ? squareSide : width,
-                height: thumbnailForceSquare ? squareSide : height
-            )
+            .frame(width: frameWidth, height: frameHeight)
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
     }
@@ -160,4 +135,32 @@ struct SaveCoverToPhotosButton: View {
             Label("Save Cover to Photos", systemImage: "photo.badge.arrow.down")
         }
     }
+}
+
+// So we can use ImageViewer.swift with SwiftUI
+struct TappableImageView: UIViewRepresentable {
+    let url: URL?
+    var cornerRadius: CGFloat = 12
+
+    func makeUIView(context: Context) -> UIView {
+        let container = UIView()
+        container.clipsToBounds = true
+        container.layer.cornerRadius = cornerRadius
+        
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.isUserInteractionEnabled = true
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        imageView.frame = container.bounds
+        container.addSubview(imageView)
+        
+        if let url = url {
+            imageView.sd_setImage(with: url)
+            imageView.setupImageViewer(url: url, options: [.theme(.dark)])
+        }
+        return container
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
 }
