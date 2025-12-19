@@ -1,4 +1,5 @@
 import SwiftUI
+import SDWebImage
 import SDWebImageSwiftUI
 
 struct SongInfo: View {
@@ -33,6 +34,11 @@ struct SongInfo: View {
                 thumbnailIsSquare: thumbnailIsSquare,
                 thumbnailForceSquare: thumbnailForceSquare,
             )
+            .contextMenu {
+                Group {
+                    SaveCoverToPhotosButton(url: self.thumbnailURL.flatMap { URL(string: $0) })
+                }
+            }
             
             VStack(spacing: 4) {
                 Text(title)
@@ -116,6 +122,37 @@ struct SongImage: View {
                 height: thumbnailForceSquare ? squareSide : height
             )
             .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+    }
+}
+
+struct SaveCoverToPhotosButton: View {
+    let url: URL?
+        
+    var body: some View {
+        Button {            
+            guard let url = url else {
+                return
+            }
+            
+            SDWebImageManager.shared.loadImage(with: url, options: [.highPriority, .retryFailed, .scaleDownLargeImages], progress: nil) { image, _, error, _, finished, _ in
+                guard error == nil, finished, let image else {
+                    showAlert(title: "Failed to Save Image", message: error?.localizedDescription ?? "Failed to load image")
+                    return
+                }
+                
+                let saver = ImageSaver()
+                saver.onSuccess = {
+                    showAlert(title: "Image Saved", message: "Saved to your Photos Library")
+                }
+                saver.onError = { error in
+                    showAlert(title: "Failed to Save Image", message: error.localizedDescription)
+                }
+                saver.save(image)
+            }
+
+        } label: {
+            Label("Save Cover to Photos", systemImage: "photo.badge.arrow.down")
         }
     }
 }
