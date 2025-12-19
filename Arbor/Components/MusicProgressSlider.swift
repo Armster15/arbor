@@ -69,8 +69,7 @@ struct MusicProgressSlider<T: BinaryFloatingPoint>: View {
                     .monospacedDigit()
                     .foregroundColor(isActive ? fillColor : emptyColor)
                 }
-                .frame(width: isActive ? bounds.size.width * 1.04 : bounds.size.width, alignment: .center)
-//                .shadow(color: .black.opacity(0.1), radius: isActive ? 20 : 0, x: 0, y: 0)
+                .scaleEffect(isActive ? 1.04 : 1.0)
                 .animation(animation, value: isActive)
             }
             .frame(width: bounds.size.width, height: bounds.size.height, alignment: .center)
@@ -103,7 +102,7 @@ struct MusicProgressSlider<T: BinaryFloatingPoint>: View {
                 }
             }
         }
-        .frame(height: isActive ? height * 1.25 : height, alignment: .center)
+        .frame(height: height, alignment: .center)
     }
     
     private var animation: Animation {
