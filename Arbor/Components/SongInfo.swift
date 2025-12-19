@@ -8,19 +8,22 @@ struct SongInfo: View {
     let thumbnailURL: String?
     let thumbnailIsSquare: Bool?
     let thumbnailForceSquare: Bool
+    let thumbnailHasContextMenu: Bool
 
     init(
         title: String,
         artist: String,
         thumbnailURL: String?,
         thumbnailIsSquare: Bool?,
-        thumbnailForceSquare: Bool = true
+        thumbnailForceSquare: Bool = true,
+        thumbnailHasContextMenu: Bool = false
     ) {
         self.title = title
         self.artist = artist
         self.thumbnailURL = thumbnailURL
         self.thumbnailIsSquare = thumbnailIsSquare
         self.thumbnailForceSquare = thumbnailForceSquare
+        self.thumbnailHasContextMenu = thumbnailHasContextMenu
     }
 
     var body: some View {
@@ -34,11 +37,13 @@ struct SongInfo: View {
                 thumbnailIsSquare: thumbnailIsSquare,
                 thumbnailForceSquare: thumbnailForceSquare,
             )
-            .contextMenu {
-                Group {
-                    SaveCoverToPhotosButton(url: self.thumbnailURL.flatMap { URL(string: $0) })
-                }
-            }
+            .contextMenu(
+                thumbnailHasContextMenu
+                    ? ContextMenu {
+                        SaveCoverToPhotosButton(url: self.thumbnailURL.flatMap { URL(string: $0) })
+                      }
+                    : nil
+            )
             
             VStack(spacing: 4) {
                 Text(title)

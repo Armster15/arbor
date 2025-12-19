@@ -110,6 +110,7 @@ struct __PlayerScreen: View {
                         thumbnailURL: libraryItem.thumbnail_url,
                         thumbnailIsSquare: libraryItem.thumbnail_is_square,
                         thumbnailForceSquare: false,
+                        thumbnailHasContextMenu: true
                     )
                                         
                     // Action buttons
