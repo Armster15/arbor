@@ -41,6 +41,7 @@ struct __PlayerScreen: View {
     @State private var isEditSheetPresented: Bool = false
     @State private var draftTitle: String = ""
     @State private var draftArtist: String = ""
+    @State private var isScrubbing: Bool = false
     
     @Environment(\.modelContext) var modelContext
     
@@ -182,25 +183,20 @@ struct __PlayerScreen: View {
                     }
                     
                     // Scrubber
-                    VStack {
-                        HStack {
-                            Text(formattedTime(audioPlayer.currentTime))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            Text(formattedTime(audioPlayer.duration))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                    Scrubber(
+                        value: $audioPlayer.currentTime,
+                        inRange: 0...max(audioPlayer.duration, 0.01),
+                        activeFillColor: Color("PrimaryBg"),
+                        fillColor: Color("PrimaryBg").opacity(0.8),
+                        emptyColor: Color("PrimaryBg").opacity(0.2),
+                        height: 30,
+                        onEditingChanged: { editing in
+                            isScrubbing = editing
+                            if !editing {
+                                audioPlayer.seek(to: audioPlayer.currentTime)
+                            }
                         }
-                        
-                        Slider(
-                            value: $audioPlayer.currentTime,
-                            in: 0...audioPlayer.duration,
-                        )
-                        .disabled(true)
-                    }
+                    )
                 }
                 
                 // Slider sections
