@@ -1,3 +1,4 @@
+<!-- Get rid of this caution banner when p0 tasks are fixed -->
 > [!CAUTION]
 > Arbor is currently in active development.
 
@@ -32,7 +33,7 @@ pip3 install --target=./python_modules -r requirements.txt
 
 Q. **Will Arbor be published to the App Store?**
 
-- No. Apple prevents apps that download YouTube videos from being published to the App Store as this explicitly violates [Guideline 5.2.3 of Apple's App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/#5.2.3). Note that the issue is _not_ because we're embedding the Python runtime, which is allowed.
+- No -- at least not in its current state. Apple prevents apps that download YouTube videos from being published to the App Store as this explicitly violates [Guideline 5.2.3 of Apple's App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/#5.2.3). Note that the issue is _not_ because we're embedding the Python runtime, which is allowed.
 
 Q. **Where did the name come from?**
 
