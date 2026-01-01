@@ -1,0 +1,3 @@
+[submodule "SwiftAudioPlayer"]
+	path = SwiftAudioPlayer
+	url = https://github.com/micahjon/SwiftAudioPlayer
