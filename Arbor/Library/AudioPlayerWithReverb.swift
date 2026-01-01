@@ -67,21 +67,21 @@ final class AudioPlayerWithReverb: ObservableObject {
                 reverbNode.reset()
             }
         }
-        // Fade in over 300ms with exponential curve, but *not* when starting from the beginning
+
+        // Fade in over 300ms with exponential curve
         let effectiveCurrentTime = pendingSeekTarget ?? currentTime
         let justStarted = effectiveCurrentTime <= 0.05
-        if microFadeInPending {
-            // ensure we start from silence to avoid click
+        if shouldRampVolume == true {
+            // ensure we start from silence to avoid click/pop at start/resume
             SAPlayer.shared.volume = 0.0
-            rampVolume(from: 0.0, to: 1.0, duration: 0.03)
-        } else if shouldRampVolume == true && !justStarted {
-            rampVolume(from: 0.0, to: 1.0, duration: 0.3)
+            SAPlayer.shared.play()
+            let duration = (microFadeInPending || justStarted) ? 0.03 : 0.3
+            rampVolume(from: 0.0, to: 1.0, duration: duration)
         } else {
             // required to override any race conditions where we may already be ramping the volume at some point
             SAPlayer.shared.volume = 1.0
+            SAPlayer.shared.play()
         }
-        
-        SAPlayer.shared.play()
         // Clear any pending seek target after attempting to play
         pendingSeekTarget = nil
         microFadeInPending = false
@@ -94,9 +94,20 @@ final class AudioPlayerWithReverb: ObservableObject {
     }
 
     func seek(to seconds: Double) {
+        if isPlaying {
+            pendingSeekTarget = nil
+            SAPlayer.shared.seekTo(seconds: seconds)
+            if seconds <= 0.05 {
+                // Clear DSP tails when jumping to start while playing
+                pitchNode.reset()
+                reverbNode.reset()
+            }
+            return
+        }
+
         pendingSeekTarget = seconds
         // If we're paused and seeking to the start, immediately halt audio and flush DSP to avoid a brief resume from old timestamp
-        if !isPlaying && seconds <= 0.05 {
+        if seconds <= 0.05 {
             // Cancel any ongoing volume ramp and ensure silence
             volumeRampTimer?.invalidate()
             volumeRampTimer = nil
@@ -110,11 +121,6 @@ final class AudioPlayerWithReverb: ObservableObject {
             currentTime = 0.0
         } else {
             SAPlayer.shared.seekTo(seconds: seconds)
-            if seconds <= 0.05 {
-                // Clear DSP tails when jumping to start while playing
-                pitchNode.reset()
-                reverbNode.reset()
-            }
         }
     }
 
