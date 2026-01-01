@@ -90,7 +90,13 @@ final class AudioPlayerWithReverb: ObservableObject {
         microFadeInPending = false
     }
 
-    func pause() {        
+    func pause() {      
+        // required because otherwise the state will only update until after the volume finishes ramping, which takes time  
+        isPlaying = false
+        var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+
         rampVolume(from: SAPlayer.shared.volume ?? 0.0, to: 0.0, duration: 0.3) {
             SAPlayer.shared.pause()
         }
