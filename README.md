@@ -1,7 +1,3 @@
-<!-- Get rid of this caution banner when p0 tasks are fixed -->
-> [!CAUTION]
-> Arbor is currently in active development.
-
 # 🌳 Arbor
 
 Arbor is a native music player for Apple devices.
@@ -9,6 +5,8 @@ Arbor is a native music player for Apple devices.
 I built this originally to easily pitch-shift, adjust speed, and add reverb on the go, but it can be used as an alternative to a music streaming service.
 
 Arbor's core app is built in Swift, but it uniquely ships an embedded version of the Python runtime. This enables Arbor to use battle-tested libraries like [yt-dlp](https://github.com/yt-dlp/yt-dlp) directly on device.
+
+It also includes built-in iCloud sync, so you can share your library across your Apple devices.
 
 ## Local Setup
 
