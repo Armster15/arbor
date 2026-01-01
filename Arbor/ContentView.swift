@@ -63,7 +63,8 @@ struct ContentView: View {
                             width: 40,
                             height: 40,
                             thumbnailURL: libraryItem.thumbnail_url,
-                            thumbnailIsSquare: libraryItem.thumbnail_is_square
+                            thumbnailIsSquare: libraryItem.thumbnail_is_square,
+                            preloadedImage: player.artworkImage
                         )
                         
                         VStack(alignment: .leading, spacing: 2) {
