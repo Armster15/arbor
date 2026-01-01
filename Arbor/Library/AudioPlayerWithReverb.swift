@@ -67,12 +67,12 @@ final class AudioPlayerWithReverb: ObservableObject {
                 reverbNode.reset()
             }
         }
-        
+
         // Fade in over 300ms with exponential curve
         let effectiveCurrentTime = pendingSeekTarget ?? currentTime
         let justStarted = effectiveCurrentTime <= 0.05
         if shouldRampVolume == true {
-            // ensure we start from silence to avoid click at start/resume
+            // ensure we start from silence to avoid click/pop at start/resume
             SAPlayer.shared.volume = 0.0
             SAPlayer.shared.play()
             let duration = (microFadeInPending || justStarted) ? 0.03 : 0.3
