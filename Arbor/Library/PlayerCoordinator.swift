@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SDWebImage
 
 @MainActor
 final class PlayerCoordinator: ObservableObject {
@@ -13,6 +14,8 @@ final class PlayerCoordinator: ObservableObject {
     @Published var audioPlayer: AudioPlayerWithReverb? = nil
     @Published var libraryItem: LibraryItem? = nil
     @Published var filePath: String? = nil
+    @Published var artworkImage: UIImage? = nil
+    @Published var artworkURL: URL? = nil
 
     public func open()  {
         if canShowPlayer {
@@ -29,6 +32,27 @@ final class PlayerCoordinator: ObservableObject {
 
         self.filePath = filePath
         self.libraryItem = libraryItem
+
+        // Load artwork image so we don't reconstruct it on every rerender in the bottom tab view accessory of ContentView
+        let nextArtworkURL = libraryItem.thumbnail_url.flatMap { URL(string: $0) }
+        if artworkURL != nextArtworkURL {
+            artworkURL = nextArtworkURL
+            artworkImage = nil
+            if let url = nextArtworkURL {
+                SDWebImageManager.shared.loadImage(
+                    with: url,
+                    options: [.highPriority, .retryFailed, .scaleDownLargeImages],
+                    progress: nil
+                ) { [weak self] image, _, error, _, finished, _ in
+                    guard let self = self, error == nil, finished, let image else { return }
+                    Task { @MainActor in
+                        if self.artworkURL == url {
+                            self.artworkImage = image
+                        }
+                    }
+                }
+            }
+        }
         
         // Tear down any existing engine before creating a new one
         audioPlayer?.unsubscribeUpdates()

@@ -69,6 +69,7 @@ struct SongImage: View {
     
     let thumbnailURL: String?
     let thumbnailIsSquare: Bool?
+    var preloadedImage: UIImage? = nil
     var thumbnailForceSquare: Bool = true
     var tappableForViewer: Bool = false
 
@@ -79,7 +80,15 @@ struct SongImage: View {
 
     var body: some View {
         if let thumbnailUrl = thumbnailURL, thumbnailIsSquare != nil {
-            if tappableForViewer {
+            if let image = preloadedImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: frameWidth, height: frameHeight)
+                    .clipped()
+                    .cornerRadius(cornerRadiusValue)
+                    .shadow(color: .black.opacity(isLarge ? 0.15 : 0), radius: 6, x: 0, y: 2)
+            } else if tappableForViewer {
                 TappableImageView(url: URL(string: thumbnailUrl), cornerRadius: cornerRadiusValue)
                     .frame(width: frameWidth, height: frameHeight)
                     .shadow(color: .black.opacity(isLarge ? 0.15 : 0), radius: 6, x: 0, y: 2)
