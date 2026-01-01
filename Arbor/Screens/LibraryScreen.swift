@@ -25,6 +25,12 @@ struct LibraryScreen: View {
     }
     
     func onTap(_ item: LibraryItem) {
+        // if tapped item is the same as currently active library item, don't reset playback
+        if player.libraryItem?.persistentModelID == item.id {
+            player.open()
+            return
+        }
+        
         if let absolutePath = getLocalAudioFilePath(originalUrl: item.original_url) {
             player.startPlayback(libraryItem: item, filePath: absolutePath)
             return
