@@ -50,14 +50,16 @@ struct Scrubber<T: BinaryFloatingPoint>: View {
                     // Time labels
                     HStack {
                         Text(formattedTime(Double(progressDuration)))
-                            .font(.caption)
+                            .font(.caption.monospacedDigit())
                             .foregroundColor(isActive ? fillColor : .secondary)
+                            .transaction { $0.animation = nil } // don't animate text. it's animating because the parent view is animating.
                         
                         Spacer()
                         
                         Text(formattedTime(Double(inRange.upperBound)))
-                            .font(.caption)
+                            .font(.caption.monospacedDigit())
                             .foregroundColor(isActive ? fillColor : .secondary)
+                            .transaction { $0.animation = nil }
                     }
 
                     // The actual scrubber
