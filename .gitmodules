@@ -1,0 +1,4 @@
+[submodule "SwiftAudioPlayer"]
+	path = SwiftAudioPlayer
+	url = https://github.com/Armster15/SwiftAudioPlayer
+	branch = main
