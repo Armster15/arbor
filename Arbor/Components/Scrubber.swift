@@ -76,26 +76,27 @@ struct Scrubber<T: BinaryFloatingPoint>: View {
                                 }
                             })
                     }
+                    .contentShape(Rectangle())
+                    .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                        .updating($isActive) { value, state, transaction in
+                            state = true
+                        }
+                        .onChanged { gesture in
+                            localTempProgress = T(gesture.translation.width / bounds.size.width)
+                            let prg = max(min((localRealProgress + localTempProgress), 1), 0)
+                            progressDuration = inRange.upperBound * prg
+                            value = max(min(getPrgValue(), inRange.upperBound), inRange.lowerBound)
+                        }.onEnded { value in
+                            localRealProgress = max(min(localRealProgress + localTempProgress, 1), 0)
+                            localTempProgress = 0
+                            progressDuration = inRange.upperBound * localRealProgress
+                        })
                     
                 }
                 .scaleEffect(isActive ? 1.04 : 1.0)
                 .animation(animation, value: isActive)
             }
             .frame(width: bounds.size.width, height: bounds.size.height, alignment: .center)
-            .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                .updating($isActive) { value, state, transaction in
-                    state = true
-                }
-                .onChanged { gesture in
-                    localTempProgress = T(gesture.translation.width / bounds.size.width)
-                    let prg = max(min((localRealProgress + localTempProgress), 1), 0)
-                    progressDuration = inRange.upperBound * prg
-                    value = max(min(getPrgValue(), inRange.upperBound), inRange.lowerBound)
-                }.onEnded { value in
-                    localRealProgress = max(min(localRealProgress + localTempProgress, 1), 0)
-                    localTempProgress = 0
-                    progressDuration = inRange.upperBound * localRealProgress
-                })
             .onChange(of: isActive) { newValue in
                 value = max(min(getPrgValue(), inRange.upperBound), inRange.lowerBound)
                 onEditingChanged(newValue)
