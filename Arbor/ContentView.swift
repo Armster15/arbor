@@ -90,6 +90,28 @@ struct ContentView: View {
                 .padding(.vertical, 4)
                 .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(spacing: 12) {
+                    SongImage(
+                        width: 40,
+                        height: 40,
+                        thumbnailURL: nil,
+                        thumbnailIsSquare: nil
+                    )
+                    
+                    Text("Not Playing")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .sheet(isPresented: $player.isPresented) {
