@@ -24,6 +24,7 @@ struct Scrubber<T: BinaryFloatingPoint>: View {
     @State private var localTempProgress: T = 0
     @GestureState private var isActive: Bool = false
     @State private var progressDuration: T = 0
+    @AppStorage("scrubberShowsRemainingTime") private var showsRemainingTime: Bool = false
     
     init(
         value: Binding<T>,
@@ -56,10 +57,13 @@ struct Scrubber<T: BinaryFloatingPoint>: View {
                         
                         Spacer()
                         
-                        Text(formattedTime(Double(inRange.upperBound)))
+                        Text(upperTimeLabel)
                             .font(.caption.monospacedDigit())
                             .foregroundColor(isActive ? fillColor : .secondary)
                             .transaction { $0.animation = nil }
+                            .onTapGesture {
+                                showsRemainingTime.toggle()
+                            }
                     }
 
                     // The actual scrubber
@@ -121,6 +125,14 @@ struct Scrubber<T: BinaryFloatingPoint>: View {
         } else {
             return .spring(response: 0.5, dampingFraction: 0.5, blendDuration: 0.6)
         }
+    }
+
+    private var upperTimeLabel: String {
+        if showsRemainingTime {
+            let remaining = max(Double(inRange.upperBound - progressDuration), 0)
+            return "-\(formattedTime(remaining))"
+        }
+        return formattedTime(Double(inRange.upperBound))
     }
     
     private func getPrgPercentage(_ value: T) -> T {
