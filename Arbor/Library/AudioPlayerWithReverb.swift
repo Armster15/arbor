@@ -110,12 +110,17 @@ final class AudioPlayerWithReverb: ObservableObject {
                 // Pause and re-seek to reset the timebase cleanly before resuming
                 pendingSeekTarget = seconds
                 microFadeInPending = true
-                SAPlayer.shared.pause()
-                SAPlayer.shared.seekTo(seconds: 0.0)
-                pitchNode.reset()
-                reverbNode.reset()
-                currentTime = 0.0
-                play()
+                volumeRampTimer?.invalidate()
+                let startVol = SAPlayer.shared.volume ?? 1.0
+                rampVolume(from: startVol, to: 0.0, duration: 0.02) { [weak self] in
+                    guard let self = self else { return }
+                    SAPlayer.shared.pause()
+                    SAPlayer.shared.seekTo(seconds: 0.0)
+                    self.pitchNode.reset()
+                    self.reverbNode.reset()
+                    self.currentTime = 0.0
+                    self.play()
+                }
                 return
             }
             pendingSeekTarget = nil
