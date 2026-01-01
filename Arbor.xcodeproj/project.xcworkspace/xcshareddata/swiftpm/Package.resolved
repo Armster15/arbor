@@ -1,5 +1,5 @@
 {
-  "originHash" : "3036f30c9596870cd76364efdd251e9bc6921c14b37114df2890ccf9f98a72ca",
+  "originHash" : "aa759cd48db71eabce6302a5865fe9ca0e4f081a7261f005e7e3d3fb6a4b8b10",
   "pins" : [
     {
       "identity" : "imageviewer.swift",
@@ -35,15 +35,6 @@
       "state" : {
         "revision" : "e8a045f91757b32bb29c6feff1644ef79c8daedf",
         "version" : "1.6.5"
-      }
-    },
-    {
-      "identity" : "swiftaudioplayer",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tanhakabir/SwiftAudioPlayer.git",
-      "state" : {
-        "revision" : "2fdfc62ce9f5d8b818ee1b2a9ac061fce4f64af9",
-        "version" : "7.6.0"
       }
     }
   ],
