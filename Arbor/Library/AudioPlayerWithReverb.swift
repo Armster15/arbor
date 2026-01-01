@@ -36,6 +36,9 @@ final class AudioPlayerWithReverb: ObservableObject {
     private var volumeRampTimer: Timer? // track volume ramp timer to prevent race conditions
     private var pendingSeekTarget: Double? // gate play after a seek until applied
     private var microFadeInPending: Bool = false // request a short fade-in on next play
+    private var lastSeekRequested: Double?
+    private var lastSeekRequestTime: Date?
+    private var lastElapsedTime: Double?
     
     init() {
         pitchNode = AVAudioUnitTimePitch()
@@ -94,7 +97,21 @@ final class AudioPlayerWithReverb: ObservableObject {
     }
 
     func seek(to seconds: Double) {
+        lastSeekRequested = seconds
+        lastSeekRequestTime = Date()
         if isPlaying {
+            if seconds <= 0.05 {
+                // Pause and re-seek to reset the timebase cleanly before resuming
+                pendingSeekTarget = seconds
+                microFadeInPending = true
+                SAPlayer.shared.pause()
+                SAPlayer.shared.seekTo(seconds: 0.0)
+                pitchNode.reset()
+                reverbNode.reset()
+                currentTime = 0.0
+                play()
+                return
+            }
             pendingSeekTarget = nil
             SAPlayer.shared.seekTo(seconds: seconds)
             if seconds <= 0.05 {
@@ -200,7 +217,10 @@ final class AudioPlayerWithReverb: ObservableObject {
     private func subscribeUpdates() {
         if elapsedSub == nil {
             elapsedSub = SAPlayer.Updates.ElapsedTime.subscribe { [weak self] time in
-                self?.currentTime = time
+                guard let self = self else { return }
+                let prevTime = self.lastElapsedTime
+                self.lastElapsedTime = time
+                self.currentTime = time
                 var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
                 nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = time
                 MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
