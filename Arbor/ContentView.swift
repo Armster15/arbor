@@ -57,36 +57,42 @@ struct ContentView: View {
         }
         .tabViewBottomAccessory {
             if player.canShowPlayer == true, let libraryItem = player.libraryItem {
-                Button(action: { player.open() }) {
-                    HStack(spacing: 12) {
-                        SongImage(
-                            width: 40,
-                            height: 40,
-                            thumbnailURL: libraryItem.thumbnail_url,
-                            thumbnailIsSquare: libraryItem.thumbnail_is_square,
-                            preloadedImage: player.artworkImage
-                        )
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(libraryItem.title)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .lineLimit(1)
+                HStack(spacing: 8) {
+                    Button(action: { player.open() }) {
+                        HStack(spacing: 12) {
+                            SongImage(
+                                width: 40,
+                                height: 40,
+                                thumbnailURL: libraryItem.thumbnail_url,
+                                thumbnailIsSquare: libraryItem.thumbnail_is_square,
+                                preloadedImage: player.artworkImage
+                            )
                             
-                            Text(libraryItem.artist)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(libraryItem.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(1)
+                                
+                                Text(libraryItem.artist)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                            
+                            Spacer()
                         }
-                        
-                        Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    
+                    if let audioPlayer = player.audioPlayer {
+                        PlayPauseButton(audioPlayer: audioPlayer)
+                    }
                 }
-                .buttonStyle(.plain)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -128,6 +134,28 @@ struct ContentView: View {
                 EmptyView()
             }
         }
+    }
+}
+
+private struct PlayPauseButton: View {
+    // required so we can observe changes to the audio player's isPlaying property
+    @ObservedObject var audioPlayer: AudioPlayerWithReverb
+    
+    var body: some View {
+        Button(action: {
+            if audioPlayer.isPlaying {
+                audioPlayer.pause()
+            } else {
+                audioPlayer.play()
+            }
+        }) {
+            Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                .font(.title3)
+                .foregroundStyle(Color("PrimaryText"))
+                .frame(width: 36, height: 36)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(audioPlayer.isPlaying ? "Pause" : "Play")
     }
 }
 
