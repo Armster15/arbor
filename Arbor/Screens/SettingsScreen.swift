@@ -11,6 +11,7 @@ import CloudKitSyncMonitor
 
 struct SettingsScreen: View {
     @StateObject private var syncMonitor = SyncMonitor.default
+    @EnvironmentObject private var lastFM: LastFMSession
 
     var body: some View {
         List {
@@ -29,7 +30,7 @@ struct SettingsScreen: View {
             } label: {
                 IntegrationRow(
                     title: "last.fm",
-                    subtitle: "Connect to start scrobbling"
+                    subtitle: lastFM.isAuthenticated ? lastFM.username : "Connect to start scrobbling"
                 )
             }
             .listRowBackground(Color("SecondaryBg"))

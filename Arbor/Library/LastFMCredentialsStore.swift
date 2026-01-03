@@ -70,7 +70,6 @@ final class LastFMSession: ObservableObject {
     @Published public private(set) var username: String = ""
     @Published public private(set) var isAuthenticated: Bool = false
     @Published public private(set) var manager: SBKManager? = nil
-    @Published public private(set) var session: SBKSessionResponseInfo? = nil
     
     private let store = LastFMCredentialsStore()
     
@@ -79,23 +78,21 @@ final class LastFMSession: ObservableObject {
     }
     
     func restoreFromKeychain() {
-        guard let username = store.username,
+        guard let username = store.username?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !username.isEmpty,
               let apiKey = store.apiKey,
-              let apiSecret = store.apiSecret else {
-            clearLocalState()
-            return
-        }
-        
-        guard !username.isEmpty else {
+              let apiSecret = store.apiSecret,
+              let sessionKey = store.sessionKey else {
             clearLocalState()
             return
         }
         
         let manager = SBKManager(apiKey: apiKey, secret: apiSecret)
-        isAuthenticated = false
+        manager.setSessionKey(sessionKey)
+        
         self.username = username
         self.manager = manager
-        self.session = nil
+        self.isAuthenticated = true
     }
     
     func signIn(username: String, password: String, apiKey: String, apiSecret: String) async throws {
@@ -116,7 +113,6 @@ final class LastFMSession: ObservableObject {
         
         self.username = session.name
         self.manager = manager
-        self.session = session
         self.isAuthenticated = true
     }
     
@@ -130,6 +126,5 @@ final class LastFMSession: ObservableObject {
         username = ""
         isAuthenticated = false
         manager = nil
-        session = nil
     }
 }
