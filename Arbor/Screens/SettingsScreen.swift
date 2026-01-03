@@ -37,6 +37,20 @@ struct SettingsScreen: View {
                 )
             }
             .listRowBackground(Color("SecondaryBg"))
+
+            Section {
+                NavigationLink("Manage Cache") {
+                    ZStack {
+                        BackgroundColor
+                            .ignoresSafeArea()
+
+                        ManageCacheScreen()
+                    }
+                    .navigationTitle("Manage Cache")
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+                .listRowBackground(Color("SecondaryBg"))
+            }
         }
         .scrollContentBackground(.hidden)
         .navigationTitle("Settings")

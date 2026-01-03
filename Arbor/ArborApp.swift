@@ -17,6 +17,14 @@ struct ArborApp: App {
     init() {
         _ = start_python_runtime(CommandLine.argc, CommandLine.unsafeArgv)
         SyncMonitor.default.startMonitoring()
+
+        let tmpPath = NSTemporaryDirectory()
+        let cachesPath = FileManager.default
+            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .path
+        debugPrint("tmpPath: \(tmpPath)")
+        debugPrint("cachesPath: \(cachesPath)")
+
     }
     var body: some Scene {
         WindowGroup {
