@@ -126,8 +126,6 @@ struct ContentView: View {
                         PlayerScreen()
                     }
                 }
-            } else if true {
-                
             } else {
                 EmptyView()
             }
