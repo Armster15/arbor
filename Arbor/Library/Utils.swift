@@ -36,6 +36,13 @@ public func sanitizeForFilename(_ string: String) -> String {
     return String(cleaned.prefix(100))
 }
 
+public func formatArtists(_ artists: [String]) -> String {
+    let cleaned = artists
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    return cleaned.isEmpty ? "N/A" : cleaned.joined(separator: ", ")
+}
+
 // Saving images to photos library is at its core simply just UIImageWriteToSavedPhotosAlbum(uiImage, nil, nil, nil),
 // but because of some historic Objective-C lore, we need a class for other functionality like error handling.
 // https://www.hackingwithswift.com/books/ios-swiftui/how-to-save-images-to-the-users-photo-library

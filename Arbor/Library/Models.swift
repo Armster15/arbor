@@ -16,7 +16,7 @@ class LibraryItem {
     // to have default values or be optional.
     var original_url: String = "N/A"
     var title: String = "N/A"
-    var artist: String = "N/A"
+    var artists: [String] = []
     var thumbnail_url: String?
     var thumbnail_width: Int?
     var thumbnail_height: Int?
@@ -28,7 +28,7 @@ class LibraryItem {
     init(
         original_url: String,
         title: String,
-        artist: String,
+        artists: [String],
         thumbnail_url: String?,
         thumbnail_width: Int?,
         thumbnail_height: Int?,
@@ -40,7 +40,7 @@ class LibraryItem {
 
         self.original_url = original_url
         self.title = title
-        self.artist = artist
+        self.artists = artists
         self.thumbnail_url = thumbnail_url
         self.thumbnail_width = thumbnail_width
         self.thumbnail_height = thumbnail_height
@@ -59,7 +59,7 @@ class LibraryItem {
         self.init(
             original_url: meta.original_url,
             title: meta.title,
-            artist: meta.artist,
+            artists: meta.artists,
             thumbnail_url: meta.thumbnail_url,
             thumbnail_width: meta.thumbnail_width,
             thumbnail_height: meta.thumbnail_height,
@@ -74,7 +74,7 @@ class LibraryItem {
         self.init(
             original_url: item.original_url,
             title: item.title,
-            artist: item.artist,
+            artists: item.artists,
             thumbnail_url: item.thumbnail_url,
             thumbnail_width: item.thumbnail_width,
             thumbnail_height: item.thumbnail_height,
@@ -90,7 +90,7 @@ struct DownloadMeta: Decodable {
     let path: String
     let original_url: String
     var title: String
-    var artist: String
+    var artists: [String]
     let thumbnail_url: String?
     let thumbnail_width: Int?
     let thumbnail_height: Int?

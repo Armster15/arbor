@@ -76,7 +76,7 @@ public func ensureLocalAudioFile(
     originalUrl: String,
     sourcePath: String,
     title: String,
-    artist: String,
+    artists: [String],
     onMissingPhysicalFile: (() -> Void)? = nil
 ) -> String {
     if let existingPath = getLocalAudioFilePath(
@@ -90,7 +90,7 @@ public func ensureLocalAudioFile(
     let ext = sourceURL.pathExtension
     let timestamp = Int(Date().timeIntervalSince1970)
     let safeTitle = sanitizeForFilename(title)
-    let safeArtist = sanitizeForFilename(artist)
+    let safeArtist = sanitizeForFilename(formatArtists(artists))
     let newName = "\(safeTitle)-\(safeArtist)-\(timestamp).\(ext)"
     
     let docsURL = URL.documentsDirectory

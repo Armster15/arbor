@@ -164,7 +164,7 @@ struct SearchResultRow: View {
                         }
 
                         HStack(spacing: 4) {
-                            Text(result.artists.joined(separator: ", "))
+                            Text(formatArtists(result.artists))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
@@ -223,7 +223,7 @@ struct DownloadScreen: View {
                         if let result = selectedResult {
                             SongInfo(
                                 title: result.title,
-                                artist: result.artists.joined(separator: ", "),
+                                artists: result.artists,
                                 thumbnailURL: result.thumbnailURL,
                                 thumbnailIsSquare: result.thumbnailIsSquare
                             )
