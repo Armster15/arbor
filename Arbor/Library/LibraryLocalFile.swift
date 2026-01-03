@@ -38,6 +38,20 @@ private func deleteLibraryLocalFile(originalUrl: String) {
     UserDefaults.standard.removeObject(forKey: "LibraryLocalFile:" + originalUrl)
 }
 
+public func deleteLocalAudioFile(originalUrl: String) {
+    if let localFile = getLibraryLocalFile(originalUrl: originalUrl) {
+        let docsURL = URL.documentsDirectory
+        let fileURL = docsURL.appendingPathComponent(localFile.relativePath)
+        let absolutePath = fileURL.path
+        
+        if FileManager.default.fileExists(atPath: absolutePath) {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+    }
+    
+    deleteLibraryLocalFile(originalUrl: originalUrl)
+}
+
 /// Looks up an existing locally saved audio file for the given original URL.
 /// - Parameters:
 ///   - originalUrl: The original remote URL (e.g. YouTube URL).
