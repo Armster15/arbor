@@ -126,6 +126,8 @@ struct ContentView: View {
                         PlayerScreen()
                     }
                 }
+            } else if true {
+                
             } else {
                 EmptyView()
             }
@@ -157,6 +159,7 @@ private struct PlayPauseButton: View {
 
 #Preview {
     @Previewable @StateObject var player = PlayerCoordinator()
+    @Previewable @StateObject var lastFM = LastFMSession()
     
     // dummy in-memory model container for preview environments
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
@@ -165,4 +168,5 @@ private struct PlayPauseButton: View {
     ContentView()
         .modelContainer(container)
         .environmentObject(player)
+        .environmentObject(lastFM)
 }
