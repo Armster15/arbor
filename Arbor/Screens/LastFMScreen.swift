@@ -55,30 +55,34 @@ struct LastFMScreen: View {
             profileImageURL = nil
             scrobbleCount = nil
         } catch {
-            showAlert(title: "Log out failed", message: error.localizedDescription)
+            showAlert(title: "Sign out failed", message: error.localizedDescription)
         }
     }
         
     var body: some View {
-        ScrollView {
-            VStack {
-                if lastFM.isAuthenticated {
-                    LoggedInLastFMView(
-                        username: lastFM.username,
-                        profileImageURL: profileImageURL,
-                        scrobbleCount: scrobbleCount,
-                        isLoadingUserInfo: isLoadingUserInfo,
-                        errorMessage: userInfoErrorMessage,
-                        onLogoutTapped: {
-                            showLogoutConfirmation = true
-                        }
-                    )
-                } else {
-                    LoggedOutLastFMView()
+        Group {
+            if lastFM.isAuthenticated {
+                LoggedInLastFMView(
+                    username: lastFM.username,
+                    profileImageURL: profileImageURL,
+                    scrobbleCount: scrobbleCount,
+                    isLoadingUserInfo: isLoadingUserInfo,
+                    errorMessage: userInfoErrorMessage,
+                    onLogoutTapped: {
+                        showLogoutConfirmation = true
+                    }
+                )
+                .frame(maxWidth: .infinity, alignment: .top)
+                .padding(.top, 4)
+            } else {
+                ScrollView {
+                    VStack {
+                        LoggedOutLastFMView()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(.top, 4)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .top)
-            .padding(.top, 4)
         }
         .navigationTitle("last.fm")
         // runs an async task whenever the id value changes
@@ -92,13 +96,13 @@ struct LastFMScreen: View {
                 userInfoErrorMessage = nil
             }
         }
-        .alert("Log Out?", isPresented: $showLogoutConfirmation) {
-            Button("Log Out", role: .destructive) {
+        .alert("Sign Out?", isPresented: $showLogoutConfirmation) {
+            Button("Sign Out", role: .destructive) {
                 logOut()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Are you sure you want to log out of Last.fm?")
+            Text("Are you sure you want to sign out of Last.fm?")
         }
     }
 }
@@ -123,73 +127,78 @@ private struct LoggedInLastFMView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            HStack(alignment: .center, spacing: 8) {
-                ZStack {
-                    if let profileImageURL {
-                        AsyncImage(url: profileImageURL) { phase in
-                            switch phase {
-                            case .empty:
-                                ProgressView()
-                                    .tint(Color("PrimaryText"))
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            case .failure:
-                                Image("LastFMDefaultAvatar")
-                                    .resizable()
-                                    .scaledToFill()
-                            @unknown default:
-                                Image("LastFMDefaultAvatar")
-                                    .resizable()
-                                    .scaledToFill()
+            List {
+                HStack(alignment: .center, spacing: 8) {
+                    ZStack {
+                        if let profileImageURL {
+                            AsyncImage(url: profileImageURL) { phase in
+                                switch phase {
+                                case .empty:
+                                    ProgressView()
+                                        .tint(Color("PrimaryText"))
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                case .failure:
+                                    Image("LastFMDefaultAvatar")
+                                        .resizable()
+                                        .scaledToFill()
+                                @unknown default:
+                                    Image("LastFMDefaultAvatar")
+                                        .resizable()
+                                        .scaledToFill()
+                                }
                             }
+                        } else {
+                            Image("LastFMDefaultAvatar")
+                                .resizable()
+                                .scaledToFill()
                         }
-                    } else {
-                        Image("LastFMDefaultAvatar")
-                            .resizable()
-                            .scaledToFill()
                     }
-                }
-                .frame(width: 56, height: 56)
-                .clipShape(Circle())
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(username)
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color("PrimaryText"))
+                    .frame(width: 56, height: 56)
+                    .clipShape(Circle())
                     
-                    Text(isLoadingUserInfo ? "Loading scrobbles..." : "\(formattedScrobbleCount() ?? "0") scrobbles")
-                        .font(.subheadline)
-                        .foregroundColor(Color("PrimaryText"))
-                        .lineLimit(2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(username)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color("PrimaryText"))
+                        
+                        Text(isLoadingUserInfo ? "Loading scrobbles..." : "\(formattedScrobbleCount() ?? "0") scrobbles")
+                            .font(.subheadline)
+                            .foregroundColor(Color("PrimaryText"))
+                            .lineLimit(2)
+                    }
+                    
+                    Spacer()
                 }
+                .listRowBackground(Color("SecondaryBg"))
                 
-                Spacer()
-            }
-            .padding(.horizontal)
-            
-            if let errorMessage {
-                Text("Couldn’t load Last.fm profile: \(errorMessage)")
-                    .foregroundColor(.red)
-                    .padding(.horizontal)
-            }
+                if let errorMessage {
+                    Text("Couldn’t load Last.fm profile: \(errorMessage)")
+                        .foregroundColor(.red)
+                        .listRowBackground(Color("SecondaryBg"))
+                }
 
-            Toggle("Enable scrobbling", isOn: $lastFM.isScrobblingEnabled)
-                .padding(.horizontal)
-            
-            Button(role: .destructive) {
-                onLogoutTapped()
-            } label: {
-                Text("Log Out")
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                Toggle(
+                    "Enable scrobbling",
+                    isOn: Binding(
+                        get: { lastFM.isScrobblingEnabled },
+                        set: { lastFM.isScrobblingEnabled = $0 }
+                    )
+                )
+                .listRowBackground(Color("SecondaryBg"))
+
+                Section {
+                    Button("Sign Out", role: .destructive) {
+                        onLogoutTapped()
+                    }
+                    .listRowBackground(Color("SecondaryBg"))
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .fontWeight(.semibold)
-            .tint(.red)
-            .padding(.horizontal)
+            .scrollContentBackground(.hidden)
+            .listStyle(.insetGrouped)
         }
     }
 }
@@ -291,14 +300,14 @@ private struct LoggedOutLastFMView: View {
         Spacer(minLength: 24)
         
         if let errorMessage {
-            Text("Couldn’t log in to Last.fm: \(errorMessage)")
+            Text("Couldn’t sign in to Last.fm: \(errorMessage)")
                 .font(.footnote)
                 .foregroundColor(.red)
                 .padding(.horizontal)
         }
         
         PrimaryActionButton(
-            title: "Submit",
+            title: "Sign In",
             isLoading: isSubmitting,
             isDisabled: false,
             action: {
