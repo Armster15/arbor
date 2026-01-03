@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import ScrobbleKit
 import SPIndicator
 
@@ -213,6 +214,11 @@ private struct LoggedOutLastFMView: View {
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String? = nil
     
+    private func openInSafari(_ urlString: String) {
+        guard let url = URL(string: urlString) else { return }
+        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+    }
+    
     @MainActor
     private func submit() async {        
         guard !username.isEmpty,
@@ -312,5 +318,35 @@ private struct LoggedOutLastFMView: View {
                 Task { await submit() }
             }
         )
+        
+        HStack(spacing: 12) {
+            Button {
+                openInSafari("https://www.last.fm/api/account/create")
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Create API key")
+                    Image(systemName: "arrow.up.forward")
+                }
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(Color("PrimaryText").opacity(0.8))
+            }
+            .frame(maxWidth: .infinity)
+            
+            Button {
+                openInSafari("https://www.last.fm/api/accounts")
+            } label: {
+                HStack(spacing: 6) {
+                    Text("View API keys")
+                    Image(systemName: "arrow.up.forward")
+                }
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(Color("PrimaryText").opacity(0.8))
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glass)
+        .tint(Color("SecondaryBg"))
+        .padding(.horizontal)
+        .padding(.bottom)
     }
 }
