@@ -20,6 +20,7 @@ public let BackgroundColor = LinearGradient(
 
 struct ContentView: View {
     @EnvironmentObject var player: PlayerCoordinator
+    @EnvironmentObject var lastFM: LastFMSession
     
     init() {
         let titleColor = UIColor(named: "PrimaryText")!
@@ -50,6 +51,9 @@ struct ContentView: View {
                         .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
                 }
             }
+        }
+        .onAppear {
+            player.attach(lastFM: lastFM)
         }
         .tabViewBottomAccessory {
             if player.canShowPlayer == true, let libraryItem = player.libraryItem {
@@ -158,8 +162,8 @@ private struct PlayPauseButton: View {
 }
 
 #Preview {
-    @Previewable @StateObject var player = PlayerCoordinator()
     @Previewable @StateObject var lastFM = LastFMSession()
+    @Previewable @StateObject var player = PlayerCoordinator()
     
     // dummy in-memory model container for preview environments
     let config = ModelConfiguration(isStoredInMemoryOnly: true)

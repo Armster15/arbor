@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SDWebImage
+import Combine
 
 @MainActor
 final class PlayerCoordinator: ObservableObject {
@@ -16,6 +17,23 @@ final class PlayerCoordinator: ObservableObject {
     @Published var filePath: String? = nil
     @Published var artworkImage: UIImage? = nil
     @Published var artworkURL: URL? = nil
+
+    private var lastFM: LastFMSession?
+    private let scrobbleCoordinator = ScrobbleCoordinator()
+    private var audioPlayerCancellables = Set<AnyCancellable>() // for monitoring changes to `duration`, `currentTime`, and `isPlaying` properties
+    private var lastFMCancellable: AnyCancellable? // for monitoring changes to `manager` and `isScrobblingEnabled` properties
+
+    // for setting the global LastFM session
+    func attach(lastFM: LastFMSession) {
+        self.lastFM = lastFM
+        lastFMCancellable = Publishers.CombineLatest(lastFM.$manager, lastFM.$isScrobblingEnabled)
+            .sink { [weak self] manager, isEnabled in
+                guard let self = self, isEnabled else { return }
+                Task {
+                    await self.scrobbleCoordinator.flushIfNeeded(manager: manager)
+                }
+            }
+    }
 
     public func open()  {
         if canShowPlayer {
@@ -75,7 +93,64 @@ final class PlayerCoordinator: ObservableObject {
         newAudioPlayer.setReverbMix(libraryItem.reverbMix)
         
         self.audioPlayer = newAudioPlayer
+
+        let scrobbleSeed = makeScrobbleSeed(from: libraryItem)
+        Task {
+            await scrobbleCoordinator.startTrack(
+                seed: scrobbleSeed,
+                duration: newAudioPlayer.duration
+            )
+        }
+
+        monitorAudioPlayerChanges(for: newAudioPlayer, libraryItem: libraryItem)
         
         open()
+    }
+
+    private func monitorAudioPlayerChanges(for audioPlayer: AudioPlayerWithReverb, libraryItem: LibraryItem) {
+        audioPlayerCancellables.removeAll()
+
+        debugPrint("Monitoring audio player changes for library item: \(libraryItem.title)")
+
+        // monitor changes to `duration`
+        audioPlayer.$duration
+            .sink { [weak self] duration in
+                guard let self = self else { return }
+                Task {
+                    await self.scrobbleCoordinator.updateDuration(duration)
+                }
+            }
+            .store(in: &audioPlayerCancellables)
+
+        // monitor changes to `currentTime` and `isPlaying`
+        Publishers.CombineLatest(audioPlayer.$currentTime, audioPlayer.$isPlaying)
+            .sink { [weak self] currentTime, isPlaying in
+                self?.handleScrobbleProgress(currentTime: currentTime, isPlaying: isPlaying)
+            }
+            .store(in: &audioPlayerCancellables)
+    }
+
+    private func handleScrobbleProgress(currentTime: Double, isPlaying: Bool) {
+        let isAuthenticated = lastFM?.isAuthenticated ?? false
+        let isScrobblingEnabled = lastFM?.isScrobblingEnabled ?? false
+        let manager = lastFM?.manager
+
+        Task {
+            await scrobbleCoordinator.handleProgress(
+                currentTime: currentTime,
+                isPlaying: isPlaying,
+                isAuthenticated: isAuthenticated,
+                isScrobblingEnabled: isScrobblingEnabled,
+                manager: manager
+            )
+        }
+    }
+
+    private func makeScrobbleSeed(from libraryItem: LibraryItem) -> ScrobbleSeed {
+        ScrobbleSeed(
+            title: libraryItem.title,
+            artist: libraryItem.artists.first,
+            album: nil
+        )
     }
 }
