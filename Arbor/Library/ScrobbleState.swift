@@ -1,5 +1,15 @@
 import Foundation
 
+// ScrobbleSeed exists so the actor only receives
+// Sendable, immutable data. LibraryItem is a SwiftData
+// @Model reference type, not Sendable, and shouldn't
+// cross actor boundaries.
+struct ScrobbleSeed: Sendable {
+    let title: String
+    let artist: String?
+    let album: String?
+}
+
 // Tracks listening progress and decides when a track meets Last.fm scrobble criteria.
 final class ScrobbleState {
     private let title: String
@@ -13,14 +23,14 @@ final class ScrobbleState {
     private var lastObservedTime: Double?
     private var scrobbled = false
 
-    init?(libraryItem: LibraryItem) {
-        // Since scrobbleState in PlayerCoordinator is already optional, songs without 
+    init?(seed: ScrobbleSeed) {
+        // Since scrobbleState in PlayerCoordinator is already optional, songs without
         // any artists will simply have scrobbleState = nil and won't be scrobbled.
-        guard let firstArtist = libraryItem.artists.first else { return nil }
-        
-        self.title = libraryItem.title
-        self.artist = firstArtist
-        self.album = nil
+        guard let artist = seed.artist else { return nil }
+
+        self.title = seed.title
+        self.artist = artist
+        self.album = seed.album
         self.startedAt = Date()
     }
 

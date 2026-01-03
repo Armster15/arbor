@@ -19,12 +19,9 @@ final class PlayerCoordinator: ObservableObject {
     @Published var artworkURL: URL? = nil
 
     private var lastFM: LastFMSession?
-    private let scrobbleQueue = ScrobbleQueue()
-    private var scrobbleState: ScrobbleState?
+    private let scrobbleCoordinator = ScrobbleCoordinator()
     private var audioPlayerCancellables = Set<AnyCancellable>() // for monitoring changes to `duration`, `currentTime`, and `isPlaying` properties
     private var lastFMCancellable: AnyCancellable? // for monitoring changes to `manager` and `isScrobblingEnabled` properties
-    private var lastPlaybackTime: Double = 0
-    private var didReturnToStart = false
 
     // for setting the global LastFM session
     func attach(lastFM: LastFMSession) {
@@ -33,7 +30,7 @@ final class PlayerCoordinator: ObservableObject {
             .sink { [weak self] manager, isEnabled in
                 guard let self = self, isEnabled else { return }
                 Task {
-                    await self.scrobbleQueue.flushIfNeeded(manager: manager)
+                    await self.scrobbleCoordinator.flushIfNeeded(manager: manager)
                 }
             }
     }
@@ -53,8 +50,6 @@ final class PlayerCoordinator: ObservableObject {
 
         self.filePath = filePath
         self.libraryItem = libraryItem
-        lastPlaybackTime = 0
-        didReturnToStart = false
 
         // Load artwork image so we don't reconstruct it on every rerender in the bottom tab view accessory of ContentView
         let nextArtworkURL = libraryItem.thumbnail_url.flatMap { URL(string: $0) }
@@ -98,7 +93,15 @@ final class PlayerCoordinator: ObservableObject {
         newAudioPlayer.setReverbMix(libraryItem.reverbMix)
         
         self.audioPlayer = newAudioPlayer
-        
+
+        let scrobbleSeed = makeScrobbleSeed(from: libraryItem)
+        Task {
+            await scrobbleCoordinator.startTrack(
+                seed: scrobbleSeed,
+                duration: newAudioPlayer.duration
+            )
+        }
+
         monitorAudioPlayerChanges(for: newAudioPlayer, libraryItem: libraryItem)
         
         open()
@@ -106,16 +109,16 @@ final class PlayerCoordinator: ObservableObject {
 
     private func monitorAudioPlayerChanges(for audioPlayer: AudioPlayerWithReverb, libraryItem: LibraryItem) {
         audioPlayerCancellables.removeAll()
-        scrobbleState = ScrobbleState(libraryItem: libraryItem)
-        lastPlaybackTime = 0
-        didReturnToStart = false
 
         debugPrint("Monitoring audio player changes for library item: \(libraryItem.title)")
 
         // monitor changes to `duration`
         audioPlayer.$duration
             .sink { [weak self] duration in
-                self?.scrobbleState?.updateDuration(duration)
+                guard let self = self else { return }
+                Task {
+                    await self.scrobbleCoordinator.updateDuration(duration)
+                }
             }
             .store(in: &audioPlayerCancellables)
 
@@ -128,42 +131,26 @@ final class PlayerCoordinator: ObservableObject {
     }
 
     private func handleScrobbleProgress(currentTime: Double, isPlaying: Bool) {
-        handleScrobbleResetIfNeeded(currentTime: currentTime, isPlaying: isPlaying)
-        guard let scrobbleState, 
-              scrobbleState.shouldScrobble(currentTime: currentTime, isPlaying: isPlaying) else {
-            return
-        }
-
-        guard let lastFM,
-              lastFM.isAuthenticated,
-              lastFM.isScrobblingEnabled else {
-            return
-        }
-
-        debugPrint("Scrobbling library item: \(libraryItem?.title ?? "Unknown")")
-
-        scrobbleState.markScrobbled()
-        let scrobble = scrobbleState.toCachedScrobble()
+        let isAuthenticated = lastFM?.isAuthenticated ?? false
+        let isScrobblingEnabled = lastFM?.isScrobblingEnabled ?? false
+        let manager = lastFM?.manager
 
         Task {
-            await scrobbleQueue.enqueue(scrobble)
-            await scrobbleQueue.flushIfNeeded(manager: lastFM.manager)
+            await scrobbleCoordinator.handleProgress(
+                currentTime: currentTime,
+                isPlaying: isPlaying,
+                isAuthenticated: isAuthenticated,
+                isScrobblingEnabled: isScrobblingEnabled,
+                manager: manager
+            )
         }
     }
 
-    private func handleScrobbleResetIfNeeded(currentTime: Double, isPlaying: Bool) {
-        if currentTime <= 0.05, lastPlaybackTime > 5.0 {
-            didReturnToStart = true
-        }
-
-        if isPlaying, didReturnToStart, let libraryItem {
-            didReturnToStart = false
-            scrobbleState = ScrobbleState(libraryItem: libraryItem)
-            if let scrobbleState {
-                scrobbleState.updateDuration(audioPlayer?.duration ?? 0)
-            }
-        }
-
-        lastPlaybackTime = currentTime
+    private func makeScrobbleSeed(from libraryItem: LibraryItem) -> ScrobbleSeed {
+        ScrobbleSeed(
+            title: libraryItem.title,
+            artist: libraryItem.artists.first,
+            album: nil
+        )
     }
 }
