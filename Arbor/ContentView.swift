@@ -70,7 +70,7 @@ struct ContentView: View {
                                     .fontWeight(.semibold)
                                     .lineLimit(1)
                                 
-                                Text(libraryItem.artist)
+                                Text(formatArtists(libraryItem.artists))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)

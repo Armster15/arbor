@@ -40,7 +40,7 @@ struct LibraryScreen: View {
         // No usable local file – fall back to re-downloading using the original URL.
         let result = SearchResult(
             title: item.title,
-            artists: [item.artist],
+            artists: item.artists,
             url: item.original_url,
             views: nil,
             duration: nil,
@@ -76,7 +76,7 @@ struct LibraryScreen: View {
                                     .font(.headline)
                                     .foregroundColor(Color("PrimaryText"))
                                 
-                                Text(item.artist)
+                                Text(formatArtists(item.artists))
                                     .font(.subheadline)
                                     .foregroundColor(Color("PrimaryText"))
                                 
@@ -146,7 +146,7 @@ struct LibraryScreen: View {
                             originalUrl: libraryItem.original_url,
                             sourcePath: meta.path,
                             title: libraryItem.title,
-                            artist: libraryItem.artist,
+                            artists: libraryItem.artists,
                             onMissingPhysicalFile: {
                                 debugPrint("Deleting outdated library item: \(libraryItem.title)")
                                 modelContext.delete(libraryItem)
