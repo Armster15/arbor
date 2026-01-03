@@ -70,11 +70,11 @@ def download(url: str):
             artists.extend(_artists)
         elif _artist := info.get("artist"):
             artists.append(_artist)
-        if _uploader := info.get("uploader"):
+        elif _uploader := info.get("uploader"):
             artists.append(_uploader)
-        if _channel := info.get("channel"):
+        elif _channel := info.get("channel"):
             artists.append(_channel)
-        if not artists:
+        else:
             artists = ["Unknown Artist"]
 
         # Choose thumbnail: prefer square art (common for music); else highest resolution
