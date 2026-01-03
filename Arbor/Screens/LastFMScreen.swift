@@ -295,7 +295,7 @@ private struct LoggedOutLastFMView: View {
             )
         }
         
-        Spacer(minLength: 24)
+        Spacer(minLength: 48)
         
         if let errorMessage {
             Text("Couldn’t sign in to Last.fm: \(errorMessage)")
