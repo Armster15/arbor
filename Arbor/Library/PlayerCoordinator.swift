@@ -23,6 +23,8 @@ final class PlayerCoordinator: ObservableObject {
     private var scrobbleState: ScrobbleState?
     private var audioPlayerCancellables = Set<AnyCancellable>() // for monitoring changes to `duration`, `currentTime`, and `isPlaying` properties
     private var lastFMCancellable: AnyCancellable? // for monitoring changes to `manager` and `isScrobblingEnabled` properties
+    private var lastPlaybackTime: Double = 0
+    private var didReturnToStart = false
 
     // for setting the global LastFM session
     func attach(lastFM: LastFMSession) {
@@ -51,6 +53,8 @@ final class PlayerCoordinator: ObservableObject {
 
         self.filePath = filePath
         self.libraryItem = libraryItem
+        lastPlaybackTime = 0
+        didReturnToStart = false
 
         // Load artwork image so we don't reconstruct it on every rerender in the bottom tab view accessory of ContentView
         let nextArtworkURL = libraryItem.thumbnail_url.flatMap { URL(string: $0) }
@@ -103,6 +107,10 @@ final class PlayerCoordinator: ObservableObject {
     private func monitorAudioPlayerChanges(for audioPlayer: AudioPlayerWithReverb, libraryItem: LibraryItem) {
         audioPlayerCancellables.removeAll()
         scrobbleState = ScrobbleState(libraryItem: libraryItem)
+        lastPlaybackTime = 0
+        didReturnToStart = false
+
+        debugPrint("Monitoring audio player changes for library item: \(libraryItem.title)")
 
         // monitor changes to `duration`
         audioPlayer.$duration
@@ -120,6 +128,7 @@ final class PlayerCoordinator: ObservableObject {
     }
 
     private func handleScrobbleProgress(currentTime: Double, isPlaying: Bool) {
+        handleScrobbleResetIfNeeded(currentTime: currentTime, isPlaying: isPlaying)
         guard let scrobbleState, 
               scrobbleState.shouldScrobble(currentTime: currentTime, isPlaying: isPlaying) else {
             return
@@ -131,6 +140,8 @@ final class PlayerCoordinator: ObservableObject {
             return
         }
 
+        debugPrint("Scrobbling library item: \(libraryItem?.title ?? "Unknown")")
+
         scrobbleState.markScrobbled()
         let scrobble = scrobbleState.toCachedScrobble()
 
@@ -138,5 +149,21 @@ final class PlayerCoordinator: ObservableObject {
             await scrobbleQueue.enqueue(scrobble)
             await scrobbleQueue.flushIfNeeded(manager: lastFM.manager)
         }
+    }
+
+    private func handleScrobbleResetIfNeeded(currentTime: Double, isPlaying: Bool) {
+        if currentTime <= 0.05, lastPlaybackTime > 5.0 {
+            didReturnToStart = true
+        }
+
+        if isPlaying, didReturnToStart, let libraryItem {
+            didReturnToStart = false
+            scrobbleState = ScrobbleState(libraryItem: libraryItem)
+            if let scrobbleState {
+                scrobbleState.updateDuration(audioPlayer?.duration ?? 0)
+            }
+        }
+
+        lastPlaybackTime = currentTime
     }
 }
