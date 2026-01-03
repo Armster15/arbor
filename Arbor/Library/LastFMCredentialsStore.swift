@@ -131,7 +131,7 @@ final class LastFMSession: ObservableObject {
     func signOut() throws {
         try store.clear()
         manager?.signOut()
-        isScrobblingEnabled = false
+        isScrobblingEnabled = true
         clearLocalState()
     }
     
@@ -139,6 +139,6 @@ final class LastFMSession: ObservableObject {
         username = ""
         isAuthenticated = false
         manager = nil
-        isScrobblingEnabled = false
+        isScrobblingEnabled = true
     }
 }
