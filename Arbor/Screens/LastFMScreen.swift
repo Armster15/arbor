@@ -26,10 +26,21 @@ struct LastFMScreen: View {
         let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedApiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedApiSecret = apiSecret.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cacheKey = ["lastfm", "user", trimmedUsername.lowercased()]
         
         guard !trimmedUsername.isEmpty,
               !trimmedApiKey.isEmpty,
               !trimmedApiSecret.isEmpty else { return }
+        
+        if let cached: SBKUser = QueryCache.shared.get(for: cacheKey) {
+            scrobbleCount = cached.playcount
+            if let url = cached.image?.largestSize {
+                profileImageURL = url
+            } else {
+                profileImageURL = nil
+            }
+            return
+        }
         
         isLoadingUserInfo = true
         userInfoErrorMessage = nil
@@ -37,13 +48,14 @@ struct LastFMScreen: View {
         
         do {
             let manager = SBKManager(apiKey: trimmedApiKey, secret: trimmedApiSecret)
-            let user = try await manager.getInfo(forUser: "ghloug")
+            let user = try await manager.getInfo(forUser: trimmedUsername)
             scrobbleCount = user.playcount
             if let url = user.image?.largestSize {
                 profileImageURL = url
             } else {
                 profileImageURL = nil
             }
+            QueryCache.shared.set(user, for: cacheKey)
         } catch {
             if error is CancellationError { return }
             if let urlError = error as? URLError, urlError.code == .cancelled { return }

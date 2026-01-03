@@ -418,7 +418,7 @@ struct HomeScreen: View {
 
         // Build cache key and return cached results if available
         let cacheKey = ["search", searchProvider.rawValue, trimmed.lowercased()]
-        if let cached = QueryCache.shared.get(for: cacheKey) {
+        if let cached: [SearchResult] = QueryCache.shared.get(for: cacheKey) {
             searchResults = cached
             isSearching = false
             return
@@ -478,4 +478,3 @@ result = search_soundcloud('\(escaped)')
         }
     }
 }
-
