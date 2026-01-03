@@ -32,7 +32,8 @@ struct SettingsScreen: View {
             } label: {
                 IntegrationRow(
                     title: "last.fm",
-                    subtitle: lastFM.isAuthenticated ? lastFM.username : "Connect to start scrobbling"
+                    subtitle: lastFM.isAuthenticated ? lastFM.username : "Connect to start scrobbling",
+                    showsDisabledBadge: lastFM.isAuthenticated && !lastFM.isScrobblingEnabled
                 )
             }
             .listRowBackground(Color("SecondaryBg"))
@@ -45,6 +46,7 @@ struct SettingsScreen: View {
 private struct IntegrationRow: View {
     let title: String
     let subtitle: String
+    var showsDisabledBadge: Bool = false
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -55,9 +57,21 @@ private struct IntegrationRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(Color("PrimaryText"))
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(Color("PrimaryText"))
+
+                    if showsDisabledBadge {
+                        Text("Disabled")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(Color("PrimaryText"))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Color("Elevated"))
+                            .clipShape(Capsule())
+                    }
+                }
 
                 Text(subtitle)
                     .font(.subheadline)
