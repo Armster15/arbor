@@ -73,7 +73,6 @@ struct LastFMScreen: View {
                     }
                 )
                 .frame(maxWidth: .infinity, alignment: .top)
-                .padding(.top, 4)
             } else {
                 ScrollView {
                     VStack {
@@ -84,7 +83,6 @@ struct LastFMScreen: View {
                 }
             }
         }
-        .navigationTitle("last.fm")
         // runs an async task whenever the id value changes
         .task(id: lastFM.username) {
             await loadUserInfo()

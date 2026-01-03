@@ -27,6 +27,8 @@ struct SettingsScreen: View {
 
                     LastFMScreen()
                 }
+                .navigationTitle("last.fm")
+                .navigationBarTitleDisplayMode(.inline)
             } label: {
                 IntegrationRow(
                     title: "last.fm",
