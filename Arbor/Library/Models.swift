@@ -7,84 +7,138 @@
 
 import SwiftData
 
-@Model
-class LibraryItem {
-    var id: UUID = UUID()
-    var createdAt: Date = Date()
+enum ArborSchemaV1: VersionedSchema {
+    static var versionIdentifier = Schema.Version(1, 0, 0)
+    static var models: [any PersistentModel.Type] { [LibraryItem.self] }
 
-    // annoyingly, icloud sync'd models require all properties
-    // to have default values or be optional.
-    var original_url: String = "N/A"
-    var title: String = "N/A"
-    var artists: [String] = []
-    var thumbnail_url: String?
-    var thumbnail_width: Int?
-    var thumbnail_height: Int?
-    var thumbnail_is_square: Bool?
-    var speedRate: Float = 1.0
-    var pitchCents: Float = 0.0
-    var reverbMix: Float = 0.0
-    
-    init(
-        original_url: String,
-        title: String,
-        artists: [String],
-        thumbnail_url: String?,
-        thumbnail_width: Int?,
-        thumbnail_height: Int?,
-        thumbnail_is_square: Bool?,
-        speedRate: Float = 1.0,
-        pitchCents: Float = 0.0,
-        reverbMix: Float = 0.0
-    ) {
+    @Model
+    final class LibraryItem {
+        var id: UUID = UUID()
+        var createdAt: Date = Date()
 
-        self.original_url = original_url
-        self.title = title
-        self.artists = artists
-        self.thumbnail_url = thumbnail_url
-        self.thumbnail_width = thumbnail_width
-        self.thumbnail_height = thumbnail_height
-        self.thumbnail_is_square = thumbnail_is_square
-        self.speedRate = speedRate
-        self.pitchCents = pitchCents
-        self.reverbMix = reverbMix
-    }
-    
-    convenience init(
-        meta: DownloadMeta,
-        speedRate: Float = 1.0,
-        pitchCents: Float = 0.0,
-        reverbMix: Float = 0.0
-    ) {
-        self.init(
-            original_url: meta.original_url,
-            title: meta.title,
-            artists: meta.artists,
-            thumbnail_url: meta.thumbnail_url,
-            thumbnail_width: meta.thumbnail_width,
-            thumbnail_height: meta.thumbnail_height,
-            thumbnail_is_square: meta.thumbnail_is_square,
-            speedRate: speedRate,
-            pitchCents: pitchCents,
-            reverbMix: reverbMix
-        )
-    }
-    
-    convenience init(copyOf item: LibraryItem) {
-        self.init(
-            original_url: item.original_url,
-            title: item.title,
-            artists: item.artists,
-            thumbnail_url: item.thumbnail_url,
-            thumbnail_width: item.thumbnail_width,
-            thumbnail_height: item.thumbnail_height,
-            thumbnail_is_square: item.thumbnail_is_square,
-            speedRate: item.speedRate,
-            pitchCents: item.pitchCents,
-            reverbMix: item.reverbMix
-        )
+        // annoyingly, icloud sync'd models require all properties
+        // to have default values or be optional.
+        var original_url: String = "N/A"
+        var title: String = "N/A"
+        var artist: String = "N/A"
+        var thumbnail_url: String?
+        var thumbnail_width: Int?
+        var thumbnail_height: Int?
+        var thumbnail_is_square: Bool?
+        var speedRate: Float = 1.0
+        var pitchCents: Float = 0.0
+        var reverbMix: Float = 0.0
+
+        init(
+            original_url: String,
+            title: String,
+            artist: String,
+            thumbnail_url: String?,
+            thumbnail_width: Int?,
+            thumbnail_height: Int?,
+            thumbnail_is_square: Bool?,
+            speedRate: Float = 1.0,
+            pitchCents: Float = 0.0,
+            reverbMix: Float = 0.0
+        ) {
+            self.original_url = original_url
+            self.title = title
+            self.artist = artist
+            self.thumbnail_url = thumbnail_url
+            self.thumbnail_width = thumbnail_width
+            self.thumbnail_height = thumbnail_height
+            self.thumbnail_is_square = thumbnail_is_square
+            self.speedRate = speedRate
+            self.pitchCents = pitchCents
+            self.reverbMix = reverbMix
+        }
     }
 }
+
+enum ArborSchemaV2: VersionedSchema {
+    static var versionIdentifier = Schema.Version(2, 0, 0)
+    static var models: [any PersistentModel.Type] { [LibraryItem.self] }
+
+    @Model
+    final class LibraryItem {
+        var id: UUID = UUID()
+        var createdAt: Date = Date()
+
+        // annoyingly, icloud sync'd models require all properties
+        // to have default values or be optional.
+        var original_url: String = "N/A"
+        var title: String = "N/A"
+        var artists: [String] = []
+        var thumbnail_url: String?
+        var thumbnail_width: Int?
+        var thumbnail_height: Int?
+        var thumbnail_is_square: Bool?
+        var speedRate: Float = 1.0
+        var pitchCents: Float = 0.0
+        var reverbMix: Float = 0.0
+
+        init(
+            original_url: String,
+            title: String,
+            artists: [String],
+            thumbnail_url: String?,
+            thumbnail_width: Int?,
+            thumbnail_height: Int?,
+            thumbnail_is_square: Bool?,
+            speedRate: Float = 1.0,
+            pitchCents: Float = 0.0,
+            reverbMix: Float = 0.0
+        ) {
+            self.original_url = original_url
+            self.title = title
+            self.artists = artists
+            self.thumbnail_url = thumbnail_url
+            self.thumbnail_width = thumbnail_width
+            self.thumbnail_height = thumbnail_height
+            self.thumbnail_is_square = thumbnail_is_square
+            self.speedRate = speedRate
+            self.pitchCents = pitchCents
+            self.reverbMix = reverbMix
+        }
+
+        convenience init(
+            meta: DownloadMeta,
+            speedRate: Float = 1.0,
+            pitchCents: Float = 0.0,
+            reverbMix: Float = 0.0
+        ) {
+            self.init(
+                original_url: meta.original_url,
+                title: meta.title,
+                artists: meta.artists,
+                thumbnail_url: meta.thumbnail_url,
+                thumbnail_width: meta.thumbnail_width,
+                thumbnail_height: meta.thumbnail_height,
+                thumbnail_is_square: meta.thumbnail_is_square,
+                speedRate: speedRate,
+                pitchCents: pitchCents,
+                reverbMix: reverbMix
+            )
+        }
+
+        convenience init(copyOf item: LibraryItem) {
+            self.init(
+                original_url: item.original_url,
+                title: item.title,
+                artists: item.artists,
+                thumbnail_url: item.thumbnail_url,
+                thumbnail_width: item.thumbnail_width,
+                thumbnail_height: item.thumbnail_height,
+                thumbnail_is_square: item.thumbnail_is_square,
+                speedRate: item.speedRate,
+                pitchCents: item.pitchCents,
+                reverbMix: item.reverbMix
+            )
+        }
+    }
+}
+
+typealias LibraryItem = ArborSchemaV2.LibraryItem
 
 struct DownloadMeta: Decodable {
     let path: String

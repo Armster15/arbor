@@ -13,10 +13,16 @@ import CloudKitSyncMonitor
 struct ArborApp: App {
     @StateObject private var player = PlayerCoordinator()
     @StateObject private var lastFM = LastFMSession()
+    private let modelContainer: ModelContainer
     
     init() {
         _ = start_python_runtime(CommandLine.argc, CommandLine.unsafeArgv)
         SyncMonitor.default.startMonitoring()
+        do {
+            modelContainer = try ModelContainer(for: LibraryItem.self, migrationPlan: ArborMigrationPlan.self)
+        } catch {
+            fatalError("Failed to create SwiftData container: \(error)")
+        }
     }
     var body: some Scene {
         WindowGroup {
@@ -24,6 +30,6 @@ struct ArborApp: App {
                 .environmentObject(player)
                 .environmentObject(lastFM)
         }
-        .modelContainer(for: [LibraryItem.self])
+        .modelContainer(modelContainer)
     }
 }
