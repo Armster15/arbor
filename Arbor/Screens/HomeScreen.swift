@@ -268,7 +268,7 @@ struct DownloadScreen: View {
     private func downloadAudio(with url: String) {
         isLoading = true
         
-        AudioDownloader.download(from: url) { result in
+        AudioDownloader.download(from: url, searchResult: selectedResult) { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 

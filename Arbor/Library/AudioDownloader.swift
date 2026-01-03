@@ -16,12 +16,33 @@ enum DownloadError: Error {
 struct AudioDownloader {
     static func download(
         from url: String,
+        searchResult: SearchResult? = nil,
         completion: @escaping (Result<DownloadMeta, Error>) -> Void
     ) {
         let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             completion(.failure(DownloadError.invalidSelection))
             return
+        }
+
+        if let existingPath = getLocalAudioFilePath(originalUrl: trimmed) {
+            if let result = searchResult {
+                let meta = DownloadMeta(
+                    path: existingPath,
+                    original_url: trimmed,
+                    title: result.title,
+                    artists: result.artists,
+                    thumbnail_url: result.thumbnailURL,
+                    thumbnail_width: result.thumbnailWidth,
+                    thumbnail_height: result.thumbnailHeight,
+                    thumbnail_is_square: result.thumbnailIsSquare
+                )
+                
+                completion(.success(meta))
+                return
+            }
+            
+            deleteLocalAudioFile(originalUrl: trimmed)
         }
 
         // Escape backslashes and single quotes for safe embedding in Python string literal
@@ -53,5 +74,4 @@ result = download('\(escaped)')
         }
     }
 }
-
 
