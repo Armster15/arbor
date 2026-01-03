@@ -6,7 +6,7 @@ import SPIndicator
 
 struct SongInfo: View {
     let title: String
-    let artist: String
+    let artists: [String]
     let thumbnailURL: String?
     let thumbnailIsSquare: Bool?
     let thumbnailForceSquare: Bool
@@ -14,14 +14,14 @@ struct SongInfo: View {
 
     init(
         title: String,
-        artist: String,
+        artists: [String],
         thumbnailURL: String?,
         thumbnailIsSquare: Bool?,
         thumbnailForceSquare: Bool = true,
         thumbnailHasContextMenu: Bool = false
     ) {
         self.title = title
-        self.artist = artist
+        self.artists = artists
         self.thumbnailURL = thumbnailURL
         self.thumbnailIsSquare = thumbnailIsSquare
         self.thumbnailForceSquare = thumbnailForceSquare
@@ -53,7 +53,7 @@ struct SongInfo: View {
                     .font(.headline)
                     .multilineTextAlignment(.center)
                 
-                Text(artist)
+                Text(formatArtists(artists))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

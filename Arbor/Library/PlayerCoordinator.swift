@@ -65,7 +65,7 @@ final class PlayerCoordinator: ObservableObject {
         newAudioPlayer.startSavedAudio(filePath: filePath)
         
         newAudioPlayer.updateMetadataTitle(libraryItem.title)
-        newAudioPlayer.updateMetadataArtist(libraryItem.artist)
+        newAudioPlayer.updateMetadataArtist(formatArtists(libraryItem.artists))
         if let artworkURL = artworkURL {
             newAudioPlayer.updateMetadataArtwork(url: artworkURL)
         }

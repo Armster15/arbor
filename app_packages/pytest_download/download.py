@@ -61,13 +61,22 @@ def download(url: str):
             raise Exception("Failed to retrieve video information (manually thrown)")
 
         title = info.get("title") or Path(full_path).stem
-        # Prefer artist, then uploader/channel, then None
-        artist = (
-            info.get("artist")
-            or info.get("uploader")
-            or info.get("channel")
-            or "Unknown Artist"
-        )
+
+        artists: list[str] = []
+
+        # the walrus operator lets us assigns values to variables as part of a larger expression
+        # https://docs.python.org/3/whatsnew/3.8.html#assignment-expressions
+        if (_artists := info.get("artists")) and isinstance(_artists, list):
+            artists.extend(_artists)
+        elif _artist := info.get("artist"):
+            artists.append(_artist)
+        if _uploader := info.get("uploader"):
+            artists.append(_uploader)
+        if _channel := info.get("channel"):
+            artists.append(_channel)
+        if not artists:
+            artists = ["Unknown Artist"]
+
         # Choose thumbnail: prefer square art (common for music); else highest resolution
         thumbnails = info.get("thumbnails") or []
         thumbnail_info = None
@@ -121,7 +130,7 @@ def download(url: str):
             "path": full_path,
             "original_url": url,
             "title": title,
-            "artist": artist,
+            "artists": artists,
             "thumbnail_url": thumbnail_url,
             "thumbnail_width": thumb_w,
             "thumbnail_height": thumb_h,

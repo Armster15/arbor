@@ -40,7 +40,7 @@ struct __PlayerScreen: View {
     
     @State private var isEditSheetPresented: Bool = false
     @State private var draftTitle: String = ""
-    @State private var draftArtist: String = ""
+    @State private var draftArtists: [String] = []
     @State private var isScrubbing: Bool = false
     
     @Environment(\.modelContext) var modelContext
@@ -86,7 +86,7 @@ struct __PlayerScreen: View {
             originalUrl: originalUrl,
             sourcePath: filePath,
             title: item.title,
-            artist: item.artist,
+            artists: item.artists,
             onMissingPhysicalFile: {
                 debugPrint("Deleting outdated library item: \(item.title)")
                 modelContext.delete(item)
@@ -106,7 +106,7 @@ struct __PlayerScreen: View {
                 VStack(spacing: 20) {
                     SongInfo(
                         title: libraryItem.title,
-                        artist: libraryItem.artist,
+                        artists: libraryItem.artists,
                         thumbnailURL: libraryItem.thumbnail_url,
                         thumbnailIsSquare: libraryItem.thumbnail_is_square,
                         thumbnailForceSquare: false,
@@ -387,7 +387,7 @@ struct __PlayerScreen: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     draftTitle = libraryItem.title
-                    draftArtist = libraryItem.artist
+                    draftArtists = libraryItem.artists
                     isEditSheetPresented = true
                 } label: {
                     Label("Edit Metadata", systemImage: "pencil")
@@ -418,16 +418,45 @@ struct __PlayerScreen: View {
                         disableAutocorrection: true
                     )
                     
-                    LabeledTextField(
-                        label: "Artist",
-                        placeholder: "Artist",
-                        text: $draftArtist,
-                        isSecure: false,
-                        textContentType: nil,
-                        keyboardType: .default,
-                        autocapitalization: .words,
-                        disableAutocorrection: true
-                    )
+                    VStack(spacing: 12) {
+                        ForEach(draftArtists.indices, id: \.self) { index in
+                            HStack(spacing: 12) {
+                                LabeledTextField(
+                                    label: "Artist \(index + 1)",
+                                    placeholder: "Artist name",
+                                    text: Binding(
+                                        get: { draftArtists[index] },
+                                        set: { draftArtists[index] = $0 }
+                                    ),
+                                    isSecure: false,
+                                    textContentType: nil,
+                                    keyboardType: .default,
+                                    autocapitalization: .words,
+                                    disableAutocorrection: true
+                                )
+
+                                Button {
+                                    draftArtists.remove(at: index)
+                                    if draftArtists.isEmpty {
+                                        draftArtists = [""]
+                                    }
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.secondary)
+                                }
+                                .accessibilityLabel("Remove artist")
+                            }
+                        }
+
+                        Button {
+                            draftArtists.append("")
+                        } label: {
+                            Label("Add Artist", systemImage: "plus.circle.fill")
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.blue)
+                    }
                 }
 
 				Spacer()
@@ -437,13 +466,17 @@ struct __PlayerScreen: View {
                     isLoading: false,
                     isDisabled: false,
                     action: {
+                        let trimmedArtists = draftArtists
+                            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                            .filter { !$0.isEmpty }
+
                         // Commit edits to meta on Save
                         libraryItem.title = draftTitle
-                        libraryItem.artist = draftArtist
+                        libraryItem.artists = trimmedArtists
 
                         // Update now playing metadata
                         audioPlayer.updateMetadataTitle(decoratedTitle())
-                        audioPlayer.updateMetadataArtist(libraryItem.artist)
+                        audioPlayer.updateMetadataArtist(formatArtists(libraryItem.artists))
                         isEditSheetPresented = false
                     }
                 )
@@ -463,10 +496,10 @@ struct __PlayerScreen: View {
 				.ignoresSafeArea()
 			
 			__PlayerScreen(
-				libraryItem: LibraryItem(
+                libraryItem: LibraryItem(
                     original_url: "https://www.youtube.com/watch?v=Sxu8wHE97Rk",
                     title: "Ude Dil Befikre (From \"Befikre\")",
-                    artist: "Vishal and Sheykhar, Benny Dayal",
+                    artists: ["Vishal and Sheykhar", "Benny Dayal"],
                     thumbnail_url: "https://lh3.googleusercontent.com/viaCZKRr1hCygO8JQS6lLmhBqUVFXctO_9sOE7hwI-rS_JlYcCdqel9sAaGdQoFEFUR2R6ldsrr_c2L5=w544-h544-l90-rj",
                     thumbnail_width: 544,
                     thumbnail_height: 544,
