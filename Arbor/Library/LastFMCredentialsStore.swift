@@ -65,19 +65,31 @@ public struct LastFMCredentialsStore {
     }
 }
 
+let SROBBLING_ENABLED_KEY = "lastFmScrobblingEnabled"
+
 @MainActor
 final class LastFMSession: ObservableObject {
     @Published public private(set) var username: String = ""
     @Published public private(set) var isAuthenticated: Bool = false
     @Published public private(set) var manager: SBKManager? = nil
+    @Published public var isScrobblingEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isScrobblingEnabled, forKey: SROBBLING_ENABLED_KEY)
+        }
+    }
     
     private let store = LastFMCredentialsStore()
     
     init() {
+        if UserDefaults.standard.object(forKey: SROBBLING_ENABLED_KEY) == nil {
+            UserDefaults.standard.set(true, forKey: SROBBLING_ENABLED_KEY)
+        }
+        isScrobblingEnabled = UserDefaults.standard.bool(forKey: SROBBLING_ENABLED_KEY)
+        
         restoreFromKeychain()
     }
     
-    func restoreFromKeychain() {
+    public func restoreFromKeychain() {
         guard let username = store.username?.trimmingCharacters(in: .whitespacesAndNewlines),
               !username.isEmpty,
               let apiKey = store.apiKey,
@@ -119,6 +131,7 @@ final class LastFMSession: ObservableObject {
     func signOut() throws {
         try store.clear()
         manager?.signOut()
+        isScrobblingEnabled = false
         clearLocalState()
     }
     
@@ -126,5 +139,6 @@ final class LastFMSession: ObservableObject {
         username = ""
         isAuthenticated = false
         manager = nil
+        isScrobblingEnabled = false
     }
 }

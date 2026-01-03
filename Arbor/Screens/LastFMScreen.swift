@@ -104,6 +104,8 @@ struct LastFMScreen: View {
 }
 
 private struct LoggedInLastFMView: View {
+    @EnvironmentObject private var lastFM: LastFMSession
+    
     let username: String
     let profileImageURL: URL?
     let scrobbleCount: Int?
@@ -173,6 +175,9 @@ private struct LoggedInLastFMView: View {
                     .foregroundColor(.red)
                     .padding(.horizontal)
             }
+
+            Toggle("Enable scrobbling", isOn: $lastFM.isScrobblingEnabled)
+                .padding(.horizontal)
             
             Button(role: .destructive) {
                 onLogoutTapped()
