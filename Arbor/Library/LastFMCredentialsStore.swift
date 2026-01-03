@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import KeychainSwift
+import ScrobbleKit
 
 public struct LastFMCredentialsStore {
     private let keychain = KeychainSwift()
@@ -61,5 +62,74 @@ public struct LastFMCredentialsStore {
         guard keychain.delete(Key.sessionKey) else {
             throw StoreError.keychainDeleteFailed(key: Key.sessionKey)
         }
+    }
+}
+
+@MainActor
+final class LastFMSession: ObservableObject {
+    @Published public private(set) var username: String = ""
+    @Published public private(set) var isAuthenticated: Bool = false
+    @Published public private(set) var manager: SBKManager? = nil
+    @Published public private(set) var session: SBKSessionResponseInfo? = nil
+    
+    private let store = LastFMCredentialsStore()
+    
+    init() {
+        restoreFromKeychain()
+    }
+    
+    func restoreFromKeychain() {
+        guard let username = store.username,
+              let apiKey = store.apiKey,
+              let apiSecret = store.apiSecret else {
+            clearLocalState()
+            return
+        }
+        
+        guard !username.isEmpty else {
+            clearLocalState()
+            return
+        }
+        
+        let manager = SBKManager(apiKey: apiKey, secret: apiSecret)
+        isAuthenticated = false
+        self.username = username
+        self.manager = manager
+        self.session = nil
+    }
+    
+    func signIn(username: String, password: String, apiKey: String, apiSecret: String) async throws {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedApiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedApiSecret = apiSecret.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        let manager = SBKManager(apiKey: trimmedApiKey, secret: trimmedApiSecret)
+        let session = try await manager.startSession(username: trimmedUsername, password: trimmedPassword)
+        
+        try store.save(
+            username: session.name,
+            apiKey: trimmedApiKey,
+            apiSecret: trimmedApiSecret,
+            sessionKey: session.key
+        )
+        
+        self.username = session.name
+        self.manager = manager
+        self.session = session
+        self.isAuthenticated = true
+    }
+    
+    func signOut() throws {
+        try store.clear()
+        manager?.signOut()
+        clearLocalState()
+    }
+    
+    private func clearLocalState() {
+        username = ""
+        isAuthenticated = false
+        manager = nil
+        session = nil
     }
 }

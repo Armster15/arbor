@@ -3,34 +3,21 @@ import ScrobbleKit
 import SPIndicator
 
 struct LastFMScreen: View {
-    private let store = LastFMCredentialsStore()
+    @EnvironmentObject private var lastFM: LastFMSession
     
-    @State private var loggedInUsername: String = ""
     @State private var profileImageURL: URL? = nil
     @State private var scrobbleCount: Int? = nil
     @State private var isLoadingUserInfo: Bool = false
     @State private var userInfoErrorMessage: String? = nil
     @State private var showLogoutConfirmation: Bool = false
     
-    private func loadFromKeychain() {
-        loggedInUsername = store.username ?? ""
-        
-        if loggedInUsername.isEmpty {
-            profileImageURL = nil
-            scrobbleCount = nil
-        }
-    }
-    
     @MainActor
-    private func loadUserInfo(username: String, apiKey: String, apiSecret: String) async {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedApiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedApiSecret = apiSecret.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cacheKey = ["lastfm", "user", trimmedUsername.lowercased()]
+    private func loadUserInfo() async {
+        let cacheKey = ["lastfm", "user", lastFM.username]
         
-        guard !trimmedUsername.isEmpty,
-              !trimmedApiKey.isEmpty,
-              !trimmedApiSecret.isEmpty else { return }
+        guard lastFM.isAuthenticated,
+              !lastFM.username.isEmpty,
+              let manager = lastFM.manager else { return }
         
         if let cached: SBKUser = QueryCache.shared.get(for: cacheKey) {
             scrobbleCount = cached.playcount
@@ -47,8 +34,7 @@ struct LastFMScreen: View {
         defer { isLoadingUserInfo = false }
         
         do {
-            let manager = SBKManager(apiKey: trimmedApiKey, secret: trimmedApiSecret)
-            let user = try await manager.getInfo(forUser: trimmedUsername)
+            let user = try await manager.getInfo(forUser: lastFM.username)
             scrobbleCount = user.playcount
             if let url = user.image?.largestSize {
                 profileImageURL = url
@@ -65,8 +51,7 @@ struct LastFMScreen: View {
     
     private func logOut() {
         do {
-            try store.clear()
-            loggedInUsername = ""
+            try lastFM.signOut()
             profileImageURL = nil
             scrobbleCount = nil
         } catch {
@@ -77,9 +62,9 @@ struct LastFMScreen: View {
     var body: some View {
         ScrollView {
             VStack {
-                if !loggedInUsername.isEmpty {
+                if lastFM.isAuthenticated {
                     LoggedInLastFMView(
-                        username: loggedInUsername,
+                        username: lastFM.username,
                         profileImageURL: profileImageURL,
                         scrobbleCount: scrobbleCount,
                         isLoadingUserInfo: isLoadingUserInfo,
@@ -89,24 +74,23 @@ struct LastFMScreen: View {
                         }
                     )
                 } else {
-                    LoggedOutLastFMView(store: store) { username in
-                        loggedInUsername = username
-                    }
+                    LoggedOutLastFMView()
                 }
             }
             .frame(maxWidth: .infinity, alignment: .top)
             .padding(.top, 4)
         }
         .navigationTitle("last.fm")
-        .onAppear {
-            loadFromKeychain()
-        }
         // runs an async task whenever the id value changes
-        .task(id: loggedInUsername) {
-            guard !loggedInUsername.isEmpty,
-                  let apiKey = store.apiKey,
-                  let apiSecret = store.apiSecret else { return }
-            await loadUserInfo(username: loggedInUsername, apiKey: apiKey, apiSecret: apiSecret)
+        .task(id: lastFM.username) {
+            await loadUserInfo()
+        }
+        .onChange(of: lastFM.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated {
+                profileImageURL = nil
+                scrobbleCount = nil
+                userInfoErrorMessage = nil
+            }
         }
         .alert("Log Out?", isPresented: $showLogoutConfirmation) {
             Button("Log Out", role: .destructive) {
@@ -206,8 +190,7 @@ private struct LoggedInLastFMView: View {
 }
 
 private struct LoggedOutLastFMView: View {
-    let store: LastFMCredentialsStore
-    let onLoggedIn: (String) -> Void
+    @EnvironmentObject private var lastFM: LastFMSession
     
     // form input values
     @State private var username: String = ""
@@ -219,17 +202,12 @@ private struct LoggedOutLastFMView: View {
     @State private var errorMessage: String? = nil
     
     @MainActor
-    private func submit() async {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedApiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedApiSecret = apiSecret.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        guard !trimmedUsername.isEmpty,
-              !trimmedPassword.isEmpty,
-              !trimmedApiKey.isEmpty,
-              !trimmedApiSecret.isEmpty else {
-            showAlert(title: "Missing info", message: "Please fill in all four fields.")
+    private func submit() async {        
+        guard !username.isEmpty,
+              !password.isEmpty,
+              !apiKey.isEmpty,
+              !apiSecret.isEmpty else {
+            showAlert(title: "Missing info", message: "Please fill in all fields")
             return
         }
         
@@ -241,24 +219,18 @@ private struct LoggedOutLastFMView: View {
         defer { isSubmitting = false }
         
         do {
-            let manager = SBKManager(apiKey: trimmedApiKey, secret: trimmedApiSecret)
-            let session = try await manager.startSession(username: trimmedUsername, password: trimmedPassword)
-            
-            try store.save(
-                username: session.name,
-                apiKey: trimmedApiKey,
-                apiSecret: trimmedApiSecret,
-                sessionKey: session.key
+            try await lastFM.signIn(
+                username: username,
+                password: password,
+                apiKey: apiKey,
+                apiSecret: apiSecret
             )
-
             SPIndicatorView(title: "Signed in to Last.fm", preset: .done).present()
             
             username = ""
             password = ""
             apiKey = ""
             apiSecret = ""
-            
-            onLoggedIn(session.name)
         } catch {
             errorMessage = error.localizedDescription
         }

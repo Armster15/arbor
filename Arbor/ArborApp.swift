@@ -12,6 +12,7 @@ import CloudKitSyncMonitor
 @main
 struct ArborApp: App {
     @StateObject private var player = PlayerCoordinator()
+    @StateObject private var lastFM = LastFMSession()
     
     init() {
         _ = start_python_runtime(CommandLine.argc, CommandLine.unsafeArgv)
@@ -21,6 +22,7 @@ struct ArborApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(player)
+                .environmentObject(lastFM)
         }
         .modelContainer(for: [LibraryItem.self])
     }
