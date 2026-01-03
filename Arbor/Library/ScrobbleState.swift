@@ -13,9 +13,13 @@ final class ScrobbleState {
     private var lastObservedTime: Double?
     private var scrobbled = false
 
-    init(libraryItem: LibraryItem) {
+    init?(libraryItem: LibraryItem) {
+        // Since scrobbleState in PlayerCoordinator is already optional, songs without 
+        // any artists will simply have scrobbleState = nil and won't be scrobbled.
+        guard let firstArtist = libraryItem.artists.first else { return nil }
+        
         self.title = libraryItem.title
-        self.artist = formatArtists(libraryItem.artists)
+        self.artist = firstArtist
         self.album = nil
         self.startedAt = Date()
     }
