@@ -14,15 +14,13 @@ enum DownloadError: Error {
 }
 
 struct AudioDownloader {
-    static func download(
+    static func localAudioMeta(
         from url: String,
-        searchResult: SearchResult? = nil,
-        completion: @escaping (Result<DownloadMeta, Error>) -> Void
-    ) {
+        searchResult: SearchResult? = nil
+    ) -> Result<DownloadMeta, Error>? {
         let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            completion(.failure(DownloadError.invalidSelection))
-            return
+            return .failure(DownloadError.invalidSelection)
         }
 
         if let existingPath = getLocalAudioFilePath(originalUrl: trimmed) {
@@ -38,11 +36,23 @@ struct AudioDownloader {
                     thumbnail_is_square: result.thumbnailIsSquare
                 )
                 
-                completion(.success(meta))
-                return
+                return .success(meta)
             }
             
             deleteLocalAudioFile(originalUrl: trimmed)
+        }
+
+        return nil
+    }
+
+    static func downloadFromPython(
+        from url: String,
+        completion: @escaping (Result<DownloadMeta, Error>) -> Void
+    ) {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            completion(.failure(DownloadError.invalidSelection))
+            return
         }
 
         // Escape backslashes and single quotes for safe embedding in Python string literal
@@ -73,5 +83,17 @@ result = download('\(escaped)')
             completion(.success(meta))
         }
     }
-}
 
+    static func download(
+        from url: String,
+        searchResult: SearchResult? = nil,
+        completion: @escaping (Result<DownloadMeta, Error>) -> Void
+    ) {
+        if let localResult = localAudioMeta(from: url, searchResult: searchResult) {
+            completion(localResult)
+            return
+        }
+
+        downloadFromPython(from: url, completion: completion)
+    }
+}
