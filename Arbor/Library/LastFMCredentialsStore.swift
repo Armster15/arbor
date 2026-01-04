@@ -4,7 +4,12 @@ import KeychainSwift
 import ScrobbleKit
 
 public struct LastFMCredentialsStore {
-    private let keychain = KeychainSwift()
+    private let keychain: KeychainSwift
+
+    init() {
+        keychain = KeychainSwift()
+        keychain.synchronizable = true // enable iCloud sync
+    }
 
     enum Key {
         static let username = "lastfm.username"
