@@ -4,11 +4,10 @@ import re
 from typing import Optional, Tuple
 from soundcloud import SoundCloud
 
-ytmusic = YTMusic()
-soundcloud = SoundCloud()
-
 
 def search_youtube(query: str):
+    ytmusic = YTMusic()
+
     print(f"Searching YouTube for {query}")
     raw_results = ytmusic.search(query, filter="songs", limit=15)
     print(f"Found {len(raw_results)} results from YouTube")
@@ -66,6 +65,8 @@ def search_youtube(query: str):
 
 
 def search_soundcloud(query: str):
+    soundcloud = SoundCloud()
+
     print(f"Searching SoundCloud for {query}")
     raw_results = soundcloud.search_tracks(query, limit=15)
 
