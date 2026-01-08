@@ -60,6 +60,8 @@ int start_python_runtime(int argc, char *argv[]) {
     NSString *python_home;
     NSString *app_module_name;
     NSString *path;
+    NSString *app_support_root;
+    NSString *app_support_path;
     NSString *traceback_str;
     wchar_t *wtmp_str;
     const char* app_module_str;
@@ -242,6 +244,15 @@ int start_python_runtime(int argc, char *argv[]) {
             add_site_dir([NSString stringWithFormat:@"%@/app_packages", resourcePath, nil],
                          @"app_packages",
                          module_attr);
+
+            // Add updated_python_modules from Application Support before python_modules to take priority.
+            app_support_root = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,
+                                                                    NSUserDomainMask,
+                                                                    YES) firstObject];
+            app_support_path = [NSString stringWithFormat:@"%@/updated_python_modules",
+                                app_support_root,
+                                nil];
+            add_site_dir(app_support_path, @"updated_python_modules", module_attr);
 
             // Adding python_modules to sys.path and executing any .pth files in that directory.
             add_site_dir([NSString stringWithFormat:@"%@/python_modules", resourcePath, nil],
