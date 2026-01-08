@@ -22,7 +22,7 @@ rm Python-3.14-iOS-support.b8.tar.gz
 2. Install Python dependencies using your global installation of pip
 
 ```
-pip3 install --target=./python_modules -r requirements.txt
+pip3 install --platform=any --only-binary=:all: --target=./python_modules -r requirements.txt
 ```
 
 3. Open the project in Xcode (`xed Arbor.xcodeproj`) and run
