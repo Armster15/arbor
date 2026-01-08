@@ -12,6 +12,7 @@
 		0855E3982EF5527E005F03BF /* SPIndicator in Frameworks */ = {isa = PBXBuildFile; productRef = 0855E3972EF5527E005F03BF /* SPIndicator */; };
 		086010362EF7B38800B1C8F2 /* KeychainSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 086010352EF7B38800B1C8F2 /* KeychainSwift */; };
 		0860103D2EF7BD4700B1C8F2 /* ScrobbleKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0860103C2EF7BD4700B1C8F2 /* ScrobbleKit */; };
+		087DB67B2F106DEB0092F72C /* requirements.txt in Resources */ = {isa = PBXBuildFile; fileRef = 087DB67A2F106DEB0092F72C /* requirements.txt */; };
 		0893EA0C2EA61E4B00E00181 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0893EA0B2EA61E4B00E00181 /* SDWebImageSwiftUI */; };
 		08C4FFF92EA1461C00F9F26C /* Python.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08C4FFF72EA1455D00F9F26C /* Python.xcframework */; };
 		08C4FFFA2EA1461C00F9F26C /* Python.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 08C4FFF72EA1455D00F9F26C /* Python.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -35,6 +36,7 @@
 
 /* Begin PBXFileReference section */
 		0842E6F22EA5B89B00AAAB49 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		087DB67A2F106DEB0092F72C /* requirements.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = requirements.txt; sourceTree = "<group>"; };
 		08C4FFE62EA1436F00F9F26C /* Arbor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Arbor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		08C4FFF72EA1455D00F9F26C /* Python.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Python.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -86,6 +88,7 @@
 				08C4FFE82EA1436F00F9F26C /* Arbor */,
 				08C4FFE72EA1436F00F9F26C /* Products */,
 				0842E6F22EA5B89B00AAAB49 /* AppIcon.icon */,
+				087DB67A2F106DEB0092F72C /* requirements.txt */,
 			);
 			sourceTree = "<group>";
 		};
@@ -180,6 +183,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				087DB67B2F106DEB0092F72C /* requirements.txt in Resources */,
 				0842E6F32EA5B89B00AAAB49 /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
