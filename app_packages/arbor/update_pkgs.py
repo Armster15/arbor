@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 
 
+# We have to do this because pip uses sys.exit(code) and we don't want to exit the program.
 def pip_main_no_exit(argv):
     try:
         from pip._internal.cli.main import main
