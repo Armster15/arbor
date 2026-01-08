@@ -3,6 +3,8 @@
 #
 # NOTE: this isn't recommended per https://github.com/pypa/pip/issues/7498.
 # But lol!
+#
+# Usage: pip_exec(["install", "requests"])
 def pip_exec(argv: list[str]) -> int:
     try:
         from pip._internal.cli.main import main
