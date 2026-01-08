@@ -4,6 +4,6 @@
 pip>=25.0.0,<26.0.0
 soundcloud-v2>=1.0.0,<2.0.0
 std-nslog>=1.0.0,<2.0.0
-yt-dlp[default]
+yt-dlp
 ytmusicapi>=1.0.0,<2.0.0
 yt-dlp-apple-webkit-jsi
