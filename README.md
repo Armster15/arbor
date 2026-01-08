@@ -36,7 +36,3 @@ Q. **Will Arbor be published to the App Store?**
 Q. **Where did the name come from?**
 
 - I started working on this while I was visiting the city of [Ann Arbor](https://www.google.com/search?q=ann+arbor+michigan).
-
-```
-
-```
