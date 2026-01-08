@@ -16,10 +16,9 @@
 
 void crash_dialog(NSString *);
 NSString * format_traceback(PyObject *type, PyObject *value, PyObject *traceback);
-static void add_site_dir(NSString *resourcePath, NSString *dir_name, PyObject *addsitedir);
+static void add_site_dir(NSString *path, NSString *dir_name, PyObject *addsitedir);
 
-static void add_site_dir(NSString *resourcePath, NSString *dir_name, PyObject *addsitedir) {
-    NSString *path = [NSString stringWithFormat:@"%@/%@", resourcePath, dir_name, nil];
+static void add_site_dir(NSString *path, NSString *dir_name, PyObject *addsitedir) {
     wchar_t *path_str = Py_DecodeLocale([path UTF8String], NULL);
     PyObject *unicode_path;
     PyObject *method_args;
@@ -240,10 +239,14 @@ int start_python_runtime(int argc, char *argv[]) {
             }
 
             // Adding app_packages to sys.path and executing any .pth files in that directory.
-            add_site_dir(resourcePath, @"app_packages", module_attr);
+            add_site_dir([NSString stringWithFormat:@"%@/app_packages", resourcePath, nil],
+                         @"app_packages",
+                         module_attr);
 
             // Adding python_modules to sys.path and executing any .pth files in that directory.
-            add_site_dir(resourcePath, @"python_modules", module_attr);
+            add_site_dir([NSString stringWithFormat:@"%@/python_modules", resourcePath, nil],
+                         @"python_modules",
+                         module_attr);
 
 
             // Start the app module.
