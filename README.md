@@ -21,7 +21,7 @@ rm Python-3.14-iOS-support.b8.tar.gz
 
 2. Install Python dependencies using your global installation of pip
 
-````
+```
 pip3 install --platform=any --only-binary=:all: --target=./python_modules -r requirements.txt
 ```
 
@@ -36,4 +36,7 @@ Q. **Will Arbor be published to the App Store?**
 Q. **Where did the name come from?**
 
 - I started working on this while I was visiting the city of [Ann Arbor](https://www.google.com/search?q=ann+arbor+michigan).
-````
+
+```
+
+```
