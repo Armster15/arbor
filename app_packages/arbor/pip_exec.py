@@ -2,8 +2,9 @@ import tempfile
 from pathlib import Path
 
 
+# A simple wrapper that lets us programatically call pip.
 # We have to do this because pip uses sys.exit(code) and we don't want to exit the program.
-def pip_main_no_exit(argv):
+def pip_exec(argv: list[str]) -> int:
     try:
         from pip._internal.cli.main import main
 
@@ -18,22 +19,3 @@ def pip_main_no_exit(argv):
         if isinstance(code, int):
             return code
         return 1  # non-int codes become failure
-
-
-temp_site_modules_dir = Path(tempfile.mkdtemp(prefix="pip-temp-site-modules-"))
-
-
-rc = pip_main_no_exit(
-    [
-        "install",
-        "--target",
-        str(temp_site_modules_dir),
-        "--only-binary",
-        ":all:",
-        "requests",
-    ]
-)
-
-
-print(rc)
-print(temp_site_modules_dir)
