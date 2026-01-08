@@ -51,7 +51,7 @@ struct AudioDownloader {
             .replacingOccurrences(of: "'", with: "\\'")
 
         let code = """
-from pytest_download import download
+from arbor import download
 result = download('\(escaped)')
 """
 

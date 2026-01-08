@@ -438,12 +438,12 @@ struct HomeScreen: View {
         switch searchProvider {
         case .youtube:
             code = """
-from pytest_download import search_youtube
+from arbor import search_youtube
 result = search_youtube('\(escaped)')
 """
         case .soundcloud:
             code = """
-from pytest_download import search_soundcloud
+from arbor import search_soundcloud
 result = search_soundcloud('\(escaped)')
 """
         }
