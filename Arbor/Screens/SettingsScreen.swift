@@ -51,6 +51,22 @@ struct SettingsScreen: View {
                 }
                 .listRowBackground(Color("SecondaryBg"))
             }
+
+#if DEBUG
+            Section("Developer") {
+                NavigationLink("Python REPL") {
+                    ZStack {
+                        BackgroundColor
+                            .ignoresSafeArea()
+
+                        DeveloperPythonReplScreen()
+                    }
+                    .navigationTitle("Python REPL")
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+                .listRowBackground(Color("SecondaryBg"))
+            }
+#endif
         }
         .scrollContentBackground(.hidden)
         .navigationTitle("Settings")
