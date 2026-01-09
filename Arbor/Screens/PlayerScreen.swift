@@ -257,7 +257,8 @@ struct __PlayerScreen: View {
                         HStack {
                             Text("Speed")
                                 .font(.subheadline)
-                                .fontWeight(.medium)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color("PrimaryText"))
                             
                                 Button("Reset") {
                                     audioPlayer.setSpeedRate(1.0)
@@ -315,7 +316,8 @@ struct __PlayerScreen: View {
                         HStack {
                             Text("Pitch")
                                 .font(.subheadline)
-                                .fontWeight(.medium)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color("PrimaryText"))
                             
                                 Button("Reset") {
                                     audioPlayer.setPitchByCents(0.0)
@@ -372,7 +374,8 @@ struct __PlayerScreen: View {
                         HStack {
                             Text("Reverb")
                                 .font(.subheadline)
-                                .fontWeight(.medium)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color("PrimaryText"))
                             
                                 Button("Reset") {
                                     audioPlayer.setReverbMix(0.0)
