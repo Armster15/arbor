@@ -12,6 +12,7 @@ struct LabeledTextField: View {
     var keyboardType: UIKeyboardType = .default
     var autocapitalization: TextInputAutocapitalization = .never
     var disableAutocorrection: Bool = true
+    var horizontalPadding: CGFloat = 16
     
     @Environment(\.colorScheme) var colorScheme
 
@@ -40,7 +41,8 @@ struct LabeledTextField: View {
             .foregroundStyle(Color("PrimaryText"))
             .tint(Color("PrimaryText"))
         }
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, horizontalPadding)
     }
 }
 
@@ -72,4 +74,3 @@ struct PrimaryActionButton: View {
         .padding(.bottom)
     }
 }
-

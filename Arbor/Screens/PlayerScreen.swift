@@ -477,7 +477,7 @@ struct __PlayerScreen: View {
                             
                             VStack(spacing: 12) {
                                 ForEach(draftArtists.indices, id: \.self) { index in
-                                    HStack(alignment: .bottom, spacing: 12) {
+                                    HStack(alignment: .bottom) {
                                         LabeledTextField(
                                             label: "Artist \(index + 1)",
                                             placeholder: "Artist name",
@@ -489,7 +489,8 @@ struct __PlayerScreen: View {
                                             textContentType: nil,
                                             keyboardType: .default,
                                             autocapitalization: .words,
-                                            disableAutocorrection: true
+                                            disableAutocorrection: true,
+                                            horizontalPadding: 0
                                         )
 
                                         Button {
@@ -503,9 +504,10 @@ struct __PlayerScreen: View {
                                                 .foregroundColor(.secondary)
                                         }
                                         .accessibilityLabel("Remove artist")
-                                        .padding(.trailing)
+                                        .padding(.horizontal, 6)
                                         .padding(.bottom, 12)
                                     }
+                                    .padding(.horizontal)
                                 }
 
                                 Button {
