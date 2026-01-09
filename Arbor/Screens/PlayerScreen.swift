@@ -296,6 +296,7 @@ else:
                             .lineSpacing(4)
                             .padding(.vertical, 8)
                         }
+                        .scrollDisabled(true)
                         .frame(maxHeight: 260)
                         .scrollIndicators(.hidden)
                         .onChange(of: activeIndex) { _, newValue in
