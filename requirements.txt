@@ -1,6 +1,7 @@
 # The dependencies should be versioned such that we can use the 
 # latest version of the dependency compatible with the embedded Python version
 
+packaging>=25.0.0,<26.0.0 # should match the version of pip
 pip>=25.0.0,<26.0.0
 soundcloud-v2>=1.0.0,<2.0.0
 std-nslog>=1.0.0,<2.0.0
