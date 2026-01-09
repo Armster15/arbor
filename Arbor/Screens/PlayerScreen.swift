@@ -42,6 +42,7 @@ struct __PlayerScreen: View {
     @State private var draftTitle: String = ""
     @State private var draftArtists: [String] = []
     @State private var isScrubbing: Bool = false
+    @State private var editSheetHeight: CGFloat = 0
     
     // Track last saved settings locally (not persisted to iCloud)
     @State private var savedSpeedRate: Float?
@@ -49,6 +50,14 @@ struct __PlayerScreen: View {
     @State private var savedReverbMix: Float?
     
     @Environment(\.modelContext) var modelContext
+
+    private struct SheetHeightKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = max(value, nextValue())
+        }
+    }
     
     private var isDownloaded: Bool {
         getLocalAudioFilePath(originalUrl: libraryItem.original_url) != nil
@@ -449,33 +458,43 @@ struct __PlayerScreen: View {
                     
                     VStack(spacing: 12) {
                         ForEach(draftArtists.indices, id: \.self) { index in
-                            HStack(spacing: 12) {
-                                LabeledTextField(
-                                    label: "Artist \(index + 1)",
-                                    placeholder: "Artist name",
-                                    text: Binding(
-                                        get: { draftArtists[index] },
-                                        set: { draftArtists[index] = $0 }
-                                    ),
-                                    isSecure: false,
-                                    textContentType: nil,
-                                    keyboardType: .default,
-                                    autocapitalization: .words,
-                                    disableAutocorrection: true
-                                )
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Artist \(index + 1)")
+                                    .fontWeight(.semibold)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(Color("PrimaryText"))
 
-                                Button {
-                                    draftArtists.remove(at: index)
-                                    if draftArtists.isEmpty {
-                                        draftArtists = [""]
+                                HStack(spacing: 12) {
+                                    TextField(
+                                        "Artist name",
+                                        text: Binding(
+                                            get: { draftArtists[index] },
+                                            set: { draftArtists[index] = $0 }
+                                        )
+                                    )
+                                    .textContentType(nil)
+                                    .textInputAutocapitalization(.words)
+                                    .disableAutocorrection(true)
+                                    .keyboardType(.default)
+                                    .padding(12)
+                                    .background(Color("Elevated"))
+                                    .cornerRadius(24)
+                                    .foregroundColor(.black)
+
+                                    Button {
+                                        draftArtists.remove(at: index)
+                                        if draftArtists.isEmpty {
+                                            draftArtists = [""]
+                                        }
+                                    } label: {
+                                        Image(systemName: "minus.circle.fill")
+                                            .font(.title3)
+                                            .foregroundColor(.secondary)
                                     }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .font(.title3)
-                                        .foregroundColor(.secondary)
+                                    .accessibilityLabel("Remove artist")
                                 }
-                                .accessibilityLabel("Remove artist")
                             }
+                            .padding(.horizontal)
                         }
 
                         Button {
@@ -487,8 +506,6 @@ struct __PlayerScreen: View {
                         .tint(Color("PrimaryBg"))
                     }
                 }
-
-				Spacer()
 
                 PrimaryActionButton(
                     title: "Save",
@@ -511,8 +528,18 @@ struct __PlayerScreen: View {
                 )
                 
 			}
-			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .presentationDetents([.medium])
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(key: SheetHeightKey.self, value: proxy.size.height)
+                }
+            )
+            .onPreferenceChange(SheetHeightKey.self) { newValue in
+                if newValue > 0 {
+                    editSheetHeight = newValue
+                }
+            }
+			.frame(maxWidth: .infinity, alignment: .top)
+            .presentationDetents([.height(max(editSheetHeight, 280)), .large])
             .presentationDragIndicator(.visible)
         }
     }
