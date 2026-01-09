@@ -37,6 +37,7 @@ struct ManageDependenciesScreen: View {
     @State private var showDeleteConfirm = false
     @State private var showRestartPrompt = false
     @State private var restartRequired = false
+    @State private var showRawDate = false
     @State private var lastUpdatedDate: Date?
     @State private var hasUpdatedDependencies = false
     @State private var didLoad = false
@@ -109,14 +110,13 @@ struct ManageDependenciesScreen: View {
             refreshUpdateMetadata()
             loadDependencyVersions()
         }
-        .confirmationDialog(
-            "Delete updated dependencies?",
-            isPresented: $showDeleteConfirm,
-            titleVisibility: .visible
-        ) {
+        .alert("Delete updated dependencies?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 deleteUpdatedDependencies()
             }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove any updated packages and require a restart.")
         }
         .alert("Restart Required", isPresented: $showRestartPrompt) {
             Button("Restart Now", role: .destructive) {
@@ -138,9 +138,12 @@ struct ManageDependenciesScreen: View {
 
             Spacer()
 
-            Text(relativeText)
+            Text(showRawDate ? (rawDateText ?? relativeText) : relativeText)
                 .foregroundColor(Color("PrimaryText").opacity(0.8))
-                .tooltip(rawDateText)
+                .onTapGesture {
+                    guard lastUpdatedDate != nil else { return }
+                    showRawDate.toggle()
+                }
         }
     }
 
@@ -302,8 +305,9 @@ result = "ok"
     }
 
     private func rawDateString(from date: Date) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
         return formatter.string(from: date)
     }
 
@@ -338,16 +342,5 @@ private struct DependencyUpdateLogView: View {
                 .padding(.top, 8)
             }
         }
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func tooltip(_ text: String?) -> some View {
-#if os(macOS)
-        help(text ?? "")
-#else
-        self
-#endif
     }
 }
