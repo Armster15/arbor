@@ -29,6 +29,7 @@ struct ContentView: View {
         
         UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: titleColor, .font: normalTitleFont]
         UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: titleColor, .font: largeTitleFont]
+        UITabBar.appearance().tintColor = UIColor(named: "PrimaryBg")
     }
         
     var body: some View {
@@ -52,6 +53,7 @@ struct ContentView: View {
                 }
             }
         }
+        .tint(Color("PrimaryBg"))
         .onAppear {
             player.attach(lastFM: lastFM)
         }
