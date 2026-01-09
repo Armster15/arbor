@@ -501,7 +501,7 @@ struct __PlayerScreen: View {
                                         } label: {
                                             Image(systemName: "minus.circle.fill")
                                                 .font(.title3)
-                                                .foregroundColor(Color("PrimaryText").opacity(0.5))
+                                                .tint(Color("PrimaryBg"))
                                         }
                                         .accessibilityLabel("Remove artist")
                                         .padding(.horizontal, 6)
