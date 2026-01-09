@@ -50,6 +50,7 @@ struct SettingsScreen: View {
                     .navigationBarTitleDisplayMode(.inline)
                 }
                 .listRowBackground(Color("SecondaryBg"))
+                .foregroundColor(Color("PrimaryText"))
 
                 NavigationLink("Manage Cache") {
                     ZStack {
@@ -62,6 +63,7 @@ struct SettingsScreen: View {
                     .navigationBarTitleDisplayMode(.inline)
                 }
                 .listRowBackground(Color("SecondaryBg"))
+                .foregroundColor(Color("PrimaryText"))
             }
 
 #if DEBUG
@@ -77,6 +79,7 @@ struct SettingsScreen: View {
                     .navigationBarTitleDisplayMode(.inline)
                 }
                 .listRowBackground(Color("SecondaryBg"))
+                .foregroundColor(Color("PrimaryText"))
             }
 #endif
         }
