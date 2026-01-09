@@ -58,12 +58,12 @@ struct __PlayerScreen: View {
     
     @Environment(\.modelContext) var modelContext
 
-    private struct LyricsPayload: Decodable {
+    private struct LyricsPayload: Decodable, Equatable {
         let timed: Bool
         let lines: [LyricsLine]
     }
 
-    private struct LyricsLine: Decodable {
+    private struct LyricsLine: Decodable, Equatable {
         let startMs: Int?
         let text: String
 
@@ -73,7 +73,7 @@ struct __PlayerScreen: View {
         }
     }
 
-    private enum LyricsState {
+    private enum LyricsState: Equatable {
         case idle
         case loading
         case loaded(LyricsPayload)
@@ -253,89 +253,67 @@ else:
     }
 
     private var lyricsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Lyrics")
-                    .font(.headline)
-                    .foregroundColor(Color("PrimaryText"))
-
-                Spacer()
-
-                if case .loading = lyricsState {
-                    ProgressView()
-                        .tint(Color("PrimaryBg"))
-                }
-            }
-
-            switch lyricsState {
-            case .idle, .loading:
-                Text("Fetching lyrics...")
-                    .font(.subheadline)
-                    .foregroundColor(Color("SecondaryText"))
-            case .empty:
-                Text("Lyrics unavailable.")
-                    .font(.subheadline)
-                    .foregroundColor(Color("SecondaryText"))
-            case .failed:
+        Group {
+            if case .loaded(let payload) = lyricsState, !payload.lines.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Could not load lyrics.")
-                        .font(.subheadline)
-                        .foregroundColor(Color("SecondaryText"))
+                    HStack {
+                        Text("Lyrics")
+                            .font(.headline)
+                            .foregroundColor(Color("PrimaryText"))
 
-                    Button("Try Again") {
-                        fetchLyricsIfNeeded()
+                        Spacer()
                     }
-                    .buttonStyle(.bordered)
-                    .tint(Color("PrimaryBg"))
-                }
-            case .loaded(let payload):
-                let activeIndex = activeLyricIndex(for: payload)
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ForEach(payload.lines.indices, id: \.self) { index in
-                                let line = payload.lines[index]
-                                let isActive = payload.timed && index == activeIndex
-                                if payload.timed {
-                                    HStack(alignment: .top, spacing: 12) {
-                                        Text(line.text.isEmpty ? " " : line.text)
-                                            .font(.title3)
-                                            .fontWeight(isActive ? .semibold : .regular)
-                                            .foregroundColor(
-                                                isActive ? Color("PrimaryText") : Color("SecondaryText")
-                                            )
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .animation(.easeInOut(duration: 0.25), value: isActive)
-                                    }
-                                    .id(index)
-                                } else {
-                                    Text(line.text.isEmpty ? " " : line.text)
-                                        .font(.body)
-                                        .foregroundColor(Color("PrimaryText"))
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    let activeIndex = activeLyricIndex(for: payload)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 10) {
+                                ForEach(payload.lines.indices, id: \.self) { index in
+                                    let line = payload.lines[index]
+                                    let isActive = payload.timed && index == activeIndex
+                                    if payload.timed {
+                                        HStack(alignment: .top, spacing: 12) {
+                                            Text(line.text.isEmpty ? " " : line.text)
+                                                .font(.title3)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(
+                                                    isActive ? Color("PrimaryText") : Color("SecondaryText")
+                                                )
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .animation(.easeInOut(duration: 0.25), value: isActive)
+                                        }
                                         .id(index)
+                                    } else {
+                                        Text(line.text.isEmpty ? " " : line.text)
+                                            .font(.body)
+                                            .foregroundColor(Color("PrimaryText"))
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .id(index)
+                                    }
                                 }
                             }
+                            .lineSpacing(4)
+                            .padding(.vertical, 8)
                         }
-                        .lineSpacing(4)
-                        .padding(.vertical, 8)
-                    }
-                    .frame(maxHeight: 260)
-                    .scrollIndicators(.hidden)
-                    .onChange(of: activeIndex) { _, newValue in
-                        guard let newValue, newValue != lastActiveLyricIndex else { return }
-                        lastActiveLyricIndex = newValue
-                        withAnimation(.easeInOut(duration: 0.4)) {
-                            proxy.scrollTo(newValue, anchor: .center)
+                        .frame(maxHeight: 260)
+                        .scrollIndicators(.hidden)
+                        .onChange(of: activeIndex) { _, newValue in
+                            guard let newValue, newValue != lastActiveLyricIndex else { return }
+                            lastActiveLyricIndex = newValue
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                proxy.scrollTo(newValue, anchor: .center)
+                            }
                         }
                     }
                 }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color("SecondaryBg"))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color("SecondaryBg"))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .animation(.easeOut(duration: 0.35), value: lyricsState)
     }
     
     private func saveToLibrary() {
