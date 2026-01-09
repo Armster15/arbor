@@ -1,5 +1,5 @@
 //
-//  Home.swift
+//  SearchScreen.swift
 //  pytest
 //
 
@@ -332,7 +332,7 @@ struct DownloadScreen: View {
     }
 }
 
-struct HomeScreen: View {
+struct SearchScreen: View {
     let onDownloaded: (DownloadMeta) -> Void
 
     @State private var searchQuery: String = ""

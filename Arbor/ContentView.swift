@@ -43,7 +43,7 @@ struct ContentView: View {
 
             Tab("Search", systemImage: "magnifyingglass", role: .search) {
                 NavigationStack() {
-                    HomeScreen(
+                    SearchScreen(
                         onDownloaded: { meta in
                             let item = LibraryItem(meta: meta)
                             player.startPlayback(libraryItem: item, filePath: meta.path)
