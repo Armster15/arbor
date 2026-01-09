@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import SwiftUI
 
@@ -34,6 +35,8 @@ struct ManageDependenciesScreen: View {
     @State private var isLoadingVersions = false
     @State private var isDisclosureExpanded = false
     @State private var showDeleteConfirm = false
+    @State private var showRestartPrompt = false
+    @State private var restartRequired = false
     @State private var lastUpdatedDate: Date?
     @State private var hasUpdatedDependencies = false
     @State private var didLoad = false
@@ -89,8 +92,17 @@ struct ManageDependenciesScreen: View {
                 }
             }
             .listRowBackground(Color("SecondaryBg"))
+
         }
         .scrollContentBackground(.hidden)
+        .safeAreaInset(edge: .bottom) {
+            if restartRequired {
+                PrimaryActionButton(title: "Restart Arbor") {
+                    requestAppRestart()
+                }
+                .padding(.top, 8)
+            }
+        }
         .task {
             guard !didLoad else { return }
             didLoad = true
@@ -105,6 +117,14 @@ struct ManageDependenciesScreen: View {
             Button("Delete", role: .destructive) {
                 deleteUpdatedDependencies()
             }
+        }
+        .alert("Restart Required", isPresented: $showRestartPrompt) {
+            Button("Restart Now", role: .destructive) {
+                requestAppRestart()
+            }
+            Button("Later", role: .cancel) {}
+        } message: {
+            Text("Dependency changes require restarting Arbor. You can still view update logs before restarting.")
         }
     }
 
@@ -143,7 +163,11 @@ struct ManageDependenciesScreen: View {
     private var updateResultRow: some View {
         if updateStatus == .success || updateStatus == .failure {
             NavigationLink {
-                DependencyUpdateLogView(logText: updateLog)
+                DependencyUpdateLogView(
+                    logText: updateLog,
+                    showRestartButton: restartRequired,
+                    onRestart: requestAppRestart
+                )
             } label: {
                 Text(updateStatus == .success ? "Update complete" : "Update failed")
             }
@@ -228,6 +252,10 @@ result = json.dumps({"success": success, "log": log})
             updateStatus = decoded.success ? .success : .failure
             refreshUpdateMetadata()
             loadDependencyVersions()
+            if decoded.success {
+                restartRequired = true
+                showRestartPrompt = true
+            }
         }
     }
 
@@ -238,12 +266,12 @@ delete_updated_pkgs()
 result = "ok"
 """
         pythonExecAndGetStringAsync(code, "result") { _ in
-            updateStatus = .idle
-            updateLog = nil
             hasUpdatedDependencies = false
             lastUpdatedDate = nil
             refreshUpdateMetadata()
             loadDependencyVersions()
+            restartRequired = true
+            showRestartPrompt = true
         }
     }
 
@@ -278,10 +306,16 @@ result = "ok"
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
     }
+
+    private func requestAppRestart() {
+        exit(0)
+    }
 }
 
 private struct DependencyUpdateLogView: View {
     let logText: String?
+    let showRestartButton: Bool
+    let onRestart: () -> Void
 
     var body: some View {
         let displayText = logText?.isEmpty == false ? (logText ?? "") : "No update logs yet."
@@ -296,6 +330,14 @@ private struct DependencyUpdateLogView: View {
         .background(BackgroundColor.ignoresSafeArea())
         .navigationTitle("Update Logs")
         .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) {
+            if showRestartButton {
+                PrimaryActionButton(title: "Restart Arbor") {
+                    onRestart()
+                }
+                .padding(.top, 8)
+            }
+        }
     }
 }
 
