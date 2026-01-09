@@ -44,6 +44,7 @@ struct __PlayerScreen: View {
     @State private var draftTitle: String = ""
     @State private var draftArtists: [String] = []
     @State private var isScrubbing: Bool = false
+    @State private var scrubberTime: Double = 0
     @State private var editSheetHeight: CGFloat = 0
     @State private var editSheetContentHeight: CGFloat = 0
     @State private var editSheetButtonHeight: CGFloat = 0
@@ -437,7 +438,7 @@ else:
                     
                     // Scrubber
                     Scrubber(
-                        value: $audioPlayer.currentTime,
+                        value: $scrubberTime,
                         inRange: 0...max(audioPlayer.duration, 0.01),
                         activeFillColor: Color("PrimaryBg"),
                         fillColor: Color("PrimaryBg").opacity(0.8),
@@ -445,11 +446,21 @@ else:
                         height: 30,
                         onEditingChanged: { editing in
                             isScrubbing = editing
+                            if editing {
+                                scrubberTime = audioPlayer.currentTime
+                            }
                             if !editing {
-                                audioPlayer.seek(to: audioPlayer.currentTime)
+                                audioPlayer.seek(to: scrubberTime)
                             }
                         }
                     )
+                    .onChange(of: audioPlayer.currentTime) { _, newValue in
+                        guard !isScrubbing else { return }
+                        scrubberTime = newValue
+                    }
+                    .onAppear {
+                        scrubberTime = audioPlayer.currentTime
+                    }
                 }
                 
                 // Slider sections
