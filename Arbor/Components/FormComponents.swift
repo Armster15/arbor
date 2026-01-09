@@ -12,6 +12,9 @@ struct LabeledTextField: View {
     var keyboardType: UIKeyboardType = .default
     var autocapitalization: TextInputAutocapitalization = .never
     var disableAutocorrection: Bool = true
+    var horizontalPadding: CGFloat = 16
+    
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -32,11 +35,14 @@ struct LabeledTextField: View {
             .disableAutocorrection(disableAutocorrection)
             .keyboardType(keyboardType)
             .padding(12)
-            .background(Color("Elevated"))
+            .background(colorScheme == .light ? Color("Elevated") : Color.clear)
+            .glassEffect()
             .cornerRadius(24)
-            .foregroundColor(.black)
+            .foregroundStyle(Color("PrimaryText"))
+            .tint(Color("PrimaryText"))
         }
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, horizontalPadding)
     }
 }
 
@@ -56,6 +62,7 @@ struct PrimaryActionButton: View {
 
                 Text(title)
                     .fontWeight(.semibold)
+                    .foregroundColor(Color("SecondaryText"))
             }
             .frame(maxWidth: .infinity)
             .padding()
@@ -67,7 +74,3 @@ struct PrimaryActionButton: View {
         .padding(.bottom)
     }
 }
-
-
-
-

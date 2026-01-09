@@ -477,41 +477,35 @@ struct __PlayerScreen: View {
                             
                             VStack(spacing: 12) {
                                 ForEach(draftArtists.indices, id: \.self) { index in
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Artist \(index + 1)")
-                                            .fontWeight(.semibold)
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundStyle(Color("PrimaryText"))
+                                    HStack(alignment: .bottom) {
+                                        LabeledTextField(
+                                            label: "Artist \(index + 1)",
+                                            placeholder: "Artist name",
+                                            text: Binding(
+                                                get: { draftArtists[index] },
+                                                set: { draftArtists[index] = $0 }
+                                            ),
+                                            isSecure: false,
+                                            textContentType: nil,
+                                            keyboardType: .default,
+                                            autocapitalization: .words,
+                                            disableAutocorrection: true,
+                                            horizontalPadding: 0
+                                        )
 
-                                        HStack(spacing: 12) {
-                                            TextField(
-                                                "Artist name",
-                                                text: Binding(
-                                                    get: { draftArtists[index] },
-                                                    set: { draftArtists[index] = $0 }
-                                                )
-                                            )
-                                            .textContentType(nil)
-                                            .textInputAutocapitalization(.words)
-                                            .disableAutocorrection(true)
-                                            .keyboardType(.default)
-                                            .padding(12)
-                                            .background(Color("Elevated"))
-                                            .cornerRadius(24)
-                                            .foregroundColor(.black)
-
-                                            Button {
-                                                draftArtists.remove(at: index)
-                                                if draftArtists.isEmpty {
-                                                    draftArtists = [""]
-                                                }
-                                            } label: {
-                                                Image(systemName: "minus.circle.fill")
-                                                    .font(.title3)
-                                                    .foregroundColor(.secondary)
+                                        Button {
+                                            draftArtists.remove(at: index)
+                                            if draftArtists.isEmpty {
+                                                draftArtists = [""]
                                             }
-                                            .accessibilityLabel("Remove artist")
+                                        } label: {
+                                            Image(systemName: "minus.circle.fill")
+                                                .font(.title3)
+                                                .tint(Color("PrimaryBg"))
                                         }
+                                        .accessibilityLabel("Remove artist")
+                                        .padding(.horizontal, 6)
+                                        .padding(.bottom, 12)
                                     }
                                     .padding(.horizontal)
                                 }
@@ -528,6 +522,7 @@ struct __PlayerScreen: View {
                                 }
                                 .buttonStyle(.bordered)
                                 .tint(Color("PrimaryBg"))
+                                .padding(.top, 12)
                             }
                         }
                         
