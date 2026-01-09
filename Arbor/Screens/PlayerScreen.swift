@@ -305,6 +305,7 @@ else:
                                                 isActive ? Color("PrimaryText") : Color("SecondaryText")
                                             )
                                             .frame(maxWidth: .infinity, alignment: .leading)
+                                            .animation(.easeInOut(duration: 0.25), value: isActive)
                                     }
                                     .id(index)
                                 } else {
@@ -324,7 +325,7 @@ else:
                     .onChange(of: activeIndex) { _, newValue in
                         guard let newValue, newValue != lastActiveLyricIndex else { return }
                         lastActiveLyricIndex = newValue
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(.easeInOut(duration: 0.4)) {
                             proxy.scrollTo(newValue, anchor: .center)
                         }
                     }
