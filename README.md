@@ -6,7 +6,9 @@ I built this originally to easily pitch-shift, adjust speed, and add reverb on t
 
 Arbor's core app is built in Swift, but it uniquely ships an embedded version of the Python runtime. This enables Arbor to use battle-tested libraries like [yt-dlp](https://github.com/yt-dlp/yt-dlp) directly on device.
 
-It also includes built-in iCloud sync, so you can share your library across your Apple devices.
+It also includes:
+- Built-in iCloud sync, so you can share your library across your Apple devices.
+- A built in Python dependency manager with `pip` so you can update dependencies without having to rebuild the app
 
 ## Local Setup
 
