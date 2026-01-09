@@ -59,21 +59,6 @@ struct __PlayerScreen: View {
     
     @Environment(\.modelContext) var modelContext
 
-    private struct LyricsPayload: Decodable, Equatable {
-        let timed: Bool
-        let lines: [LyricsLine]
-    }
-
-    private struct LyricsLine: Decodable, Equatable {
-        let startMs: Int?
-        let text: String
-
-        enum CodingKeys: String, CodingKey {
-            case startMs = "start_ms"
-            case text
-        }
-    }
-
     private enum LyricsState: Equatable {
         case idle
         case loading
@@ -142,12 +127,6 @@ struct __PlayerScreen: View {
         return "\(libraryItem.title) (\(tags.joined(separator: " + ")))"
     }
 
-    private func escapeForPythonString(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "'", with: "\\'")
-    }
-
     private func youtubeVideoId(from urlString: String) -> String? {
         guard let url = URL(string: urlString) else { return nil }
 
@@ -201,55 +180,21 @@ struct __PlayerScreen: View {
             return
         }
 
-        let cacheKey = ["lyrics", videoId]
-        if let cached: LyricsPayload = QueryCache.shared.get(for: cacheKey) {
-            lyricsState = .loaded(cached)
-            return
-        }
-
         let taskId = UUID()
         currentLyricsTaskId = taskId
         lyricsState = .loading
 
-        let escaped = escapeForPythonString(videoId)
-        let code = """
-from arbor import get_lyrics_from_youtube
-import json
-_result = get_lyrics_from_youtube('\(escaped)')
-if _result is None:
-    result = ""
-else:
-    lines = []
-    if len(_result) > 0 and isinstance(_result[0], (list, tuple)):
-        for start_ms, text in _result:
-            lines.append({"start_ms": int(start_ms), "text": text})
-        payload = {"timed": True, "lines": lines}
-    else:
-        for text in _result:
-            lines.append({"start_ms": None, "text": text})
-        payload = {"timed": False, "lines": lines}
-    result = json.dumps(payload)
-"""
-
-        pythonExecAndGetStringAsync(
-            code.trimmingCharacters(in: .whitespacesAndNewlines),
-            "result"
-        ) { result in
+        LyricsCache.shared.fetchLyrics(videoId: videoId) { result in
             guard taskId == currentLyricsTaskId else { return }
 
-            guard let output = result, !output.isEmpty else {
+            switch result {
+            case .loaded(let payload):
+                lyricsState = .loaded(payload)
+            case .empty:
                 lyricsState = .empty
-                return
-            }
-
-            guard let data = output.data(using: .utf8),
-                  let payload = try? JSONDecoder().decode(LyricsPayload.self, from: data) else {
+            case .failed:
                 lyricsState = .failed
-                return
             }
-
-            QueryCache.shared.set(payload, for: cacheKey)
-            lyricsState = .loaded(payload)
         }
     }
 
@@ -278,7 +223,7 @@ else:
                                                 .font(.title3)
                                                 .fontWeight(.semibold)
                                                 .foregroundColor(
-                                                    isActive ? Color("PrimaryText") : Color("SecondaryText")
+                                                    isActive ? Color("PrimaryText") : Color("PrimaryText").opacity(0.1)
                                                 )
                                                 .frame(maxWidth: .infinity, alignment: .leading)
                                                 .animation(.easeInOut(duration: 0.2), value: isActive)
