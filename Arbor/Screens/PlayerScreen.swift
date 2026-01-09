@@ -298,17 +298,8 @@ else:
                                 let isActive = payload.timed && index == activeIndex
                                 if payload.timed {
                                     HStack(alignment: .top, spacing: 12) {
-                                        if let stamp = formatTimestamp(line.startMs) {
-                                            Text(stamp)
-                                                .font(.caption)
-                                                .foregroundColor(
-                                                    isActive ? Color("PrimaryText") : Color("SecondaryText")
-                                                )
-                                                .frame(width: 44, alignment: .leading)
-                                        }
-
                                         Text(line.text.isEmpty ? " " : line.text)
-                                            .font(isActive ? .title3 : .body)
+                                            .font(.title3)
                                             .fontWeight(isActive ? .semibold : .regular)
                                             .foregroundColor(
                                                 isActive ? Color("PrimaryText") : Color("SecondaryText")
