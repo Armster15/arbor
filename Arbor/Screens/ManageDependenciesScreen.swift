@@ -159,6 +159,7 @@ struct ManageDependenciesScreen: View {
                 }
             }
         }
+        .tint(.blue)
         .disabled(updateStatus == .running)
     }
 
