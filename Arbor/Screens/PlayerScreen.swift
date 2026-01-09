@@ -43,7 +43,26 @@ struct __PlayerScreen: View {
     @State private var draftArtists: [String] = []
     @State private var isScrubbing: Bool = false
     
+    // Track last saved settings locally (not persisted to iCloud)
+    @State private var savedSpeedRate: Float?
+    @State private var savedPitchCents: Float?
+    @State private var savedReverbMix: Float?
+    
     @Environment(\.modelContext) var modelContext
+    
+    private var isDownloaded: Bool {
+        getLocalAudioFilePath(originalUrl: libraryItem.original_url) != nil
+    }
+    
+    private var isModified: Bool {
+        let refSpeed = savedSpeedRate ?? libraryItem.speedRate
+        let refPitch = savedPitchCents ?? libraryItem.pitchCents
+        let refReverb = savedReverbMix ?? libraryItem.reverbMix
+        
+        return audioPlayer.speedRate != refSpeed ||
+               audioPlayer.pitchCents != refPitch ||
+               audioPlayer.reverbMix != refReverb
+    }
     
     init(libraryItem: LibraryItem, audioPlayer: AudioPlayerWithReverb, filePath: Binding<String>) {
         self.libraryItem = libraryItem
@@ -98,6 +117,11 @@ struct __PlayerScreen: View {
         if SHOULD_COPY {
             modelContext.insert(item)
         }
+        
+        // Track saved settings locally so isModified reflects the saved state
+        savedSpeedRate = audioPlayer.speedRate
+        savedPitchCents = audioPlayer.pitchCents
+        savedReverbMix = audioPlayer.reverbMix
     }
 
     var body: some View {
@@ -380,7 +404,12 @@ struct __PlayerScreen: View {
                 Button {
                     saveToLibrary()
                 } label: {
-                    Label("Download", systemImage: "arrow.down.circle")
+                    Label(
+                        "Download",
+                        systemImage: !isDownloaded ? "arrow.down.circle" :
+                                     isModified ? "arrow.down.circle.dotted" :
+                                     "checkmark.circle"
+                    )
                 }
             }
 
