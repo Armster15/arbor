@@ -56,6 +56,7 @@ struct PrimaryActionButton: View {
 
                 Text(title)
                     .fontWeight(.semibold)
+                    .foregroundColor(Color("SecondaryText"))
             }
             .frame(maxWidth: .infinity)
             .padding()
