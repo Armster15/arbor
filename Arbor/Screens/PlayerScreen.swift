@@ -251,6 +251,14 @@ struct __PlayerScreen: View {
                                 proxy.scrollTo(newValue, anchor: .center)
                             }
                         }
+                        // scroll to the active lyric on appear (e.g. when player is reopened)
+                        .onAppear {
+                            guard let activeIndex else { return }
+                            lastActiveLyricIndex = activeIndex
+                            withAnimation(nil) {
+                                proxy.scrollTo(activeIndex, anchor: .center)
+                            }
+                        }
                     }
                 }
                 .padding(16)
