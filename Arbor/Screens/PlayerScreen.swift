@@ -522,6 +522,7 @@ struct __PlayerScreen: View {
                                 }
                                 .buttonStyle(.bordered)
                                 .tint(Color("PrimaryBg"))
+                                .padding(.top, 12)
                             }
                         }
                         
