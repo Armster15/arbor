@@ -39,6 +39,18 @@ struct SettingsScreen: View {
             .listRowBackground(Color("SecondaryBg"))
 
             Section {
+                NavigationLink("Manage Dependencies") {
+                    ZStack {
+                        BackgroundColor
+                            .ignoresSafeArea()
+
+                        ManageDependenciesScreen()
+                    }
+                    .navigationTitle("Manage Dependencies")
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+                .listRowBackground(Color("SecondaryBg"))
+
                 NavigationLink("Manage Cache") {
                     ZStack {
                         BackgroundColor
