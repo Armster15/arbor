@@ -25,129 +25,105 @@ struct SearchResultsView: View {
     var body: some View {
         let isSearchQueryURL = isValidURL(searchQuery)
         
-        ZStack {
-            VStack(spacing: 0) {
-                Picker("Provider", selection: $searchProvider) {
-                    Text("YouTube Music").tag(SearchProvider.youtube)
-                    Text("SoundCloud").tag(SearchProvider.soundcloud)
+        VStack(spacing: 0) {
+            Picker("Provider", selection: $searchProvider) {
+                Text("YouTube Music").tag(SearchProvider.youtube)
+                Text("SoundCloud").tag(SearchProvider.soundcloud)
+            }
+            .pickerStyle(.segmented)
+            .disabled(isSearchQueryURL)
+            .padding()
+            .opacity(searchVisible ? 1 : 0)
+            .offset(y: searchVisible ? 0 : -8)
+            .animation(.easeInOut(duration: 0.28), value: searchVisible)
+            
+            // Results List
+            if searchQuery.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    
+                    Text("Search for a song or artist")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
                 }
-                .pickerStyle(.segmented)
-                .disabled(isSearchQueryURL)
-                .padding()
-                .opacity(searchVisible ? 1 : 0)
-                .offset(y: searchVisible ? 0 : -8)
-                .animation(.easeInOut(duration: 0.28), value: searchVisible)
-                
-                // Results List
-                if searchQuery.isEmpty {
-                    Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if isSearchQueryURL {
-                    // Show URL box for direct URL input
-                    VStack(spacing: 16) {
-                        let result = SearchResult(
-                            title: searchQuery,
-                            artists: ["Raw URL"],
-                            url: searchQuery,
-                            views: nil,
-                            duration: nil,
-                            isExplicit: nil,
-                            isVerified: nil,
-                            thumbnailURL: nil,
-                            thumbnailIsSquare: nil,
-                            thumbnailWidth: nil,
-                            thumbnailHeight: nil
-                        )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if isSearchQueryURL {
+                // Show URL box for direct URL input
+                VStack(spacing: 16) {
+                    let result = SearchResult(
+                        title: searchQuery,
+                        artists: ["Raw URL"],
+                        url: searchQuery,
+                        views: nil,
+                        duration: nil,
+                        isExplicit: nil,
+                        isVerified: nil,
+                        thumbnailURL: nil,
+                        thumbnailIsSquare: nil,
+                        thumbnailWidth: nil,
+                        thumbnailHeight: nil
+                    )
 
-                        SearchResultRow(result: result) {
-                            onResultSelected(result)
-                        }
+                    SearchResultRow(result: result) {
+                        onResultSelected(result)
                     }
-                    .padding(.bottom, 16)
-                } else if isSearching && searchResults.isEmpty {
-                    VStack {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .progressViewStyle(CircularProgressViewStyle(tint: .secondary))
-                            .accessibilityLabel("Searching...")
-                        
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if searchResults.isEmpty {
-                    Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(searchResults, id: \.url) { result in
-                                SearchResultRow(result: result) {
-                                    onResultSelected(result)
-                                }
-                                
-                                if result != searchResults.last {
-                                    Divider()
-                                        .padding(.leading, 74)
-                                }
+                }
+                .padding(.bottom, 16)
+            } else if isSearching && searchResults.isEmpty {
+                VStack {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .progressViewStyle(CircularProgressViewStyle(tint: .secondary))
+                        .accessibilityLabel("Searching...")
+                    
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if searchResults.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    
+                    Text("No results found")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Try searching for a song title or artist")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(searchResults, id: \.url) { result in
+                            SearchResultRow(result: result) {
+                                onResultSelected(result)
+                            }
+                            
+                            if result != searchResults.last {
+                                Divider()
+                                    .padding(.leading, 74)
                             }
                         }
-                        .padding(.bottom, 16) // 16px padding
                     }
-                    .safeAreaInset(edge: .bottom) {
-                        Color.clear.frame(height: 0) // Bottom safe area inset
-                    }
-                    .ignoresSafeArea(.container, edges: .bottom)
+                    .padding(.bottom, 16) // 16px padding
                 }
-            }
-            .ignoresSafeArea(.container, edges: .bottom)
-            
-            if searchQuery.isEmpty {
-                CenteredEmptyState(
-                    systemImage: "magnifyingglass",
-                    title: "Search for a song or artist"
-                )
-            } else if !isSearchQueryURL && !isSearching && searchResults.isEmpty {
-                CenteredEmptyState(
-                    systemImage: "magnifyingglass",
-                    title: "No results found",
-                    subtitle: "Try searching for a song title or artist",
-                    subtitleFont: .caption
-                )
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 0) // Bottom safe area inset
+                }
+                .ignoresSafeArea(.container, edges: .bottom)
             }
         }
+        .ignoresSafeArea(.container, edges: .bottom)
         .onAppear {
             searchVisible = true
         }
         .onDisappear {
             searchVisible = false
         }
-    }
-}
-
-struct CenteredEmptyState: View {
-    let systemImage: String
-    let title: String
-    var subtitle: String? = nil
-    var subtitleFont: Font = .caption
-    
-    var body: some View {
-        GeometryReader { proxy in
-            VStack(spacing: 16) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 48))
-                    .foregroundColor(.secondary)
-                
-                Text(title)
-                    .font(.title3)
-                    .foregroundColor(.secondary)
-                
-                if let subtitle {
-                    Text(subtitle)
-                        .font(subtitleFont)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
-        }
-        .ignoresSafeArea()
     }
 }
 
@@ -238,47 +214,57 @@ struct DownloadScreen: View {
     @Binding var selectedResult: SearchResult?
     
     @State private var isLoading: Bool = false
+    @State private var idleOpacity: Double = 1.0
 
     var body: some View {
-        ZStack {
-            VStack(spacing: 20) {
-                if isLoading {
-                    ZStack {
-                        VStack(spacing: 32) {
-                            if let result = selectedResult {
-                                SongInfo(
-                                    title: result.title,
-                                    artists: result.artists,
-                                    thumbnailURL: result.thumbnailURL,
-                                    thumbnailIsSquare: result.thumbnailIsSquare
-                                )
-                            }
-                            
-                            HStack(spacing: 16) {
-                                ProgressView()
-                                    .scaleEffect(1.5)
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .secondary))
-                                    .accessibilityLabel("Downloading...")
-                                Text("Downloading...")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
+        VStack(spacing: 20) {
+            if isLoading {
+                ZStack {
+                    VStack(spacing: 32) {
+                        if let result = selectedResult {
+                            SongInfo(
+                                title: result.title,
+                                artists: result.artists,
+                                thumbnailURL: result.thumbnailURL,
+                                thumbnailIsSquare: result.thumbnailIsSquare
+                            )
+                        }
+                        
+                        HStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .secondary))
+                                .accessibilityLabel("Downloading...")
+                            Text("Downloading...")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            
+            else {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    
+                    Text("Start searching to find songs")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                }
+                .opacity(idleOpacity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .onAppear {
+                    idleOpacity = 0
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        idleOpacity = 1
+                    }
                 }
             }
-            .padding()
-            
-            if !isLoading {
-                CenteredEmptyState(
-                    systemImage: "magnifyingglass",
-                    title: "Start searching to find songs"
-                )
-            }
         }
+        .padding()
         .onAppear {
             triggerDownloadIfPossible()
         }
@@ -375,7 +361,7 @@ struct SearchScreen: View {
                 )
             }
         }
-        .navigationTitle("arbor")
+        .navigationTitle("Search")
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .searchable(
             text: $searchQuery,
