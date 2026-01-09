@@ -214,6 +214,7 @@ struct DownloadScreen: View {
     @Binding var selectedResult: SearchResult?
     
     @State private var isLoading: Bool = false
+    @State private var idleOpacity: Double = 1.0
 
     var body: some View {
         VStack(spacing: 20) {
@@ -253,7 +254,14 @@ struct DownloadScreen: View {
                         .font(.title3)
                         .foregroundColor(.secondary)
                 }
+                .opacity(idleOpacity)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .onAppear {
+                    idleOpacity = 0
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        idleOpacity = 1
+                    }
+                }
             }
         }
         .padding()
