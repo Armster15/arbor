@@ -108,6 +108,7 @@ struct LastFMScreen: View {
 
 private struct LoggedInLastFMView: View {
     @EnvironmentObject private var lastFM: LastFMSession
+    @Environment(\.colorScheme) var colorScheme
     
     let username: String
     let profileImageURL: URL?
@@ -187,6 +188,7 @@ private struct LoggedInLastFMView: View {
                         set: { lastFM.isScrobblingEnabled = $0 }
                     )
                 )
+                .tint(colorScheme == .light ? Color("PrimaryBg") : .blue)
                 .listRowBackground(Color("SecondaryBg"))
 
                 Section {
