@@ -295,7 +295,8 @@ struct DownloadScreen: View {
 
                     message += "\n\nIf the problem persists, try updating the dependencies in Settings."
 
-                    showAlert(title: "Download Failed", message: message)                    
+                    showAlert(title: "Download Failed", message: message)
+                    self.selectedResult = nil
                 }
             }
         }
