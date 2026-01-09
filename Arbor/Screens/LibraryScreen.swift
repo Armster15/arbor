@@ -58,57 +58,75 @@ struct LibraryScreen: View {
     
     var body: some View {
         Group {
-            List {
-                ForEach(libraryItems, id: \.persistentModelID) { item in
-                    Button(action: {
-                        onTap(item)
-                    }) {
-                        HStack(alignment: .center, spacing: 12) {
-                            SongImage(
-                                width: 60,
-                                height: 60,
-                                thumbnailURL: item.thumbnail_url,
-                                thumbnailIsSquare: item.thumbnail_is_square
-                            )
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(item.title)
-                                    .font(.headline)
-                                    .foregroundColor(Color("PrimaryText"))
+            if libraryItems.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "music.note.square.stack.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    
+                    Text("No songs in library")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Start searching to find songs")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .multilineTextAlignment(.center)
+            } else {
+                List {
+                    ForEach(libraryItems, id: \.persistentModelID) { item in
+                        Button(action: {
+                            onTap(item)
+                        }) {
+                            HStack(alignment: .center, spacing: 12) {
+                                SongImage(
+                                    width: 60,
+                                    height: 60,
+                                    thumbnailURL: item.thumbnail_url,
+                                    thumbnailIsSquare: item.thumbnail_is_square
+                                )
                                 
-                                Text(formatArtists(item.artists))
-                                    .font(.subheadline)
-                                    .foregroundColor(Color("PrimaryText"))
-                                
-                                HStack(spacing: 12) {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "gauge.with.dots.needle.67percent")
-                                            .font(.caption)
-                                        Text(String(format: "%.2fx", item.speedRate))
-                                            .font(.caption)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.title)
+                                        .font(.headline)
+                                        .foregroundColor(Color("PrimaryText"))
+                                    
+                                    Text(formatArtists(item.artists))
+                                        .font(.subheadline)
+                                        .foregroundColor(Color("PrimaryText"))
+                                    
+                                    HStack(spacing: 12) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "gauge.with.dots.needle.67percent")
+                                                .font(.caption)
+                                            Text(String(format: "%.2fx", item.speedRate))
+                                                .font(.caption)
+                                        }
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "tuningfork")
+                                                .font(.caption)
+                                            Text(String(format: "%+.0f", item.pitchCents))
+                                                .font(.caption)
+                                        }
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "dot.radiowaves.left.and.right")
+                                                .font(.caption)
+                                            Text("\(Int(item.reverbMix))%")
+                                                .font(.caption)
+                                        }
                                     }
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "tuningfork")
-                                            .font(.caption)
-                                        Text(String(format: "%+.0f", item.pitchCents))
-                                            .font(.caption)
-                                    }
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "dot.radiowaves.left.and.right")
-                                            .font(.caption)
-                                        Text("\(Int(item.reverbMix))%")
-                                            .font(.caption)
-                                    }
+                                    .foregroundColor(.secondary)
                                 }
-                                .foregroundColor(.secondary)
                             }
                         }
+                        .listRowBackground(Color("SecondaryBg"))
                     }
-                    .listRowBackground(Color("SecondaryBg"))
+                    .onDelete(perform: deleteLibraryItems)
                 }
-                .onDelete(perform: deleteLibraryItems)
+                .scrollContentBackground(.hidden)
             }
-            .scrollContentBackground(.hidden)
         }
         .navigationTitle("Library")
         .toolbar {

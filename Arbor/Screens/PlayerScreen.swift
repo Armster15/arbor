@@ -214,14 +214,14 @@ struct __PlayerScreen: View {
                                 }
                                 .font(.caption)
                                 .buttonStyle(.bordered)
-                                .tint(.blue)
+                                .tint(Color("PrimaryBg"))
                                 .opacity(audioPlayer.speedRate == 1.0 ? 0 : 1)
                             
                             Spacer()
                             
                             Text(String(format: "%.2fx", audioPlayer.speedRate))
                                 .font(.subheadline)
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color("PrimaryBg"))
                         }
                         
                         HStack {
@@ -272,14 +272,14 @@ struct __PlayerScreen: View {
                                 }
                                 .font(.caption)
                                 .buttonStyle(.bordered)
-                                .tint(.blue)
+                                .tint(Color("PrimaryBg"))
                                 .opacity(audioPlayer.pitchCents.isZero ? 0 : 1)
                             
                             Spacer()
                             
                             Text("\(Int(audioPlayer.pitchCents)) cents")
                                 .font(.subheadline)
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color("PrimaryBg"))
                         }
                         
                         HStack {
@@ -329,14 +329,14 @@ struct __PlayerScreen: View {
                                 }
                                 .font(.caption)
                                 .buttonStyle(.bordered)
-                                .tint(.blue)
+                                .tint(Color("PrimaryBg"))
                                 .opacity(audioPlayer.reverbMix > 0 ? 1 : 0)
                             
                             Spacer()
                             
                             Text("\(Int(audioPlayer.reverbMix))%")
                                 .font(.subheadline)
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color("PrimaryBg"))
                         }
                         
                         HStack {
@@ -455,7 +455,7 @@ struct __PlayerScreen: View {
                             Label("Add Artist", systemImage: "plus.circle.fill")
                         }
                         .buttonStyle(.bordered)
-                        .tint(.blue)
+                        .tint(Color("PrimaryBg"))
                     }
                 }
 
