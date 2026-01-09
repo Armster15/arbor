@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Foundation
 import SwiftData
 import SDWebImage
 import SDWebImageSwiftUI
@@ -46,6 +47,9 @@ struct __PlayerScreen: View {
     @State private var editSheetHeight: CGFloat = 0
     @State private var editSheetContentHeight: CGFloat = 0
     @State private var editSheetButtonHeight: CGFloat = 0
+    @State private var lyricsState: LyricsState = .idle
+    @State private var currentLyricsTaskId: UUID?
+    @State private var lastActiveLyricIndex: Int?
     
     // Track last saved settings locally (not persisted to iCloud)
     @State private var savedSpeedRate: Float?
@@ -53,6 +57,29 @@ struct __PlayerScreen: View {
     @State private var savedReverbMix: Float?
     
     @Environment(\.modelContext) var modelContext
+
+    private struct LyricsPayload: Decodable {
+        let timed: Bool
+        let lines: [LyricsLine]
+    }
+
+    private struct LyricsLine: Decodable {
+        let startMs: Int?
+        let text: String
+
+        enum CodingKeys: String, CodingKey {
+            case startMs = "start_ms"
+            case text
+        }
+    }
+
+    private enum LyricsState {
+        case idle
+        case loading
+        case loaded(LyricsPayload)
+        case empty
+        case failed
+    }
 
     private struct SheetHeightKey: PreferenceKey {
         static var defaultValue: CGFloat = 0
@@ -112,6 +139,211 @@ struct __PlayerScreen: View {
         }
         guard !tags.isEmpty else { return libraryItem.title }
         return "\(libraryItem.title) (\(tags.joined(separator: " + ")))"
+    }
+
+    private func escapeForPythonString(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+    }
+
+    private func youtubeVideoId(from urlString: String) -> String? {
+        guard let url = URL(string: urlString) else { return nil }
+
+        let host = url.host?.lowercased() ?? ""
+        if host.contains("youtu.be") {
+            return url.pathComponents.dropFirst().first
+        }
+
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let queryItems = components.queryItems,
+           let videoId = queryItems.first(where: { $0.name == "v" })?.value {
+            return videoId
+        }
+
+        if host.contains("youtube.com"),
+           let shortsIndex = url.pathComponents.firstIndex(of: "shorts"),
+           url.pathComponents.count > shortsIndex + 1 {
+            return url.pathComponents[shortsIndex + 1]
+        }
+
+        return nil
+    }
+
+    private func formatTimestamp(_ ms: Int?) -> String? {
+        guard let ms else { return nil }
+        let totalSeconds = max(ms, 0) / 1000
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    private func activeLyricIndex(for payload: LyricsPayload) -> Int? {
+        guard payload.timed, !payload.lines.isEmpty else { return nil }
+
+        let currentMs = Int(audioPlayer.currentTime * 1000)
+        var activeIndex: Int?
+        for (index, line) in payload.lines.enumerated() {
+            guard let startMs = line.startMs else { continue }
+            if startMs <= currentMs {
+                activeIndex = index
+            } else {
+                break
+            }
+        }
+        return activeIndex
+    }
+
+    private func fetchLyricsIfNeeded() {
+        guard let videoId = youtubeVideoId(from: libraryItem.original_url) else {
+            lyricsState = .empty
+            return
+        }
+
+        let cacheKey = ["lyrics", videoId]
+        if let cached: LyricsPayload = QueryCache.shared.get(for: cacheKey) {
+            lyricsState = .loaded(cached)
+            return
+        }
+
+        let taskId = UUID()
+        currentLyricsTaskId = taskId
+        lyricsState = .loading
+
+        let escaped = escapeForPythonString(videoId)
+        let code = """
+from arbor import get_lyrics_from_youtube
+import json
+_result = get_lyrics_from_youtube('\(escaped)')
+if _result is None:
+    result = ""
+else:
+    lines = []
+    if len(_result) > 0 and isinstance(_result[0], (list, tuple)):
+        for start_ms, text in _result:
+            lines.append({"start_ms": int(start_ms), "text": text})
+        payload = {"timed": True, "lines": lines}
+    else:
+        for text in _result:
+            lines.append({"start_ms": None, "text": text})
+        payload = {"timed": False, "lines": lines}
+    result = json.dumps(payload)
+"""
+
+        pythonExecAndGetStringAsync(
+            code.trimmingCharacters(in: .whitespacesAndNewlines),
+            "result"
+        ) { result in
+            guard taskId == currentLyricsTaskId else { return }
+
+            guard let output = result, !output.isEmpty else {
+                lyricsState = .empty
+                return
+            }
+
+            guard let data = output.data(using: .utf8),
+                  let payload = try? JSONDecoder().decode(LyricsPayload.self, from: data) else {
+                lyricsState = .failed
+                return
+            }
+
+            QueryCache.shared.set(payload, for: cacheKey)
+            lyricsState = .loaded(payload)
+        }
+    }
+
+    private var lyricsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Lyrics")
+                    .font(.headline)
+                    .foregroundColor(Color("PrimaryText"))
+
+                Spacer()
+
+                if case .loading = lyricsState {
+                    ProgressView()
+                        .tint(Color("PrimaryBg"))
+                }
+            }
+
+            switch lyricsState {
+            case .idle, .loading:
+                Text("Fetching lyrics...")
+                    .font(.subheadline)
+                    .foregroundColor(Color("SecondaryText"))
+            case .empty:
+                Text("Lyrics unavailable.")
+                    .font(.subheadline)
+                    .foregroundColor(Color("SecondaryText"))
+            case .failed:
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Could not load lyrics.")
+                        .font(.subheadline)
+                        .foregroundColor(Color("SecondaryText"))
+
+                    Button("Try Again") {
+                        fetchLyricsIfNeeded()
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color("PrimaryBg"))
+                }
+            case .loaded(let payload):
+                let activeIndex = activeLyricIndex(for: payload)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(payload.lines.indices, id: \.self) { index in
+                                let line = payload.lines[index]
+                                let isActive = payload.timed && index == activeIndex
+                                if payload.timed {
+                                    HStack(alignment: .top, spacing: 12) {
+                                        if let stamp = formatTimestamp(line.startMs) {
+                                            Text(stamp)
+                                                .font(.caption)
+                                                .foregroundColor(
+                                                    isActive ? Color("PrimaryText") : Color("SecondaryText")
+                                                )
+                                                .frame(width: 44, alignment: .leading)
+                                        }
+
+                                        Text(line.text.isEmpty ? " " : line.text)
+                                            .font(isActive ? .title3 : .body)
+                                            .fontWeight(isActive ? .semibold : .regular)
+                                            .foregroundColor(
+                                                isActive ? Color("PrimaryText") : Color("SecondaryText")
+                                            )
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .id(index)
+                                } else {
+                                    Text(line.text.isEmpty ? " " : line.text)
+                                        .font(.body)
+                                        .foregroundColor(Color("PrimaryText"))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .id(index)
+                                }
+                            }
+                        }
+                        .lineSpacing(4)
+                        .padding(.vertical, 8)
+                    }
+                    .frame(maxHeight: 260)
+                    .scrollIndicators(.hidden)
+                    .onChange(of: activeIndex) { _, newValue in
+                        guard let newValue, newValue != lastActiveLyricIndex else { return }
+                        lastActiveLyricIndex = newValue
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(newValue, anchor: .center)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color("SecondaryBg"))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
     
     private func saveToLibrary() {
@@ -425,6 +657,8 @@ struct __PlayerScreen: View {
                         }
                     }
                 }
+
+                lyricsSection
             }
             .padding()
         }
@@ -457,6 +691,10 @@ struct __PlayerScreen: View {
         }
         .onChange(of: audioPlayer.reverbMix) { _, _ in
             audioPlayer.updateMetadataTitle(decoratedTitle())
+        }
+        .task(id: libraryItem.original_url) {
+            lyricsState = .idle
+            fetchLyricsIfNeeded()
         }
         .sheet(isPresented: $isEditSheetPresented) {
             ScrollViewReader { proxy in
