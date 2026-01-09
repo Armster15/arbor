@@ -375,7 +375,7 @@ struct SearchScreen: View {
                 )
             }
         }
-        .navigationTitle("arbor")
+        .navigationTitle("Search")
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .searchable(
             text: $searchQuery,

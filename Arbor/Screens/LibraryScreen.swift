@@ -128,7 +128,7 @@ struct LibraryScreen: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        .navigationTitle("Library")
+        .navigationTitle("arbor")
         .toolbar {
             Button {
                 showSettings = true
