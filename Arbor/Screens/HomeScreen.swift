@@ -243,10 +243,17 @@ struct DownloadScreen: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             
-            // TODO: show something as a home page
             else {
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    
+                    Text("Start searching to find songs")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .padding()

@@ -33,6 +33,13 @@ struct ContentView: View {
         
     var body: some View {
         TabView {
+            Tab("Library", systemImage: "music.note.square.stack.fill") {
+                NavigationStack() {
+                    LibraryScreen()
+                        .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
+                }
+            }
+
             Tab("Search", systemImage: "magnifyingglass", role: .search) {
                 NavigationStack() {
                     HomeScreen(
@@ -42,13 +49,6 @@ struct ContentView: View {
                         }
                     )
                     .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
-                }
-            }
-
-            Tab("Library", systemImage: "music.note.square.stack.fill") {
-                NavigationStack() {
-                    LibraryScreen()
-                        .background(BackgroundColor.ignoresSafeArea(.all)) // for root view
                 }
             }
         }
