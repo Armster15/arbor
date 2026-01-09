@@ -278,12 +278,12 @@ struct DownloadScreen: View {
                     self.selectedResult = nil
                     
                 case .failure(let error):
-                    let message: String
+                    var message: String
                     
                     if let downloadError = error as? DownloadError {
                         switch downloadError {
                         case .invalidSelection:
-                            message = "Invalid selection"
+                            message = "Invalid selection."
                         case .emptyResult:
                             message = "Failed to download audio. Please check the URL and try again."
                         case .invalidResponse:
@@ -292,15 +292,13 @@ struct DownloadScreen: View {
                     } else {
                         message = "Failed to download audio. Please check the URL and try again."
                     }
-                    
-                    self.onError(message: message)
+
+                    message += "\n\nIf the problem persists, try updating the dependencies in Settings."
+
+                    showAlert(title: "Download Failed", message: message)                    
                 }
             }
         }
-    }
-
-    private func onError(message: String) {
-        showAlert(title: "Download Failed", message: message)
     }
 }
 
