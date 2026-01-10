@@ -132,7 +132,11 @@ struct __PlayerScreen: View {
         currentLyricsTaskId = taskId
         lyricsState = .loading
 
-        LyricsCache.shared.fetchLyrics(originalUrl: libraryItem.original_url) { result in
+        LyricsCache.shared.fetchLyrics(
+            originalUrl: libraryItem.original_url,
+            title: libraryItem.title,
+            artists: libraryItem.artists
+        ) { result in
             guard taskId == currentLyricsTaskId else { return }
 
             switch result {
@@ -608,17 +612,27 @@ struct __PlayerScreen: View {
                     isLoading: false,
                     isDisabled: false,
                     action: {
+                        let previousTitle = libraryItem.title
+                        let previousArtists = libraryItem.artists
                         let trimmedArtists = draftArtists
                             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                             .filter { !$0.isEmpty }
+                        let nextTitle = draftTitle
+                        let nextArtists = trimmedArtists
 
                         // Commit edits to meta on Save
-                        libraryItem.title = draftTitle
+                        libraryItem.title = nextTitle
                         libraryItem.artists = trimmedArtists
 
                         // Update now playing metadata
                         audioPlayer.updateMetadataTitle(decoratedTitle())
                         audioPlayer.updateMetadataArtist(formatArtists(libraryItem.artists))
+
+                        if previousTitle != nextTitle || previousArtists != nextArtists {
+                            LyricsCache.shared.clearLyrics(originalURL: libraryItem.original_url)
+                            fetchLyricsIfNeeded()
+                        }
+
                         isEditSheetPresented = false
                     }
                 )
@@ -774,14 +788,16 @@ private struct LyricsView: View {
                     .lineSpacing(4)
                     .padding(.vertical, 8)
                 }
-                .scrollDisabled(true)
+                .scrollDisabled(payload.timed)
                 .frame(maxHeight: 260)
                 .scrollIndicators(.hidden)
                 .onChange(of: activeIndex) { _, newValue in
+                    guard payload.timed else { return }
                     guard let newValue, newValue != lastActiveLyricIndex else { return }
                     scrollToActiveLyric(proxy, activeIndex: newValue, shouldAnimate: true)
                 }
                 .onChange(of: audioPlayer.currentTime) { _, newValue in
+                    guard payload.timed else { return }
                     let newMs = Int(newValue * 1000)
                     if let lastMs = lastPlaybackTimeMs {
                         let jumped = abs(newMs - lastMs) > 1500
@@ -803,16 +819,19 @@ private struct LyricsView: View {
                     lastPlaybackTimeMs = newMs
                 }
                 .onChange(of: lyricsDisplayMode) { _, newValue in
+                    guard payload.timed else { return }
                     DispatchQueue.main.async {
                         scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                     }
                 }
                 .onChange(of: romanizedLyricLines) { _, _ in
+                    guard payload.timed else { return }
                     DispatchQueue.main.async {
                         scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                     }
                 }
                 .onChange(of: translatedLyricLines) { _, _ in
+                    guard payload.timed else { return }
                     DispatchQueue.main.async {
                         scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                     }
@@ -822,6 +841,7 @@ private struct LyricsView: View {
                 }
                 // scroll to the active lyric on appear (e.g. when player is reopened)
                 .onAppear {
+                    guard payload.timed else { return }
                     scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                 }
             }

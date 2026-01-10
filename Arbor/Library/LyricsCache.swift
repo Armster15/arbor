@@ -1,8 +1,20 @@
 import Foundation
 
+enum LyricsSource: String, Codable {
+    case youtube = "YouTube"
+    case genius = "Genius"
+}
+
 struct LyricsPayload: Codable, Equatable {
     let timed: Bool
     let lines: [LyricsLine]
+    let source: LyricsSource?
+
+    init(timed: Bool, lines: [LyricsLine], source: LyricsSource? = nil) {
+        self.timed = timed
+        self.lines = lines
+        self.source = source
+    }
 }
 
 struct LyricsLine: Codable, Equatable {
@@ -41,15 +53,14 @@ final class LyricsCache {
     private init() {}
 
     private static let directoryName = "LyricsCache"
-    private let memoryQueue = DispatchQueue(label: "LyricsCache.memory.queue", attributes: .concurrent)
-    private var memoryCache: [String: LyricsPayload] = [:]
-    private var memoryTranslationCache: [String: LyricsTranslationPayload] = [:]
+    private let lyricsCachePrefix = ["lyrics"]
+    private let translationCachePrefix = ["lyricsTranslation"]
 
     static func cacheDirectoryPath() -> String? {
         shared.directoryURL?.path
     }
 
-    static func videoId(from urlString: String) -> String? {
+    static func youtubeVideoId(from urlString: String) -> String? {
         guard let url = URL(string: urlString) else { return nil }
 
         let host = url.host?.lowercased() ?? ""
@@ -61,8 +72,8 @@ final class LyricsCache {
 
         if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
            let queryItems = components.queryItems,
-           let videoId = queryItems.first(where: { $0.name == "v" })?.value {
-            return videoId
+           let youtubeVideoId = queryItems.first(where: { $0.name == "v" })?.value {
+            return youtubeVideoId
         }
 
         // https://www.youtube.com/watch?v=e0Y39QnwRvY
@@ -90,55 +101,135 @@ final class LyricsCache {
         return activeIndex
     }
 
-    func fetchLyrics(originalUrl: String, completion: @escaping (LyricsFetchResult) -> Void) {
-        guard let videoId = Self.videoId(from: originalUrl) else {
-            completion(.empty)
-            return
-        }
-        fetchLyrics(videoId: videoId, completion: completion)
-    }
-
-    func fetchLyrics(videoId: String, completion: @escaping (LyricsFetchResult) -> Void) {
-        if let cached = getFromMemory(videoId: videoId) {
+    func fetchLyrics(
+        originalUrl: String,
+        title: String,
+        artists: [String],
+        completion: @escaping (LyricsFetchResult) -> Void
+    ) {
+        if let cached = getFromMemory(originalURL: originalUrl) {
             completion(.loaded(cached))
             return
         }
 
-        if let data = loadFromDisk(videoId: videoId) {
+        if let data = loadFromDisk(originalURL: originalUrl) {
             if let payload = try? JSONDecoder().decode(LyricsPayload.self, from: data) {
-                setInMemory(payload, videoId: videoId)
+                setInMemory(payload, originalURL: originalUrl)
                 completion(.loaded(payload))
                 return
             } else {
-                removeFromDisk(videoId: videoId)
+                removeFromDisk(originalURL: originalUrl)
             }
         }
 
-        let escaped = escapeForPythonString(videoId)
-        let code = """
-from arbor.lyrics import get_lyrics_from_youtube
-result = get_lyrics_from_youtube('\(escaped)')
-"""
+        let primaryArtist = artists.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let queryParts = [
+            title.trimmingCharacters(in: .whitespacesAndNewlines),
+            primaryArtist
+        ]
+            .filter { !$0.isEmpty }
+        let geniusQuery = queryParts.joined(separator: " ")
 
-        pythonExecAndGetStringAsync(
-            code.trimmingCharacters(in: .whitespacesAndNewlines),
-            "result"
-        ) { result in
-            guard let output = result, !output.isEmpty else {
+        func fetchFromGenius() {
+            guard !primaryArtist.isEmpty, !geniusQuery.isEmpty else {
+                debugPrint("LyricsCache: skipping Genius lookup (missing artist/query) for \(originalUrl)")
                 completion(.empty)
                 return
             }
 
-            guard let data = output.data(using: .utf8),
-                  let payload = try? JSONDecoder().decode(LyricsPayload.self, from: data) else {
-                completion(.failed)
-                return
-            }
+            debugPrint("LyricsCache: fetching Genius lyrics for \(originalUrl) with query '\(geniusQuery)'")
+            let escapedQuery = escapeForPythonString(geniusQuery)
+            let geniusCode = """
+from arbor import get_lyrics_from_genius
+result = get_lyrics_from_genius('\(escapedQuery)')
+"""
 
-            self.setInMemory(payload, videoId: videoId)
-            self.saveToDisk(data: data, videoId: videoId)
-            completion(.loaded(payload))
+            pythonExecAndGetStringAsync(
+                geniusCode.trimmingCharacters(in: .whitespacesAndNewlines),
+                "result"
+            ) { result in
+                guard let output = result, !output.isEmpty else {
+                    debugPrint("LyricsCache: Genius returned empty result for \(originalUrl)")
+                    completion(.empty)
+                    return
+                }
+
+                guard let data = output.data(using: .utf8),
+                      let payload = try? JSONDecoder().decode(LyricsPayload.self, from: data) else {
+                    debugPrint("LyricsCache: failed to decode Genius lyrics for \(originalUrl)")
+                    completion(.failed)
+                    return
+                }
+
+                guard !payload.lines.isEmpty else {
+                    debugPrint("LyricsCache: Genius returned no lyric lines for \(originalUrl)")
+                    completion(.empty)
+                    return
+                }
+
+                let attributedPayload = LyricsPayload(
+                    timed: payload.timed,
+                    lines: payload.lines,
+                    source: .genius
+                )
+                if let encoded = try? JSONEncoder().encode(attributedPayload) {
+                    self.saveToDisk(data: encoded, originalURL: originalUrl)
+                }
+                self.setInMemory(attributedPayload, originalURL: originalUrl)
+                completion(.loaded(attributedPayload))
+            }
         }
+
+        func fetchFromYouTube(youtubeVideoId: String) {
+            let escaped = escapeForPythonString(youtubeVideoId)
+            let code = """
+from arbor.lyrics import get_lyrics_from_youtube
+result = get_lyrics_from_youtube('\(escaped)')
+"""
+
+            pythonExecAndGetStringAsync(
+                code.trimmingCharacters(in: .whitespacesAndNewlines),
+                "result"
+            ) { result in
+                guard let output = result, !output.isEmpty else {
+                    debugPrint("LyricsCache: YouTube returned empty result for \(originalUrl); falling back to Genius")
+                    fetchFromGenius()
+                    return
+                }
+
+                guard let data = output.data(using: .utf8),
+                      let payload = try? JSONDecoder().decode(LyricsPayload.self, from: data) else {
+                    debugPrint("LyricsCache: failed to decode YouTube lyrics for \(originalUrl); falling back to Genius")
+                    fetchFromGenius()
+                    return
+                }
+
+                guard !payload.lines.isEmpty else {
+                    debugPrint("LyricsCache: YouTube returned no lyric lines for \(originalUrl); falling back to Genius")
+                    fetchFromGenius()
+                    return
+                }
+
+            let attributedPayload = LyricsPayload(
+                timed: payload.timed,
+                lines: payload.lines,
+                source: .youtube
+            )
+            if let encoded = try? JSONEncoder().encode(attributedPayload) {
+                self.saveToDisk(data: encoded, originalURL: originalUrl)
+            }
+            self.setInMemory(attributedPayload, originalURL: originalUrl)
+            completion(.loaded(attributedPayload))
+        }
+    }
+
+        let youtubeVideoId = Self.youtubeVideoId(from: originalUrl)
+        guard let youtubeVideoId else {
+            debugPrint("LyricsCache: non-YouTube URL; trying Genius for \(originalUrl)")
+            fetchFromGenius()
+            return
+        }
+        fetchFromYouTube(youtubeVideoId: youtubeVideoId)
     }
 
     func translateLyrics(
@@ -146,30 +237,30 @@ result = get_lyrics_from_youtube('\(escaped)')
         payload: LyricsPayload,
         completion: @escaping (LyricsTranslationResult) -> Void
     ) {
-        guard let videoId = Self.videoId(from: originalUrl) else {
+        guard let youtubeVideoId = Self.youtubeVideoId(from: originalUrl) else {
             completion(.failed)
             return
         }
-        translateLyrics(videoId: videoId, payload: payload, completion: completion)
+        translateLyrics(youtubeVideoId: youtubeVideoId, payload: payload, completion: completion)
     }
 
     func translateLyrics(
-        videoId: String,
+        youtubeVideoId: String,
         payload: LyricsPayload,
         completion: @escaping (LyricsTranslationResult) -> Void
     ) {
-        if let cached = getTranslationFromMemory(videoId: videoId) {
+        if let cached = getTranslationFromMemory(youtubeVideoId: youtubeVideoId) {
             completion(.loaded(cached))
             return
         }
 
-        if let data = loadTranslationFromDisk(videoId: videoId) {
+        if let data = loadTranslationFromDisk(youtubeVideoId: youtubeVideoId) {
             if let payload = try? JSONDecoder().decode(LyricsTranslationPayload.self, from: data) {
-                setTranslationInMemory(payload, videoId: videoId)
+                setTranslationInMemory(payload, youtubeVideoId: youtubeVideoId)
                 completion(.loaded(payload))
                 return
             } else {
-                removeTranslationFromDisk(videoId: videoId)
+                removeTranslationFromDisk(youtubeVideoId: youtubeVideoId)
             }
         }
 
@@ -210,9 +301,9 @@ result = translate(payload)
                 romanizations: romanizedLines
             )
             if let encoded = try? JSONEncoder().encode(sanitizedPayload) {
-                self.saveTranslationToDisk(data: encoded, videoId: videoId)
+                self.saveTranslationToDisk(data: encoded, youtubeVideoId: youtubeVideoId)
             }
-            self.setTranslationInMemory(sanitizedPayload, videoId: videoId)
+            self.setTranslationInMemory(sanitizedPayload, youtubeVideoId: youtubeVideoId)
             completion(.loaded(sanitizedPayload))
         }
     }
@@ -222,39 +313,38 @@ result = translate(payload)
         clearDisk()
     }
 
-    private func getFromMemory(videoId: String) -> LyricsPayload? {
-        var result: LyricsPayload?
-        memoryQueue.sync {
-            result = memoryCache[videoId]
-        }
-        return result
-    }
+    func clearLyrics(originalURL: String) {
+        QueryCache.shared.invalidateQueries(lyricsCachePrefix + [originalURL])
+        removeFromDisk(originalURL: originalURL)
 
-    private func setInMemory(_ payload: LyricsPayload, videoId: String) {
-        memoryQueue.sync(flags: .barrier) {
-            memoryCache[videoId] = payload
+        if let youtubeVideoId = Self.youtubeVideoId(from: originalURL) {
+            QueryCache.shared.invalidateQueries(translationCachePrefix + [youtubeVideoId])
+            removeTranslationFromDisk(youtubeVideoId: youtubeVideoId)
         }
     }
 
-    private func getTranslationFromMemory(videoId: String) -> LyricsTranslationPayload? {
-        var result: LyricsTranslationPayload?
-        memoryQueue.sync {
-            result = memoryTranslationCache[videoId]
-        }
-        return result
+    private func getFromMemory(originalURL: String) -> LyricsPayload? {
+        QueryCache.shared.get(for: lyricsCachePrefix + [originalURL], as: LyricsPayload.self)
     }
 
-    private func setTranslationInMemory(_ payload: LyricsTranslationPayload, videoId: String) {
-        memoryQueue.sync(flags: .barrier) {
-            memoryTranslationCache[videoId] = payload
-        }
+    private func setInMemory(_ payload: LyricsPayload, originalURL: String) {
+        QueryCache.shared.set(payload, for: lyricsCachePrefix + [originalURL])
+    }
+
+    private func getTranslationFromMemory(youtubeVideoId: String) -> LyricsTranslationPayload? {
+        QueryCache.shared.get(
+            for: translationCachePrefix + [youtubeVideoId],
+            as: LyricsTranslationPayload.self
+        )
+    }
+
+    private func setTranslationInMemory(_ payload: LyricsTranslationPayload, youtubeVideoId: String) {
+        QueryCache.shared.set(payload, for: translationCachePrefix + [youtubeVideoId])
     }
 
     private func clearMemory() {
-        memoryQueue.sync(flags: .barrier) {
-            memoryCache.removeAll()
-            memoryTranslationCache.removeAll()
-        }
+        QueryCache.shared.invalidateQueries(lyricsCachePrefix)
+        QueryCache.shared.invalidateQueries(translationCachePrefix)
     }
 
     private var directoryURL: URL? {
@@ -264,33 +354,33 @@ result = translate(payload)
             .appendingPathComponent(Self.directoryName, isDirectory: true)
     }
 
-    private func loadFromDisk(videoId: String) -> Data? {
-        guard let url = fileURL(for: videoId) else { return nil }
+    private func loadFromDisk(originalURL: String) -> Data? {
+        guard let url = fileURL(for: originalURL) else { return nil }
         return try? Data(contentsOf: url)
     }
 
-    private func saveToDisk(data: Data, videoId: String) {
-        guard let url = fileURL(for: videoId) else { return }
+    private func saveToDisk(data: Data, originalURL: String) {
+        guard let url = fileURL(for: originalURL) else { return }
         try? data.write(to: url, options: [.atomic])
     }
 
-    private func removeFromDisk(videoId: String) {
-        guard let url = fileURL(for: videoId) else { return }
+    private func removeFromDisk(originalURL: String) {
+        guard let url = fileURL(for: originalURL) else { return }
         try? FileManager.default.removeItem(at: url)
     }
 
-    private func loadTranslationFromDisk(videoId: String) -> Data? {
-        guard let url = translationFileURL(for: videoId) else { return nil }
+    private func loadTranslationFromDisk(youtubeVideoId: String) -> Data? {
+        guard let url = translationFileURL(for: youtubeVideoId) else { return nil }
         return try? Data(contentsOf: url)
     }
 
-    private func saveTranslationToDisk(data: Data, videoId: String) {
-        guard let url = translationFileURL(for: videoId) else { return }
+    private func saveTranslationToDisk(data: Data, youtubeVideoId: String) {
+        guard let url = translationFileURL(for: youtubeVideoId) else { return }
         try? data.write(to: url, options: [.atomic])
     }
 
-    private func removeTranslationFromDisk(videoId: String) {
-        guard let url = translationFileURL(for: videoId) else { return }
+    private func removeTranslationFromDisk(youtubeVideoId: String) {
+        guard let url = translationFileURL(for: youtubeVideoId) else { return }
         try? FileManager.default.removeItem(at: url)
     }
 
@@ -306,15 +396,15 @@ result = translate(payload)
         }
     }
 
-    private func fileURL(for videoId: String) -> URL? {
+    private func fileURL(for originalURL: String) -> URL? {
         guard let dirURL = ensureDirectory() else { return nil }
-        let filename = sanitizedFileName(videoId)
+        let filename = sanitizedFileName(originalURL)
         return dirURL.appendingPathComponent(filename).appendingPathExtension("json")
     }
 
-    private func translationFileURL(for videoId: String) -> URL? {
+    private func translationFileURL(for youtubeVideoId: String) -> URL? {
         guard let dirURL = ensureDirectory() else { return nil }
-        let filename = sanitizedFileName(videoId) + ".translations"
+        let filename = sanitizedFileName(youtubeVideoId) + ".translations"
         return dirURL.appendingPathComponent(filename).appendingPathExtension("json")
     }
 
