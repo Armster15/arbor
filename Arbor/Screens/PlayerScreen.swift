@@ -228,7 +228,7 @@ struct __PlayerScreen: View {
                         } label: {
                             Image(systemName: "translate")
                                 .font(.callout)
-                                .foregroundColor(lyricsDisplayMode == .original ? Color("PrimaryText") : .blue)
+                                .foregroundColor(lyricsDisplayMode != .original && !isTranslatingLyrics ? .blue : Color("PrimaryText"))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
                                 .background(colorScheme == .light ? Color("Elevated") : Color("SecondaryBg"))
