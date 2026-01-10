@@ -313,6 +313,16 @@ result = translate(payload)
         clearDisk()
     }
 
+    func clearLyrics(originalURL: String) {
+        QueryCache.shared.invalidateQueries(lyricsCachePrefix + [originalURL])
+        removeFromDisk(originalURL: originalURL)
+
+        if let youtubeVideoId = Self.youtubeVideoId(from: originalURL) {
+            QueryCache.shared.invalidateQueries(translationCachePrefix + [youtubeVideoId])
+            removeTranslationFromDisk(youtubeVideoId: youtubeVideoId)
+        }
+    }
+
     private func getFromMemory(originalURL: String) -> LyricsPayload? {
         QueryCache.shared.get(for: lyricsCachePrefix + [originalURL], as: LyricsPayload.self)
     }

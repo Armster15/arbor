@@ -612,17 +612,27 @@ struct __PlayerScreen: View {
                     isLoading: false,
                     isDisabled: false,
                     action: {
+                        let previousTitle = libraryItem.title
+                        let previousArtists = libraryItem.artists
                         let trimmedArtists = draftArtists
                             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                             .filter { !$0.isEmpty }
+                        let nextTitle = draftTitle
+                        let nextArtists = trimmedArtists
 
                         // Commit edits to meta on Save
-                        libraryItem.title = draftTitle
+                        libraryItem.title = nextTitle
                         libraryItem.artists = trimmedArtists
 
                         // Update now playing metadata
                         audioPlayer.updateMetadataTitle(decoratedTitle())
                         audioPlayer.updateMetadataArtist(formatArtists(libraryItem.artists))
+
+                        if previousTitle != nextTitle || previousArtists != nextArtists {
+                            LyricsCache.shared.clearLyrics(originalURL: libraryItem.original_url)
+                            fetchLyricsIfNeeded()
+                        }
+
                         isEditSheetPresented = false
                     }
                 )
