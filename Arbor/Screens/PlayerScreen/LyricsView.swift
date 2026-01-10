@@ -18,8 +18,6 @@ public struct LyricsView: View {
     let payload: LyricsPayload
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
     let originalUrl: String
-    let title: String
-    let artistSummary: String
     @Binding var lyricsDisplayMode: LyricsDisplayMode
     let onExpand: () -> Void
 
@@ -27,7 +25,6 @@ public struct LyricsView: View {
     @State private var translatedLyricLines: [String]?
     @State private var isTranslatingLyrics: Bool = false
     @State private var currentTranslateTaskId: UUID?
-    @State private var isAutoScrollEnabled: Bool = true
 
     private func translateLyrics() {
         guard !isTranslatingLyrics else { return }
@@ -72,13 +69,8 @@ public struct LyricsView: View {
                 isTranslatingLyrics: isTranslatingLyrics,
                 lyricsDisplayMode: lyricsDisplayMode,
                 lyricsSource: payload.source,
-                showsSync: payload.timed && !isAutoScrollEnabled,
                 showsExpand: true,
-                onSync: {
-                    isAutoScrollEnabled = true
-                },
                 onExpand: {
-                    isAutoScrollEnabled = true
                     onExpand()
                 }
             ) { mode in
@@ -92,7 +84,8 @@ public struct LyricsView: View {
                 lyricsDisplayMode: lyricsDisplayMode,
                 romanizedLyricLines: romanizedLyricLines,
                 translatedLyricLines: translatedLyricLines,
-                isAutoScrollEnabled: $isAutoScrollEnabled,
+                isAutoScrollEnabled: .constant(true),
+                allowsUserScroll: false,
                 timedLineFont: lyricUIFont(textStyle: .title3, weight: .semibold),
                 untimedLineFont: lyricUIFont(textStyle: .title3, weight: .semibold),
                 itemSpacing: 10,
@@ -108,7 +101,6 @@ public struct LyricsView: View {
             }
             .onChange(of: payload) { _, _ in
                 resetTranslationState()
-                isAutoScrollEnabled = true
             }
         }
         .padding(16)
@@ -193,6 +185,7 @@ private struct LyricsLinesView: View {
     let romanizedLyricLines: [String]?
     let translatedLyricLines: [String]?
     @Binding var isAutoScrollEnabled: Bool
+    let allowsUserScroll: Bool
     let timedLineFont: UIFont
     let untimedLineFont: UIFont
     let itemSpacing: CGFloat
@@ -242,6 +235,49 @@ private struct LyricsLinesView: View {
         }
     }
 
+    @ViewBuilder
+    private func lyricsContent(
+        selectedLyricLines: [String]?,
+        activeIndex: Int?,
+        proxy: ScrollViewProxy?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: itemSpacing) {
+            ForEach(payload.lines.indices, id: \.self) { index in
+                let line = payload.lines[index]
+                let isActive = payload.timed && index == activeIndex
+                let displayText = selectedLyricLines?[index] ?? line.text
+                UIKitLyricLabel(
+                    text: displayText.isEmpty ? " " : displayText,
+                    font: payload.timed ? timedLineFont : untimedLineFont,
+                    textColor: payload.timed
+                        ? (isActive ? Color("PrimaryText") : Color("PrimaryText").opacity(0.1))
+                        : Color("PrimaryText"),
+                    isActive: isActive,
+                    onTap: {
+                        onLineTap(line, index)
+                        guard seeksOnTap else { return }
+                        pendingTapLyricIndex = index
+                        suppressAutoScrollUntil = Date().addingTimeInterval(0.5)
+                        lastActiveLyricIndex = index
+                        lastPlaybackTimeMs = line.startMs
+                        isAutoScrollEnabled = true
+                        seekToLine(line)
+                        if let proxy {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                proxy.scrollTo(index, anchor: .center)
+                            }
+                        }
+                    }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .id(index)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .lineSpacing(lineSpacing)
+        .padding(.vertical, 8)
+    }
+
     var body: some View {
         let currentMs = Int(audioPlayer.currentTime * 1000)
         let shouldShowActive = payload.timed
@@ -262,41 +298,15 @@ private struct LyricsLinesView: View {
 
         return ScrollViewReader { proxy in
             ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: itemSpacing) {
-                    ForEach(payload.lines.indices, id: \.self) { index in
-                        let line = payload.lines[index]
-                        let isActive = payload.timed && index == activeIndex
-                        let displayText = selectedLyricLines?[index] ?? line.text
-                        UIKitLyricLabel(
-                            text: displayText.isEmpty ? " " : displayText,
-                            font: payload.timed ? timedLineFont : untimedLineFont,
-                            textColor: payload.timed
-                                ? (isActive ? Color("PrimaryText") : Color("PrimaryText").opacity(0.1))
-                                : Color("PrimaryText"),
-                            isActive: isActive,
-                            onTap: {
-                                onLineTap(line, index)
-                                guard seeksOnTap else { return }
-                                pendingTapLyricIndex = index
-                                suppressAutoScrollUntil = Date().addingTimeInterval(0.5)
-                                lastActiveLyricIndex = index
-                                lastPlaybackTimeMs = line.startMs
-                                isAutoScrollEnabled = true
-                                seekToLine(line)
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    proxy.scrollTo(index, anchor: .center)
-                                }
-                            }
-                        )
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .id(index)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .lineSpacing(lineSpacing)
-                .padding(.vertical, 8)
+                lyricsContent(
+                    selectedLyricLines: selectedLyricLines,
+                    activeIndex: activeIndex,
+                    proxy: proxy
+                )
             }
             .frame(maxHeight: maxHeight)
+            .scrollDisabled(!allowsUserScroll)
+            .allowsHitTesting(allowsUserScroll)
             .scrollIndicators(.hidden)
             .onChange(of: activeIndex) { _, newValue in
                 guard payload.timed, isAutoScrollEnabled else { return }
@@ -354,7 +364,7 @@ private struct LyricsLinesView: View {
             }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 2).onChanged { _ in
-                    guard payload.timed else { return }
+                    guard allowsUserScroll, payload.timed else { return }
                     isAutoScrollEnabled = false
                 }
             )
@@ -370,19 +380,14 @@ private struct LyricsHeaderView: View, Equatable {
     let isTranslatingLyrics: Bool
     let lyricsDisplayMode: LyricsDisplayMode
     let lyricsSource: LyricsSource?
-    let showsSync: Bool
     let showsExpand: Bool
-    let onSync: () -> Void
     let onExpand: () -> Void
     let onSelect: (LyricsDisplayMode) -> Void
-
-    @Environment(\.colorScheme) var colorScheme
 
     static func == (lhs: LyricsHeaderView, rhs: LyricsHeaderView) -> Bool {
         lhs.isTranslatingLyrics == rhs.isTranslatingLyrics
             && lhs.lyricsDisplayMode == rhs.lyricsDisplayMode
             && lhs.lyricsSource == rhs.lyricsSource
-            && lhs.showsSync == rhs.showsSync
             && lhs.showsExpand == rhs.showsExpand
     }
 
@@ -391,19 +396,6 @@ private struct LyricsHeaderView: View, Equatable {
             Text("Lyrics")
                 .font(.headline)
                 .foregroundColor(Color("PrimaryText"))
-
-            Button("Sync") {
-                onSync()
-            }
-            .font(.caption)
-            .foregroundColor(Color("PrimaryText"))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(colorScheme == .light ? Color("Elevated") : Color("SecondaryBg"))
-            .clipShape(Capsule())
-            .opacity(showsSync ? 1 : 0)
-            .allowsHitTesting(showsSync)
-            .accessibilityHidden(!showsSync)
 
             Spacer()
 
@@ -544,6 +536,7 @@ public struct FullScreenLyricsView: View {
                     romanizedLyricLines: romanizedLyricLines,
                     translatedLyricLines: translatedLyricLines,
                     isAutoScrollEnabled: $isAutoScrollEnabled,
+                    allowsUserScroll: true,
                     timedLineFont: UIFont.systemFont(ofSize: 24, weight: .semibold),
                     untimedLineFont: UIFont.systemFont(ofSize: 24, weight: .semibold),
                     itemSpacing: 14,

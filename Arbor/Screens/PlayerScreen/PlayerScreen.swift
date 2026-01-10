@@ -115,8 +115,6 @@ struct __PlayerScreen: View {
                     payload: payload,
                     audioPlayer: audioPlayer,
                     originalUrl: libraryItem.original_url,
-                    title: libraryItem.title,
-                    artistSummary: libraryItem.artists.joined(separator: ", "),
                     lyricsDisplayMode: $lyricsDisplayMode,
                     onExpand: {
                         activeLyricsPayload = payload
