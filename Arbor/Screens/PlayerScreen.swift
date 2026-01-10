@@ -55,11 +55,6 @@ struct __PlayerScreen: View {
     @Binding var filePath: String
     
     @State private var isEditSheetPresented: Bool = false
-    @State private var draftTitle: String = ""
-    @State private var draftArtists: [String] = []
-    @State private var editSheetHeight: CGFloat = 0
-    @State private var editSheetContentHeight: CGFloat = 0
-    @State private var editSheetButtonHeight: CGFloat = 0
     @State private var lyricsState: LyricsState = .idle
     @State private var currentLyricsTaskId: UUID?
     
@@ -78,28 +73,6 @@ struct __PlayerScreen: View {
         case failed
     }
 
-    private struct SheetHeightKey: PreferenceKey {
-        static var defaultValue: CGFloat = 0
-
-        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-            value = max(value, nextValue())
-        }
-    }
-
-    private struct SheetButtonHeightKey: PreferenceKey {
-        static var defaultValue: CGFloat = 0
-
-        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-            value = max(value, nextValue())
-        }
-    }
-
-    private var editSheetDetentHeight: CGFloat {
-        let maxSheetHeight = UIScreen.main.bounds.height * 0.9
-        let targetHeight = editSheetContentHeight + editSheetButtonHeight
-        return min(max(targetHeight, 280), maxSheetHeight)
-    }
-    
     private var isDownloaded: Bool {
         getLocalAudioFilePath(originalUrl: libraryItem.original_url) != nil
     }
@@ -215,11 +188,7 @@ struct __PlayerScreen: View {
                 savedPitchCents: savedPitchCents,
                 savedReverbMix: savedReverbMix,
                 onSave: { saveToLibrary() },
-                onEdit: {
-                    draftTitle = libraryItem.title
-                    draftArtists = libraryItem.artists
-                    isEditSheetPresented = true
-                }
+                onEdit: { isEditSheetPresented = true }
             )
         }
         .task(id: libraryItem.original_url) {
@@ -227,140 +196,12 @@ struct __PlayerScreen: View {
             fetchLyricsIfNeeded()
         }
         .sheet(isPresented: $isEditSheetPresented) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 32) {
-                        Text("Edit Metadata")
-                            .font(.headline)
-                            .padding(.top, 24)
-                    
-                        VStack(spacing: 24) {
-                            LabeledTextField(
-                                label: "Title",
-                                placeholder: "Title",
-                                text: $draftTitle,
-                                isSecure: false,
-                                textContentType: nil,
-                                keyboardType: .default,
-                                autocapitalization: .words,
-                                disableAutocorrection: true
-                            )
-                            
-                            VStack(spacing: 12) {
-                                ForEach(draftArtists.indices, id: \.self) { index in
-                                    HStack(alignment: .bottom) {
-                                        LabeledTextField(
-                                            label: "Artist \(index + 1)",
-                                            placeholder: "Artist name",
-                                            text: Binding(
-                                                get: { draftArtists[index] },
-                                                set: { draftArtists[index] = $0 }
-                                            ),
-                                            isSecure: false,
-                                            textContentType: nil,
-                                            keyboardType: .default,
-                                            autocapitalization: .words,
-                                            disableAutocorrection: true,
-                                            horizontalPadding: 0
-                                        )
-
-                                        Button {
-                                            draftArtists.remove(at: index)
-                                            if draftArtists.isEmpty {
-                                                draftArtists = [""]
-                                            }
-                                        } label: {
-                                            Image(systemName: "minus.circle.fill")
-                                                .font(.title3)
-                                                .tint(Color("PrimaryBg"))
-                                        }
-                                        .accessibilityLabel("Remove artist")
-                                        .padding(.horizontal, 6)
-                                        .padding(.bottom, 12)
-                                    }
-                                    .padding(.horizontal)
-                                }
-
-                                Button {
-                                    draftArtists.append("")
-                                    DispatchQueue.main.async {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            proxy.scrollTo("editSheetBottom", anchor: .bottom)
-                                        }
-                                    }
-                                } label: {
-                                    Label("Add Artist", systemImage: "plus.circle.fill")
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(Color("PrimaryBg"))
-                                .padding(.top, 12)
-                            }
-                        }
-                        
-                        Color.clear
-                            .frame(height: 1)
-                            .id("editSheetBottom")
-                    }
-                    .padding(.bottom, 24)
-                    .background(
-                        GeometryReader { proxy in
-                            Color.clear.preference(key: SheetHeightKey.self, value: proxy.size.height)
-                        }
-                    )
-                }
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                PrimaryActionButton(
-                    title: "Save",
-                    isLoading: false,
-                    isDisabled: false,
-                    action: {
-                        let previousTitle = libraryItem.title
-                        let previousArtists = libraryItem.artists
-                        let trimmedArtists = draftArtists
-                            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                            .filter { !$0.isEmpty }
-                        let nextTitle = draftTitle
-                        let nextArtists = trimmedArtists
-
-                        // Commit edits to meta on Save
-                        libraryItem.title = nextTitle
-                        libraryItem.artists = trimmedArtists
-
-                        // Update now playing metadata
-                        audioPlayer.updateMetadataTitle(decoratedTitle(for: libraryItem, audioPlayer: audioPlayer))
-                        audioPlayer.updateMetadataArtist(formatArtists(libraryItem.artists))
-
-                        if previousTitle != nextTitle || previousArtists != nextArtists {
-                            LyricsCache.shared.clearLyrics(originalURL: libraryItem.original_url)
-                            fetchLyricsIfNeeded()
-                        }
-
-                        isEditSheetPresented = false
-                    }
-                )
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear.preference(key: SheetButtonHeightKey.self, value: proxy.size.height)
-                    }
-                )
-            }
-            .onPreferenceChange(SheetHeightKey.self) { newValue in
-                if newValue > 0 {
-                    editSheetContentHeight = newValue
-                    editSheetHeight = editSheetDetentHeight
-                }
-            }
-            .onPreferenceChange(SheetButtonHeightKey.self) { newValue in
-                if newValue > 0 {
-                    editSheetButtonHeight = newValue
-                    editSheetHeight = editSheetDetentHeight
-                }
-            }
-			.frame(maxWidth: .infinity, alignment: .top)
-            .presentationDetents([.height(max(editSheetHeight, 280)), .large])
-            .presentationBackground(BackgroundColor)
-            .presentationDragIndicator(.visible)
+            PlayerMetadataSheet(
+                libraryItem: libraryItem,
+                audioPlayer: audioPlayer,
+                onLyricsInvalidated: { fetchLyricsIfNeeded() },
+                isPresented: $isEditSheetPresented
+            )
         }
     }
 }
@@ -694,6 +535,187 @@ private struct PlayerMetadataSyncView: View {
             .onChange(of: audioPlayer.reverbMix) { _, _ in
                 audioPlayer.updateMetadataTitle(decoratedTitle(for: libraryItem, audioPlayer: audioPlayer))
             }
+    }
+}
+
+private struct PlayerMetadataSheet: View {
+    @Bindable var libraryItem: LibraryItem
+    @ObservedObject var audioPlayer: AudioPlayerWithReverb
+    let onLyricsInvalidated: () -> Void
+    @Binding var isPresented: Bool
+
+    @State private var draftTitle: String = ""
+    @State private var draftArtists: [String] = []
+    @State private var editSheetHeight: CGFloat = 0
+    @State private var editSheetContentHeight: CGFloat = 0
+    @State private var editSheetButtonHeight: CGFloat = 0
+    @State private var hasInitialized: Bool = false
+
+    private struct SheetHeightKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = max(value, nextValue())
+        }
+    }
+
+    private struct SheetButtonHeightKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = max(value, nextValue())
+        }
+    }
+
+    private var editSheetDetentHeight: CGFloat {
+        let maxSheetHeight = UIScreen.main.bounds.height * 0.9
+        let targetHeight = editSheetContentHeight + editSheetButtonHeight
+        return min(max(targetHeight, 280), maxSheetHeight)
+    }
+
+    private func initializeDraftsIfNeeded() {
+        guard !hasInitialized else { return }
+        draftTitle = libraryItem.title
+        draftArtists = libraryItem.artists
+        hasInitialized = true
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 32) {
+                    Text("Edit Metadata")
+                        .font(.headline)
+                        .padding(.top, 24)
+
+                    VStack(spacing: 24) {
+                        LabeledTextField(
+                            label: "Title",
+                            placeholder: "Title",
+                            text: $draftTitle,
+                            isSecure: false,
+                            textContentType: nil,
+                            keyboardType: .default,
+                            autocapitalization: .words,
+                            disableAutocorrection: true
+                        )
+
+                        VStack(spacing: 12) {
+                            ForEach(draftArtists.indices, id: \.self) { index in
+                                HStack(alignment: .bottom) {
+                                    LabeledTextField(
+                                        label: "Artist \(index + 1)",
+                                        placeholder: "Artist name",
+                                        text: Binding(
+                                            get: { draftArtists[index] },
+                                            set: { draftArtists[index] = $0 }
+                                        ),
+                                        isSecure: false,
+                                        textContentType: nil,
+                                        keyboardType: .default,
+                                        autocapitalization: .words,
+                                        disableAutocorrection: true,
+                                        horizontalPadding: 0
+                                    )
+
+                                    Button {
+                                        draftArtists.remove(at: index)
+                                        if draftArtists.isEmpty {
+                                            draftArtists = [""]
+                                        }
+                                    } label: {
+                                        Image(systemName: "minus.circle.fill")
+                                            .font(.title3)
+                                            .tint(Color("PrimaryBg"))
+                                    }
+                                    .accessibilityLabel("Remove artist")
+                                    .padding(.horizontal, 6)
+                                    .padding(.bottom, 12)
+                                }
+                                .padding(.horizontal)
+                            }
+
+                            Button {
+                                draftArtists.append("")
+                                DispatchQueue.main.async {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        proxy.scrollTo("editSheetBottom", anchor: .bottom)
+                                    }
+                                }
+                            } label: {
+                                Label("Add Artist", systemImage: "plus.circle.fill")
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(Color("PrimaryBg"))
+                            .padding(.top, 12)
+                        }
+                    }
+
+                    Color.clear
+                        .frame(height: 1)
+                        .id("editSheetBottom")
+                }
+                .padding(.bottom, 24)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: SheetHeightKey.self, value: proxy.size.height)
+                    }
+                )
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            PrimaryActionButton(
+                title: "Save",
+                isLoading: false,
+                isDisabled: false,
+                action: {
+                    let previousTitle = libraryItem.title
+                    let previousArtists = libraryItem.artists
+                    let trimmedArtists = draftArtists
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                    let nextTitle = draftTitle
+                    let nextArtists = trimmedArtists
+
+                    libraryItem.title = nextTitle
+                    libraryItem.artists = trimmedArtists
+
+                    audioPlayer.updateMetadataTitle(decoratedTitle(for: libraryItem, audioPlayer: audioPlayer))
+                    audioPlayer.updateMetadataArtist(formatArtists(libraryItem.artists))
+
+                    if previousTitle != nextTitle || previousArtists != nextArtists {
+                        LyricsCache.shared.clearLyrics(originalURL: libraryItem.original_url)
+                        onLyricsInvalidated()
+                    }
+
+                    isPresented = false
+                }
+            )
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(key: SheetButtonHeightKey.self, value: proxy.size.height)
+                }
+            )
+        }
+        .onAppear {
+            initializeDraftsIfNeeded()
+        }
+        .onPreferenceChange(SheetHeightKey.self) { newValue in
+            if newValue > 0 {
+                editSheetContentHeight = newValue
+                editSheetHeight = editSheetDetentHeight
+            }
+        }
+        .onPreferenceChange(SheetButtonHeightKey.self) { newValue in
+            if newValue > 0 {
+                editSheetButtonHeight = newValue
+                editSheetHeight = editSheetDetentHeight
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .presentationDetents([.height(max(editSheetHeight, 280)), .large])
+        .presentationBackground(BackgroundColor)
+        .presentationDragIndicator(.visible)
     }
 }
 
