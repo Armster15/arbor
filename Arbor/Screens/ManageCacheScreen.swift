@@ -17,7 +17,7 @@ struct ManageCacheScreen: View {
         List {
             Section {
                 HStack {
-                    Text("Temporary files")
+                    Text("Temporary Files")
                         .foregroundColor(Color("PrimaryText"))
 
                     Spacer()
@@ -35,7 +35,7 @@ struct ManageCacheScreen: View {
                 .listRowBackground(Color("SecondaryBg"))
 
                 HStack {
-                    Text("Lyrics cache")
+                    Text("Lyrics Cache")
                         .foregroundColor(Color("PrimaryText"))
 
                     Spacer()
@@ -57,7 +57,7 @@ struct ManageCacheScreen: View {
                 Button(role: .destructive) {
                     showClearConfirm = true
                 } label: {
-                    Text("Delete Temporary files")
+                    Text("Delete Temporary Files")
                 }
                 .disabled(isClearing)
                 .listRowBackground(Color("SecondaryBg"))
@@ -65,7 +65,7 @@ struct ManageCacheScreen: View {
                 Button(role: .destructive) {
                     showClearLyricsConfirm = true
                 } label: {
-                    Text("Delete Cached Lyrics")
+                    Text("Delete Lyrics Cache")
                 }
                 .disabled(isClearingLyrics)
                 .listRowBackground(Color("SecondaryBg"))
@@ -76,7 +76,7 @@ struct ManageCacheScreen: View {
             refreshSizes()
         }
         .confirmationDialog(
-            "Delete temporary files?",
+            "Delete Temporary Files?",
             isPresented: $showClearConfirm,
             titleVisibility: .visible
         ) {
@@ -85,7 +85,7 @@ struct ManageCacheScreen: View {
             }
         }
         .confirmationDialog(
-            "Delete cached lyrics?",
+            "Delete Lyrics Cache?",
             isPresented: $showClearLyricsConfirm,
             titleVisibility: .visible
         ) {
