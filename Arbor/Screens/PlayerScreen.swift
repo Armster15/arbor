@@ -830,7 +830,7 @@ private struct LyricsView: View {
                 translatedLyricLines: translatedLyricLines,
                 isAutoScrollEnabled: $isAutoScrollEnabled,
                 timedLineFont: lyricUIFont(textStyle: .title3, weight: .semibold),
-                untimedLineFont: lyricUIFont(textStyle: .body, weight: .semibold),
+                untimedLineFont: lyricUIFont(textStyle: .title3, weight: .semibold),
                 itemSpacing: 10,
                 lineSpacing: 4,
                 maxHeight: 260,
