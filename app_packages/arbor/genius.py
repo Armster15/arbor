@@ -5,6 +5,8 @@ import urllib.parse
 from bs4 import BeautifulSoup
 import json
 from difflib import SequenceMatcher
+import re
+
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; rv:123.0) Gecko/20100101 Firefox/123.0"
 
@@ -87,7 +89,17 @@ def _get_lyrics_with_url_from_genius(url: str) -> str | None:
 def get_lyrics_from_genius(title: str, primary_artist: str) -> str:
     songs = _search_genius_songs(title + " " + primary_artist)
 
-    if songs is None or len(songs) == 0:
+    if songs is None:
+        return ""
+
+    if len(songs) == 0:
+        # Sometimes a song will be like "Where Have You Been (TikTok Version)," which won't yield results
+        # on Genius. So for these cases, we strip the parentheses and the text inside them and try again.
+        if ("(" in title and ")" in title) or ("[" in title and "]" in title):
+            # Strip all parentheses and brackets and the text inside them and try again
+            new_title = re.sub(r"[\(\[][^\)\]]*[\)\]]", "", title).strip()
+            return get_lyrics_from_genius(new_title, primary_artist)
+
         return ""
 
     # Selects the song dict whose title is most similar to `title`
