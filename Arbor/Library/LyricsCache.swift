@@ -33,6 +33,55 @@ final class LyricsCache {
         shared.directoryURL?.path
     }
 
+    static func videoId(from urlString: String) -> String? {
+        guard let url = URL(string: urlString) else { return nil }
+
+        let host = url.host?.lowercased() ?? ""
+
+        // https://youtu.be/e0Y39QnwRvY
+        if host.contains("youtu.be") {
+            return url.pathComponents.dropFirst().first
+        }
+
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let queryItems = components.queryItems,
+           let videoId = queryItems.first(where: { $0.name == "v" })?.value {
+            return videoId
+        }
+
+        // https://www.youtube.com/watch?v=e0Y39QnwRvY
+        if host.contains("youtube.com"),
+           let shortsIndex = url.pathComponents.firstIndex(of: "shorts"),
+           url.pathComponents.count > shortsIndex + 1 {
+            return url.pathComponents[shortsIndex + 1]
+        }
+
+        return nil
+    }
+
+    static func activeLyricIndex(for payload: LyricsPayload, currentTimeMs: Int) -> Int? {
+        guard payload.timed, !payload.lines.isEmpty else { return nil }
+
+        var activeIndex: Int?
+        for (index, line) in payload.lines.enumerated() {
+            guard let startMs = line.startMs else { continue }
+            if startMs <= currentTimeMs {
+                activeIndex = index
+            } else {
+                break
+            }
+        }
+        return activeIndex
+    }
+
+    func fetchLyrics(originalUrl: String, completion: @escaping (LyricsFetchResult) -> Void) {
+        guard let videoId = Self.videoId(from: originalUrl) else {
+            completion(.empty)
+            return
+        }
+        fetchLyrics(videoId: videoId, completion: completion)
+    }
+
     func fetchLyrics(videoId: String, completion: @escaping (LyricsFetchResult) -> Void) {
         if let cached = getFromMemory(videoId: videoId) {
             completion(.loaded(cached))
