@@ -46,12 +46,17 @@ def _get_romanization(result: Translated) -> str | None:
 def translate(text: list[str]) -> str:
     result = _google_translate(text)
 
+    translations: list[str] = []
     romanizations: list[str | None] = []
+
     for r in result:
+        translations.append(r.text)
+
         romanization = _get_romanization(r)
         romanizations.append(romanization)
 
     payload = {
+        "translations": translations,
         "romanizations": romanizations,
     }
 
