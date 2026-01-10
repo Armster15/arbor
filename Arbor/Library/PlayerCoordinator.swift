@@ -17,6 +17,7 @@ final class PlayerCoordinator: ObservableObject {
     @Published var filePath: String? = nil
     @Published var artworkImage: UIImage? = nil
     @Published var artworkURL: URL? = nil
+    @Published var lyricsDisplayMode: LyricsDisplayMode = .original
 
     private var lastFM: LastFMSession?
     private let scrobbleCoordinator = ScrobbleCoordinator()
@@ -50,6 +51,7 @@ final class PlayerCoordinator: ObservableObject {
 
         self.filePath = filePath
         self.libraryItem = libraryItem
+        self.lyricsDisplayMode = .original
 
         // Load artwork image so we don't reconstruct it on every rerender in the bottom tab view accessory of ContentView
         let nextArtworkURL = libraryItem.thumbnail_url.flatMap { URL(string: $0) }

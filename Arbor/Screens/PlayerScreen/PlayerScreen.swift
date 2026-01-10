@@ -25,7 +25,8 @@ struct PlayerScreen: View {
                     filePath: Binding(
                         get: { filePath },
                         set: { player.filePath = $0 }
-                    )
+                    ),
+                    lyricsDisplayMode: $player.lyricsDisplayMode
                 )
             } else {
                 EmptyView()
@@ -52,13 +53,13 @@ struct __PlayerScreen: View {
     @Bindable var libraryItem: LibraryItem
     let audioPlayer: AudioPlayerWithReverb
     @Binding var filePath: String
+    @Binding var lyricsDisplayMode: LyricsDisplayMode
     
     @State private var isEditSheetPresented: Bool = false
     @State private var lyricsState: LyricsState = .idle
     @State private var currentLyricsTaskId: UUID?
     @State private var isLyricsFullScreenPresented: Bool = false
     @State private var activeLyricsPayload: LyricsPayload?
-    @State private var lyricsDisplayMode: LyricsDisplayMode = .original
     
     // Track last saved settings locally (not persisted to iCloud)
     @State private var savedSpeedRate: Float?
@@ -79,10 +80,16 @@ struct __PlayerScreen: View {
         getLocalAudioFilePath(originalUrl: libraryItem.original_url) != nil
     }
     
-    init(libraryItem: LibraryItem, audioPlayer: AudioPlayerWithReverb, filePath: Binding<String>) {
+    init(
+        libraryItem: LibraryItem,
+        audioPlayer: AudioPlayerWithReverb,
+        filePath: Binding<String>,
+        lyricsDisplayMode: Binding<LyricsDisplayMode>
+    ) {
         self.libraryItem = libraryItem
         self.audioPlayer = audioPlayer
         self._filePath = filePath
+        self._lyricsDisplayMode = lyricsDisplayMode
     }
 
     private func fetchLyricsIfNeeded() {
@@ -748,7 +755,7 @@ private struct PlayerMetadataSheet: View {
 			BackgroundColor
 				.ignoresSafeArea()
 			
-			__PlayerScreen(
+            __PlayerScreen(
                 libraryItem: LibraryItem(
                     original_url: "https://www.youtube.com/watch?v=Sxu8wHE97Rk",
                     title: "Ude Dil Befikre (From \"Befikre\")",
@@ -762,7 +769,8 @@ private struct PlayerMetadataSheet: View {
                 filePath: Binding(
                     get: { "" },
                     set: { _ in }
-                )
+                ),
+                lyricsDisplayMode: .constant(.original)
 			)
 		}
 	}
