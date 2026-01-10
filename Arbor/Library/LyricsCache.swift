@@ -100,22 +100,8 @@ final class LyricsCache {
 
         let escaped = escapeForPythonString(videoId)
         let code = """
-from arbor import get_lyrics_from_youtube
-import json
-_result = get_lyrics_from_youtube('\(escaped)')
-if _result is None:
-    result = ""
-else:
-    lines = []
-    if len(_result) > 0 and isinstance(_result[0], (list, tuple)):
-        for start_ms, text in _result:
-            lines.append({"start_ms": int(start_ms), "text": text})
-        payload = {"timed": True, "lines": lines}
-    else:
-        for text in _result:
-            lines.append({"start_ms": None, "text": text})
-        payload = {"timed": False, "lines": lines}
-    result = json.dumps(payload)
+from arbor.lyrics import get_lyrics_from_youtube
+result = get_lyrics_from_youtube('\(escaped)')
 """
 
         pythonExecAndGetStringAsync(
