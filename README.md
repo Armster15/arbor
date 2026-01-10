@@ -7,9 +7,10 @@ I built this originally to easily pitch-shift, adjust speed, and add reverb on t
 Arbor's core app is built in Swift, but it uniquely ships an embedded version of the Python runtime. This enables Arbor to use battle-tested libraries like [yt-dlp](https://github.com/yt-dlp/yt-dlp) directly on device.
 
 It also features:
-- iCloud Sync, so you can share your library across your Apple devices.
-- Last.fm support for scrobbling your listens
-- A Python dependency manager with `pip` so you can update dependencies without having to rebuild the app
+- **iCloud Sync**, so you can share your library across your Apple devices.
+- **Last.fm support** for scrobbling your listens
+- **Lyrics**, including romanization and translation
+- **A Python dependency manager** with `pip` so you can update dependencies without having to rebuild the app
 
 ## Local Setup
 
