@@ -155,4 +155,11 @@ final class PlayerCoordinator: ObservableObject {
             album: nil
         )
     }
+
+    func updateScrobbleSeed(for libraryItem: LibraryItem) {
+        let scrobbleSeed = makeScrobbleSeed(from: libraryItem)
+        Task {
+            await scrobbleCoordinator.updateSeed(scrobbleSeed)
+        }
+    }
 }

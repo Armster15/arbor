@@ -12,9 +12,9 @@ struct ScrobbleSeed: Sendable {
 
 // Tracks listening progress and decides when a track meets Last.fm scrobble criteria.
 final class ScrobbleState {
-    private let title: String
-    private let artist: String
-    private let album: String?
+    private var title: String
+    private var artist: String
+    private var album: String?
     private let startedAt: Date
 
     private var duration: Double = 0
@@ -82,5 +82,14 @@ final class ScrobbleState {
             chosenByUser: true,
             mbid: nil
         )
+    }
+
+    @discardableResult
+    func updateMetadata(_ seed: ScrobbleSeed) -> Bool {
+        guard let nextArtist = seed.artist else { return false }
+        title = seed.title
+        artist = nextArtist
+        album = seed.album
+        return true
     }
 }
