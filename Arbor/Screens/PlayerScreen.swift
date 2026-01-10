@@ -132,7 +132,11 @@ struct __PlayerScreen: View {
         currentLyricsTaskId = taskId
         lyricsState = .loading
 
-        LyricsCache.shared.fetchLyrics(originalUrl: libraryItem.original_url) { result in
+        LyricsCache.shared.fetchLyrics(
+            originalUrl: libraryItem.original_url,
+            title: libraryItem.title,
+            artists: libraryItem.artists
+        ) { result in
             guard taskId == currentLyricsTaskId else { return }
 
             switch result {

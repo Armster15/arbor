@@ -90,15 +90,25 @@ final class LyricsCache {
         return activeIndex
     }
 
-    func fetchLyrics(originalUrl: String, completion: @escaping (LyricsFetchResult) -> Void) {
+    func fetchLyrics(
+        originalUrl: String,
+        title: String,
+        artists: [String],
+        completion: @escaping (LyricsFetchResult) -> Void
+    ) {
         guard let videoId = Self.videoId(from: originalUrl) else {
             completion(.empty)
             return
         }
-        fetchLyrics(videoId: videoId, completion: completion)
+        fetchLyrics(videoId: videoId, title: title, artists: artists, completion: completion)
     }
 
-    func fetchLyrics(videoId: String, completion: @escaping (LyricsFetchResult) -> Void) {
+    func fetchLyrics(
+        videoId: String,
+        title: String,
+        artists: [String],
+        completion: @escaping (LyricsFetchResult) -> Void
+    ) {
         if let cached = getFromMemory(videoId: videoId) {
             completion(.loaded(cached))
             return
@@ -114,6 +124,57 @@ final class LyricsCache {
             }
         }
 
+        let primaryArtist = artists.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let queryParts = [
+            title.trimmingCharacters(in: .whitespacesAndNewlines),
+            primaryArtist
+        ]
+            .filter { !$0.isEmpty }
+        let geniusQuery = queryParts.joined(separator: " ")
+
+        func fetchFromGenius() {
+            guard !primaryArtist.isEmpty, !geniusQuery.isEmpty else {
+                debugPrint("LyricsCache: skipping Genius lookup (missing artist/query) for \(videoId)")
+                completion(.empty)
+                return
+            }
+
+            debugPrint("LyricsCache: fetching Genius lyrics for \(videoId) with query '\(geniusQuery)'")
+            let escapedQuery = escapeForPythonString(geniusQuery)
+            let geniusCode = """
+from arbor import get_lyrics_from_genius
+result = get_lyrics_from_genius('\(escapedQuery)')
+"""
+
+            pythonExecAndGetStringAsync(
+                geniusCode.trimmingCharacters(in: .whitespacesAndNewlines),
+                "result"
+            ) { result in
+                guard let output = result, !output.isEmpty else {
+                    debugPrint("LyricsCache: Genius returned empty result for \(videoId)")
+                    completion(.empty)
+                    return
+                }
+
+                guard let data = output.data(using: .utf8),
+                      let payload = try? JSONDecoder().decode(LyricsPayload.self, from: data) else {
+                    debugPrint("LyricsCache: failed to decode Genius lyrics for \(videoId)")
+                    completion(.failed)
+                    return
+                }
+
+                guard !payload.lines.isEmpty else {
+                    debugPrint("LyricsCache: Genius returned no lyric lines for \(videoId)")
+                    completion(.empty)
+                    return
+                }
+
+                self.setInMemory(payload, videoId: videoId)
+                self.saveToDisk(data: data, videoId: videoId)
+                completion(.loaded(payload))
+            }
+        }
+
         let escaped = escapeForPythonString(videoId)
         let code = """
 from arbor.lyrics import get_lyrics_from_youtube
@@ -125,13 +186,21 @@ result = get_lyrics_from_youtube('\(escaped)')
             "result"
         ) { result in
             guard let output = result, !output.isEmpty else {
-                completion(.empty)
+                debugPrint("LyricsCache: YouTube returned empty result for \(videoId); falling back to Genius")
+                fetchFromGenius()
                 return
             }
 
             guard let data = output.data(using: .utf8),
                   let payload = try? JSONDecoder().decode(LyricsPayload.self, from: data) else {
-                completion(.failed)
+                debugPrint("LyricsCache: failed to decode YouTube lyrics for \(videoId); falling back to Genius")
+                fetchFromGenius()
+                return
+            }
+
+            guard !payload.lines.isEmpty else {
+                debugPrint("LyricsCache: YouTube returned no lyric lines for \(videoId); falling back to Genius")
+                fetchFromGenius()
                 return
             }
 
