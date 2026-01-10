@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Foundation
 import SwiftData
 import SDWebImage
 import SDWebImageSwiftUI
@@ -43,9 +44,13 @@ struct __PlayerScreen: View {
     @State private var draftTitle: String = ""
     @State private var draftArtists: [String] = []
     @State private var isScrubbing: Bool = false
+    @State private var scrubberTime: Double = 0
     @State private var editSheetHeight: CGFloat = 0
     @State private var editSheetContentHeight: CGFloat = 0
     @State private var editSheetButtonHeight: CGFloat = 0
+    @State private var lyricsState: LyricsState = .idle
+    @State private var currentLyricsTaskId: UUID?
+    @State private var lastActiveLyricIndex: Int?
     
     // Track last saved settings locally (not persisted to iCloud)
     @State private var savedSpeedRate: Float?
@@ -53,6 +58,14 @@ struct __PlayerScreen: View {
     @State private var savedReverbMix: Float?
     
     @Environment(\.modelContext) var modelContext
+
+    private enum LyricsState: Equatable {
+        case idle
+        case loading
+        case loaded(LyricsPayload)
+        case empty
+        case failed
+    }
 
     private struct SheetHeightKey: PreferenceKey {
         static var defaultValue: CGFloat = 0
@@ -112,6 +125,102 @@ struct __PlayerScreen: View {
         }
         guard !tags.isEmpty else { return libraryItem.title }
         return "\(libraryItem.title) (\(tags.joined(separator: " + ")))"
+    }
+
+    private func fetchLyricsIfNeeded() {
+        let taskId = UUID()
+        currentLyricsTaskId = taskId
+        lyricsState = .loading
+
+        LyricsCache.shared.fetchLyrics(originalUrl: libraryItem.original_url) { result in
+            guard taskId == currentLyricsTaskId else { return }
+
+            switch result {
+            case .loaded(let payload):
+                lyricsState = .loaded(payload)
+            case .empty:
+                lyricsState = .empty
+            case .failed:
+                lyricsState = .failed
+            }
+        }
+    }
+
+    private var lyricsSection: some View {
+        Group {
+            if case .loaded(let payload) = lyricsState, !payload.lines.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Lyrics")
+                            .font(.headline)
+                            .foregroundColor(Color("PrimaryText"))
+
+                        Spacer()
+                    }
+
+                    let currentMs = Int(audioPlayer.currentTime * 1000)
+                    let activeIndex = LyricsCache.activeLyricIndex(
+                        for: payload,
+                        currentTimeMs: currentMs
+                    )
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 10) {
+                                ForEach(payload.lines.indices, id: \.self) { index in
+                                    let line = payload.lines[index]
+                                    let isActive = payload.timed && index == activeIndex
+                                    if payload.timed {
+                                        HStack(alignment: .top, spacing: 12) {
+                                            Text(line.text.isEmpty ? " " : line.text)
+                                                .font(.title3)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(
+                                                    isActive ? Color("PrimaryText") : Color("PrimaryText").opacity(0.1)
+                                                )
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .animation(.easeInOut(duration: 0.15), value: isActive)
+                                        }
+                                        .id(index)
+                                    } else {
+                                        Text(line.text.isEmpty ? " " : line.text)
+                                            .font(.body)
+                                            .foregroundColor(Color("PrimaryText"))
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .id(index)
+                                    }
+                                }
+                            }
+                            .lineSpacing(4)
+                            .padding(.vertical, 8)
+                        }
+                        .scrollDisabled(true)
+                        .frame(maxHeight: 260)
+                        .scrollIndicators(.hidden)
+                        .onChange(of: activeIndex) { _, newValue in
+                            guard let newValue, newValue != lastActiveLyricIndex else { return }
+                            lastActiveLyricIndex = newValue
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                proxy.scrollTo(newValue, anchor: .center)
+                            }
+                        }
+                        // scroll to the active lyric on appear (e.g. when player is reopened)
+                        .onAppear {
+                            guard let activeIndex else { return }
+                            lastActiveLyricIndex = activeIndex
+                            withAnimation(nil) {
+                                proxy.scrollTo(activeIndex, anchor: .center)
+                            }
+                        }
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color("SecondaryBg"))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.35), value: lyricsState)
     }
     
     private func saveToLibrary() {
@@ -235,7 +344,7 @@ struct __PlayerScreen: View {
                     
                     // Scrubber
                     Scrubber(
-                        value: $audioPlayer.currentTime,
+                        value: $scrubberTime,
                         inRange: 0...max(audioPlayer.duration, 0.01),
                         activeFillColor: Color("PrimaryBg"),
                         fillColor: Color("PrimaryBg").opacity(0.8),
@@ -243,11 +352,21 @@ struct __PlayerScreen: View {
                         height: 30,
                         onEditingChanged: { editing in
                             isScrubbing = editing
+                            if editing {
+                                scrubberTime = audioPlayer.currentTime
+                            }
                             if !editing {
-                                audioPlayer.seek(to: audioPlayer.currentTime)
+                                audioPlayer.seek(to: scrubberTime)
                             }
                         }
                     )
+                    .onChange(of: audioPlayer.currentTime) { _, newValue in
+                        guard !isScrubbing else { return }
+                        scrubberTime = newValue
+                    }
+                    .onAppear {
+                        scrubberTime = audioPlayer.currentTime
+                    }
                 }
                 
                 // Slider sections
@@ -425,6 +544,8 @@ struct __PlayerScreen: View {
                         }
                     }
                 }
+
+                lyricsSection
             }
             .padding()
         }
@@ -457,6 +578,10 @@ struct __PlayerScreen: View {
         }
         .onChange(of: audioPlayer.reverbMix) { _, _ in
             audioPlayer.updateMetadataTitle(decoratedTitle())
+        }
+        .task(id: libraryItem.original_url) {
+            lyricsState = .idle
+            fetchLyricsIfNeeded()
         }
         .sheet(isPresented: $isEditSheetPresented) {
             ScrollViewReader { proxy in
