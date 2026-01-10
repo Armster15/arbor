@@ -945,7 +945,8 @@ private struct LyricsLinesView: View {
                         let displayText = selectedLyricLines?[index] ?? line.text
                         Text(displayText.isEmpty ? " " : displayText)
                             .font(payload.timed ? timedLineFont : untimedLineFont)
-                            .fontWeight(payload.timed ? timedLineWeight : untimedLineWeight)
+                            // FOR SOME REASON, THIS LINE ALLOWS HORIZONTAL SCROLLING OF THE PLAYER SCREEN ????
+                            // .fontWeight(payload.timed ? timedLineWeight : untimedLineWeight)
                             .foregroundColor(payload.timed
                                 ? (isActive ? Color("PrimaryText") : Color("PrimaryText").opacity(0.1))
                                 : Color("PrimaryText"))
