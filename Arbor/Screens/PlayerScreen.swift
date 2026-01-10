@@ -829,10 +829,8 @@ private struct LyricsView: View {
                 romanizedLyricLines: romanizedLyricLines,
                 translatedLyricLines: translatedLyricLines,
                 isAutoScrollEnabled: $isAutoScrollEnabled,
-                timedLineFont: .title3,
-                timedLineWeight: .semibold,
-                untimedLineFont: .body,
-                untimedLineWeight: .semibold,
+                timedLineFont: lyricUIFont(textStyle: .title3, weight: .semibold),
+                untimedLineFont: lyricUIFont(textStyle: .body, weight: .semibold),
                 itemSpacing: 10,
                 lineSpacing: 4,
                 maxHeight: 260,
@@ -860,6 +858,60 @@ private struct LyricsView: View {
     }
 }
 
+// Minimal UIKit label wrapper to fix SwiftUI Text horizontal scrolling bug
+private struct UIKitLyricLabel: UIViewRepresentable {
+    let text: String
+    let font: UIFont
+    let textColor: Color
+    let isActive: Bool
+    let onTap: () -> Void
+    
+    func makeUIView(context: Context) -> UILabel {
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
+        label.textAlignment = .left
+        label.isUserInteractionEnabled = true
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        
+        let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap))
+        label.addGestureRecognizer(tapGesture)
+        
+        return label
+    }
+    
+    func updateUIView(_ label: UILabel, context: Context) {
+        label.text = text
+        label.textColor = UIColor(textColor)
+        label.font = font
+        context.coordinator.onTap = onTap
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onTap: onTap)
+    }
+    
+    class Coordinator: NSObject {
+        var onTap: () -> Void
+        
+        init(onTap: @escaping () -> Void) {
+            self.onTap = onTap
+        }
+        
+        @objc func handleTap() {
+            onTap()
+        }
+    }
+    
+}
+
+private func lyricUIFont(textStyle: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
+    let descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: textStyle)
+    let baseFont = UIFont.systemFont(ofSize: descriptor.pointSize, weight: weight)
+    return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: baseFont)
+}
+
 private struct LyricsLinesView: View {
     let payload: LyricsPayload
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
@@ -867,10 +919,8 @@ private struct LyricsLinesView: View {
     let romanizedLyricLines: [String]?
     let translatedLyricLines: [String]?
     @Binding var isAutoScrollEnabled: Bool
-    let timedLineFont: Font
-    let timedLineWeight: Font.Weight?
-    let untimedLineFont: Font
-    let untimedLineWeight: Font.Weight?
+    let timedLineFont: UIFont
+    let untimedLineFont: UIFont
     let itemSpacing: CGFloat
     let lineSpacing: CGFloat
     let maxHeight: CGFloat?
@@ -937,22 +987,20 @@ private struct LyricsLinesView: View {
         }()
 
         return ScrollViewReader { proxy in
-            ScrollView {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: itemSpacing) {
                     ForEach(payload.lines.indices, id: \.self) { index in
                         let line = payload.lines[index]
                         let isActive = payload.timed && index == activeIndex
                         let displayText = selectedLyricLines?[index] ?? line.text
-                        Text(displayText.isEmpty ? " " : displayText)
-                            .font(payload.timed ? timedLineFont : untimedLineFont)
-                            // FOR SOME REASON, THIS LINE ALLOWS HORIZONTAL SCROLLING OF THE PLAYER SCREEN ????
-                            // .fontWeight(payload.timed ? timedLineWeight : untimedLineWeight)
-                            .foregroundColor(payload.timed
+                        UIKitLyricLabel(
+                            text: displayText.isEmpty ? " " : displayText,
+                            font: payload.timed ? timedLineFont : untimedLineFont,
+                            textColor: payload.timed
                                 ? (isActive ? Color("PrimaryText") : Color("PrimaryText").opacity(0.1))
-                                : Color("PrimaryText"))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
+                                : Color("PrimaryText"),
+                            isActive: isActive,
+                            onTap: {
                                 onLineTap(line, index)
                                 guard seeksOnTap else { return }
                                 pendingTapLyricIndex = index
@@ -965,10 +1013,12 @@ private struct LyricsLinesView: View {
                                     proxy.scrollTo(index, anchor: .center)
                                 }
                             }
-                            .id(index)
-                            .animation(.easeInOut(duration: 0.2), value: isActive)
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .id(index)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .lineSpacing(lineSpacing)
                 .padding(.vertical, 8)
             }
@@ -1220,10 +1270,8 @@ private struct FullScreenLyricsView: View {
                     romanizedLyricLines: romanizedLyricLines,
                     translatedLyricLines: translatedLyricLines,
                     isAutoScrollEnabled: $isAutoScrollEnabled,
-                    timedLineFont: .system(size: 24, weight: .semibold),
-                    timedLineWeight: nil,
-                    untimedLineFont: .system(size: 24, weight: .semibold),
-                    untimedLineWeight: nil,
+                    timedLineFont: UIFont.systemFont(ofSize: 24, weight: .semibold),
+                    untimedLineFont: UIFont.systemFont(ofSize: 24, weight: .semibold),
                     itemSpacing: 14,
                     lineSpacing: 6,
                     maxHeight: nil,
