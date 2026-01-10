@@ -4,12 +4,15 @@ from googletrans.models import Translated
 import json
 
 
-def _google_translate(text: str) -> Translated:
+def _google_translate(text: str | list[str]) -> list[Translated]:
     translator = Translator()
     # HACKHACK: running async code in a sync function
     translated = asyncio.run(translator.translate(text))
 
-    return translated
+    if isinstance(translated, Translated):
+        return [translated]
+    else:
+        return translated
 
 
 # HACKHACK: normally we'd get the romanization from the `pronunciation` attr on
@@ -40,12 +43,16 @@ def _get_romanization(result: Translated) -> str | None:
 
 # Use this public method as the other two deal with googletrans internals
 # which aren't JSON serializable
-def translate(text: str) -> str:
+def translate(text: list[str]) -> str:
     result = _google_translate(text)
-    romanization = _get_romanization(result)
+
+    romanizations: list[str | None] = []
+    for r in result:
+        romanization = _get_romanization(r)
+        romanizations.append(romanization)
 
     payload = {
-        "romanization": romanization,
+        "romanizations": romanizations,
     }
 
-    return json.dumps(payload)
+    return json.dumps(payload, ensure_ascii=False)
