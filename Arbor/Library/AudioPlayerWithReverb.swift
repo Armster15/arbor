@@ -61,6 +61,8 @@ final class AudioPlayerWithReverb: ObservableObject {
     }
 
     func play(shouldRampVolume: Bool = true) {
+        isPlaying = true
+
         // If there is a pending seek, apply it just before playing to avoid stale buffered frames
         if let target = pendingSeekTarget {
             SAPlayer.shared.seekTo(seconds: target)
