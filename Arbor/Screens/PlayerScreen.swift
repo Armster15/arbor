@@ -786,7 +786,8 @@ private struct LyricsView: View {
         VStack(alignment: .leading, spacing: 12) {
             LyricsHeaderView(
                 isTranslatingLyrics: isTranslatingLyrics,
-                lyricsDisplayMode: lyricsDisplayMode
+                lyricsDisplayMode: lyricsDisplayMode,
+                lyricsSource: payload.source
             ) { mode in
                 let needsTranslation = (mode == .romanized || mode == .translated)
                     && (romanizedLyricLines == nil || translatedLyricLines == nil)
@@ -914,6 +915,7 @@ private struct LyricsView: View {
 private struct LyricsHeaderView: View, Equatable {
     let isTranslatingLyrics: Bool
     let lyricsDisplayMode: LyricsDisplayMode
+    let lyricsSource: LyricsSource?
     let onSelect: (LyricsDisplayMode) -> Void
 
     @Environment(\.colorScheme) var colorScheme
@@ -921,6 +923,7 @@ private struct LyricsHeaderView: View, Equatable {
     static func == (lhs: LyricsHeaderView, rhs: LyricsHeaderView) -> Bool {
         lhs.isTranslatingLyrics == rhs.isTranslatingLyrics
             && lhs.lyricsDisplayMode == rhs.lyricsDisplayMode
+            && lhs.lyricsSource == rhs.lyricsSource
     }
 
     var body: some View {
@@ -947,6 +950,13 @@ private struct LyricsHeaderView: View, Equatable {
                             Text(mode.rawValue)
                         }
                     }
+                }
+                if let lyricsSource {
+                    Divider()
+                    Button {} label: {
+                        Text("Source: \(lyricsSource.rawValue)")
+                    }
+                    .disabled(true)
                 }
             } label: {
                 Image(systemName: "translate")
