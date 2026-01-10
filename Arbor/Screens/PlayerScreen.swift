@@ -226,7 +226,7 @@ struct __PlayerScreen: View {
                                                     isActive ? Color("PrimaryText") : Color("PrimaryText").opacity(0.1)
                                                 )
                                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                                .animation(.easeInOut(duration: 0.2), value: isActive)
+                                                .animation(.easeInOut(duration: 0.15), value: isActive)
                                         }
                                         .id(index)
                                     } else {
