@@ -1,8 +1,20 @@
 import Foundation
 
+enum LyricsSource: String, Codable {
+    case youtube = "YouTube"
+    case genius = "Genius"
+}
+
 struct LyricsPayload: Codable, Equatable {
     let timed: Bool
     let lines: [LyricsLine]
+    let source: LyricsSource?
+
+    init(timed: Bool, lines: [LyricsLine], source: LyricsSource? = nil) {
+        self.timed = timed
+        self.lines = lines
+        self.source = source
+    }
 }
 
 struct LyricsLine: Codable, Equatable {
@@ -169,9 +181,16 @@ result = get_lyrics_from_genius('\(escapedQuery)')
                     return
                 }
 
-                self.setInMemory(payload, videoId: videoId)
-                self.saveToDisk(data: data, videoId: videoId)
-                completion(.loaded(payload))
+                let attributedPayload = LyricsPayload(
+                    timed: payload.timed,
+                    lines: payload.lines,
+                    source: .genius
+                )
+                if let encoded = try? JSONEncoder().encode(attributedPayload) {
+                    self.saveToDisk(data: encoded, videoId: videoId)
+                }
+                self.setInMemory(attributedPayload, videoId: videoId)
+                completion(.loaded(attributedPayload))
             }
         }
 
@@ -204,9 +223,16 @@ result = get_lyrics_from_youtube('\(escaped)')
                 return
             }
 
-            self.setInMemory(payload, videoId: videoId)
-            self.saveToDisk(data: data, videoId: videoId)
-            completion(.loaded(payload))
+            let attributedPayload = LyricsPayload(
+                timed: payload.timed,
+                lines: payload.lines,
+                source: .youtube
+            )
+            if let encoded = try? JSONEncoder().encode(attributedPayload) {
+                self.saveToDisk(data: encoded, videoId: videoId)
+            }
+            self.setInMemory(attributedPayload, videoId: videoId)
+            completion(.loaded(attributedPayload))
         }
     }
 
