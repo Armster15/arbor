@@ -36,7 +36,19 @@ def _get_romanization(result: Translated) -> str | None:
 
     if result.extra_data:
         translations: list[str] | None = result.extra_data.get("translation")
-        return recursively_get_romanization(translations)
+        romanization = recursively_get_romanization(translations)
+
+        # HACKHACK: sometimes the romanization text is a string of the form "it_en_2023q1.md".
+        # In these cases, ignore the romanization and simply return None.
+        if (
+            romanization
+            and romanization.endswith(".md")
+            and romanization.find(" ") == -1
+        ):
+            return None
+
+        return romanization
+
     else:
         return None
 
