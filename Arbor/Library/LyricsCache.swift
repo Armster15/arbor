@@ -122,26 +122,23 @@ final class LyricsCache {
             }
         }
 
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let primaryArtist = artists.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let queryParts = [
-            title.trimmingCharacters(in: .whitespacesAndNewlines),
-            primaryArtist
-        ]
-            .filter { !$0.isEmpty }
-        let geniusQuery = queryParts.joined(separator: " ")
 
         func fetchFromGenius() {
-            guard !primaryArtist.isEmpty, !geniusQuery.isEmpty else {
+            guard !title.isEmpty, !primaryArtist.isEmpty else {
                 debugPrint("LyricsCache: skipping Genius lookup (missing artist/query) for \(originalUrl)")
                 completion(.empty)
                 return
             }
 
-            debugPrint("LyricsCache: fetching Genius lyrics for \(originalUrl) with query '\(geniusQuery)'")
-            let escapedQuery = escapeForPythonString(geniusQuery)
+            debugPrint("LyricsCache: fetching Genius lyrics for \(originalUrl) with title '\(title)' by artist '\(primaryArtist)'")
+            
+            let escapedTitle = escapeForPythonString(title)
+            let escapedPrimaryArtist = escapeForPythonString(primaryArtist)
             let geniusCode = """
 from arbor import get_lyrics_from_genius
-result = get_lyrics_from_genius('\(escapedQuery)')
+result = get_lyrics_from_genius('\(escapedTitle)', '\(escapedPrimaryArtist)')
 """
 
             pythonExecAndGetStringAsync(
