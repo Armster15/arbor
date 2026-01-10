@@ -738,6 +738,7 @@ private struct LyricsView: View {
     @State private var lyricsDisplayMode: LyricsDisplayMode = .original
     @State private var currentTranslateTaskId: UUID?
     @State private var lastPlaybackTimeMs: Int?
+    @State private var isAutoScrollEnabled: Bool = true
 
     private func translateLyrics() {
         guard !isTranslatingLyrics else { return }
@@ -787,7 +788,11 @@ private struct LyricsView: View {
             LyricsHeaderView(
                 isTranslatingLyrics: isTranslatingLyrics,
                 lyricsDisplayMode: lyricsDisplayMode,
-                lyricsSource: payload.source
+                lyricsSource: payload.source,
+                showsSync: payload.timed && !isAutoScrollEnabled,
+                onSync: {
+                    isAutoScrollEnabled = true
+                }
             ) { mode in
                 let needsTranslation = (mode == .romanized || mode == .translated)
                     && (romanizedLyricLines == nil || translatedLyricLines == nil)
@@ -846,16 +851,15 @@ private struct LyricsView: View {
                     .lineSpacing(4)
                     .padding(.vertical, 8)
                 }
-                .scrollDisabled(payload.timed)
                 .frame(maxHeight: 260)
                 .scrollIndicators(.hidden)
                 .onChange(of: activeIndex) { _, newValue in
-                    guard payload.timed else { return }
+                    guard payload.timed, isAutoScrollEnabled else { return }
                     guard let newValue, newValue != lastActiveLyricIndex else { return }
                     scrollToActiveLyric(proxy, activeIndex: newValue, shouldAnimate: true)
                 }
                 .onChange(of: audioPlayer.currentTime) { _, newValue in
-                    guard payload.timed else { return }
+                    guard payload.timed, isAutoScrollEnabled else { return }
                     let newMs = Int(newValue * 1000)
                     if let lastMs = lastPlaybackTimeMs {
                         let jumped = abs(newMs - lastMs) > 1500
@@ -877,30 +881,41 @@ private struct LyricsView: View {
                     lastPlaybackTimeMs = newMs
                 }
                 .onChange(of: lyricsDisplayMode) { _, newValue in
-                    guard payload.timed else { return }
+                    guard payload.timed, isAutoScrollEnabled else { return }
                     DispatchQueue.main.async {
                         scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                     }
                 }
                 .onChange(of: romanizedLyricLines) { _, _ in
-                    guard payload.timed else { return }
+                    guard payload.timed, isAutoScrollEnabled else { return }
                     DispatchQueue.main.async {
                         scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                     }
                 }
                 .onChange(of: translatedLyricLines) { _, _ in
-                    guard payload.timed else { return }
+                    guard payload.timed, isAutoScrollEnabled else { return }
                     DispatchQueue.main.async {
                         scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                     }
                 }
                 .onChange(of: payload) { _, _ in
                     resetTranslationState()
+                    isAutoScrollEnabled = true
                 }
                 // scroll to the active lyric on appear (e.g. when player is reopened)
                 .onAppear {
-                    guard payload.timed else { return }
+                    guard payload.timed, isAutoScrollEnabled else { return }
                     scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 2).onChanged { _ in
+                        guard payload.timed else { return }
+                        isAutoScrollEnabled = false
+                    }
+                )
+                .onChange(of: isAutoScrollEnabled) { _, newValue in
+                    guard payload.timed, newValue else { return }
+                    scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: true)
                 }
             }
         }
@@ -916,6 +931,8 @@ private struct LyricsHeaderView: View, Equatable {
     let isTranslatingLyrics: Bool
     let lyricsDisplayMode: LyricsDisplayMode
     let lyricsSource: LyricsSource?
+    let showsSync: Bool
+    let onSync: () -> Void
     let onSelect: (LyricsDisplayMode) -> Void
 
     @Environment(\.colorScheme) var colorScheme
@@ -924,6 +941,7 @@ private struct LyricsHeaderView: View, Equatable {
         lhs.isTranslatingLyrics == rhs.isTranslatingLyrics
             && lhs.lyricsDisplayMode == rhs.lyricsDisplayMode
             && lhs.lyricsSource == rhs.lyricsSource
+            && lhs.showsSync == rhs.showsSync
     }
 
     var body: some View {
@@ -937,6 +955,18 @@ private struct LyricsHeaderView: View, Equatable {
             if isTranslatingLyrics {
                 ProgressView()
                     .scaleEffect(0.7)
+            }
+
+            if showsSync {
+                Button("Sync") {
+                    onSync()
+                }
+                .font(.callout)
+                .foregroundColor(Color("PrimaryText"))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(colorScheme == .light ? Color("Elevated") : Color("SecondaryBg"))
+                .clipShape(Capsule())
             }
 
             Menu {
