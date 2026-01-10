@@ -167,7 +167,7 @@ struct __PlayerScreen: View {
         isTranslatingLyrics = true
         let taskId = UUID()
         currentTranslateTaskId = taskId
-        LyricsCache.shared.translateLyrics(payload: payload) { result in
+        LyricsCache.shared.translateLyrics(originalUrl: libraryItem.original_url, payload: payload) { result in
             guard taskId == currentTranslateTaskId else { return }
             isTranslatingLyrics = false
 

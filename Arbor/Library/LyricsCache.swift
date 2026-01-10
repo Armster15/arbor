@@ -21,7 +21,7 @@ enum LyricsFetchResult {
     case failed
 }
 
-struct LyricsTranslationPayload: Equatable {
+struct LyricsTranslationPayload: Codable, Equatable {
     let translations: [String]
     let romanizations: [String]
 }
@@ -43,6 +43,7 @@ final class LyricsCache {
     private static let directoryName = "LyricsCache"
     private let memoryQueue = DispatchQueue(label: "LyricsCache.memory.queue", attributes: .concurrent)
     private var memoryCache: [String: LyricsPayload] = [:]
+    private var memoryTranslationCache: [String: LyricsTranslationPayload] = [:]
 
     static func cacheDirectoryPath() -> String? {
         shared.directoryURL?.path
@@ -140,7 +141,38 @@ result = get_lyrics_from_youtube('\(escaped)')
         }
     }
 
-    func translateLyrics(payload: LyricsPayload, completion: @escaping (LyricsTranslationResult) -> Void) {
+    func translateLyrics(
+        originalUrl: String,
+        payload: LyricsPayload,
+        completion: @escaping (LyricsTranslationResult) -> Void
+    ) {
+        guard let videoId = Self.videoId(from: originalUrl) else {
+            completion(.failed)
+            return
+        }
+        translateLyrics(videoId: videoId, payload: payload, completion: completion)
+    }
+
+    func translateLyrics(
+        videoId: String,
+        payload: LyricsPayload,
+        completion: @escaping (LyricsTranslationResult) -> Void
+    ) {
+        if let cached = getTranslationFromMemory(videoId: videoId) {
+            completion(.loaded(cached))
+            return
+        }
+
+        if let data = loadTranslationFromDisk(videoId: videoId) {
+            if let payload = try? JSONDecoder().decode(LyricsTranslationPayload.self, from: data) {
+                setTranslationInMemory(payload, videoId: videoId)
+                completion(.loaded(payload))
+                return
+            } else {
+                removeTranslationFromDisk(videoId: videoId)
+            }
+        }
+
         let texts = payload.lines.map { $0.text }
         guard let data = try? JSONSerialization.data(withJSONObject: texts, options: []),
               let jsonString = String(data: data, encoding: .utf8) else {
@@ -177,6 +209,10 @@ result = translate(payload)
                 translations: parsed.translations,
                 romanizations: romanizedLines
             )
+            if let encoded = try? JSONEncoder().encode(sanitizedPayload) {
+                self.saveTranslationToDisk(data: encoded, videoId: videoId)
+            }
+            self.setTranslationInMemory(sanitizedPayload, videoId: videoId)
             completion(.loaded(sanitizedPayload))
         }
     }
@@ -200,9 +236,24 @@ result = translate(payload)
         }
     }
 
+    private func getTranslationFromMemory(videoId: String) -> LyricsTranslationPayload? {
+        var result: LyricsTranslationPayload?
+        memoryQueue.sync {
+            result = memoryTranslationCache[videoId]
+        }
+        return result
+    }
+
+    private func setTranslationInMemory(_ payload: LyricsTranslationPayload, videoId: String) {
+        memoryQueue.sync(flags: .barrier) {
+            memoryTranslationCache[videoId] = payload
+        }
+    }
+
     private func clearMemory() {
         memoryQueue.sync(flags: .barrier) {
             memoryCache.removeAll()
+            memoryTranslationCache.removeAll()
         }
     }
 
@@ -228,6 +279,21 @@ result = translate(payload)
         try? FileManager.default.removeItem(at: url)
     }
 
+    private func loadTranslationFromDisk(videoId: String) -> Data? {
+        guard let url = translationFileURL(for: videoId) else { return nil }
+        return try? Data(contentsOf: url)
+    }
+
+    private func saveTranslationToDisk(data: Data, videoId: String) {
+        guard let url = translationFileURL(for: videoId) else { return }
+        try? data.write(to: url, options: [.atomic])
+    }
+
+    private func removeTranslationFromDisk(videoId: String) {
+        guard let url = translationFileURL(for: videoId) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
     private func clearDisk() {
         guard let dirURL = directoryURL else { return }
         guard FileManager.default.fileExists(atPath: dirURL.path) else { return }
@@ -243,6 +309,12 @@ result = translate(payload)
     private func fileURL(for videoId: String) -> URL? {
         guard let dirURL = ensureDirectory() else { return nil }
         let filename = sanitizedFileName(videoId)
+        return dirURL.appendingPathComponent(filename).appendingPathExtension("json")
+    }
+
+    private func translationFileURL(for videoId: String) -> URL? {
+        guard let dirURL = ensureDirectory() else { return nil }
+        let filename = sanitizedFileName(videoId) + ".translations"
         return dirURL.appendingPathComponent(filename).appendingPathExtension("json")
     }
 
