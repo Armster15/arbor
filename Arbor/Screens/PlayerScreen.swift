@@ -728,10 +728,11 @@ private struct LyricsView: View {
             }
 
             let currentMs = Int(audioPlayer.currentTime * 1000)
-            let activeIndex = LyricsCache.activeLyricIndex(
-                for: payload,
-                currentTimeMs: currentMs
-            )
+            let shouldShowActive = payload.timed
+                && (currentMs > 0 || audioPlayer.isPlaying || lastPlaybackTimeMs != nil)
+            let activeIndex = shouldShowActive
+                ? LyricsCache.activeLyricIndex(for: payload, currentTimeMs: currentMs)
+                : nil
             let selectedLyricLines: [String]? = {
                 switch lyricsDisplayMode {
                 case .original:
