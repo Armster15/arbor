@@ -4,6 +4,7 @@ import requests
 import urllib.parse
 from bs4 import BeautifulSoup
 import json
+from difflib import SequenceMatcher
 
 
 def _genius_api_request(url: str) -> requests.Response | None:
@@ -81,14 +82,18 @@ def _get_lyrics_with_url_from_genius(url: str) -> str | None:
     return lyrics
 
 
-def get_lyrics_from_genius(query: str) -> str:
-    songs = _search_genius_songs(query)
+def get_lyrics_from_genius(title: str, primary_artist: str) -> str:
+    songs = _search_genius_songs(title + " " + primary_artist)
 
     if songs is None or len(songs) == 0:
         return ""
 
-    song = songs[0]
-    url = song["url"]
+    # Selects the song dict whose title is most similar to `title`
+    best_match_song = max(
+        songs, key=lambda song: SequenceMatcher(None, title, song["title"]).ratio()
+    )
+
+    url = best_match_song["url"]
 
     lyrics = _get_lyrics_with_url_from_genius(url)
 
