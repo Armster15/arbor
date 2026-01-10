@@ -51,11 +51,12 @@ struct SongInfo: View {
             VStack(spacing: 4) {
                 Text(title)
                     .font(.headline)
+                    .foregroundColor(Color("PrimaryText"))
                     .multilineTextAlignment(.center)
                 
                 Text(formatArtists(artists))
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color("PrimaryText").opacity(0.7))
                     .multilineTextAlignment(.center)
             }
         }
