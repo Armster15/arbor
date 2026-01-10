@@ -131,7 +131,7 @@ private struct UIKitLyricLabel: UIViewRepresentable {
     let onTap: () -> Void
     
     func makeUIView(context: Context) -> UILabel {
-        let label = UILabel()
+        let label = UIWrappingLabel()
         label.numberOfLines = 0
         label.lineBreakMode = .byWordWrapping
         label.textAlignment = .left
@@ -168,6 +168,16 @@ private struct UIKitLyricLabel: UIViewRepresentable {
         }
     }
     
+}
+
+private final class UIWrappingLabel: UILabel {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let targetWidth = bounds.width
+        guard targetWidth > 0, preferredMaxLayoutWidth != targetWidth else { return }
+        preferredMaxLayoutWidth = targetWidth
+        invalidateIntrinsicContentSize()
+    }
 }
 
 private func lyricUIFont(textStyle: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
