@@ -666,6 +666,7 @@ private struct LyricsView: View {
     @State private var isTranslatingLyrics: Bool = false
     @State private var lyricsDisplayMode: LyricsDisplayMode = .original
     @State private var currentTranslateTaskId: UUID?
+    @State private var lastPlaybackTimeMs: Int?
 
     private func translateLyrics() {
         guard !isTranslatingLyrics else { return }
@@ -778,6 +779,27 @@ private struct LyricsView: View {
                 .onChange(of: activeIndex) { _, newValue in
                     guard let newValue, newValue != lastActiveLyricIndex else { return }
                     scrollToActiveLyric(proxy, activeIndex: newValue, shouldAnimate: true)
+                }
+                .onChange(of: audioPlayer.currentTime) { _, newValue in
+                    let newMs = Int(newValue * 1000)
+                    if let lastMs = lastPlaybackTimeMs {
+                        let jumped = abs(newMs - lastMs) > 1500
+                        if jumped {
+                            let jumpedIndex = LyricsCache.activeLyricIndex(
+                                for: payload,
+                                currentTimeMs: newMs
+                            )
+                            if let jumpedIndex {
+                                lastActiveLyricIndex = jumpedIndex
+                            }
+                            scrollToActiveLyric(proxy, activeIndex: jumpedIndex, shouldAnimate: false)
+                        }
+                        if newMs < lastMs && newMs < 500 {
+                            lastActiveLyricIndex = 0
+                            scrollToActiveLyric(proxy, activeIndex: 0, shouldAnimate: false)
+                        }
+                    }
+                    lastPlaybackTimeMs = newMs
                 }
                 .onChange(of: lyricsDisplayMode) { _, newValue in
                     DispatchQueue.main.async {
