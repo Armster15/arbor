@@ -81,13 +81,23 @@ def _get_lyrics_with_url_from_genius(url: str) -> str | None:
     return lyrics
 
 
-def get_lyrics_from_genius(query: str) -> str | None:
+def get_lyrics_from_genius(query: str) -> str:
     songs = _search_genius_songs(query)
 
     if songs is None or len(songs) == 0:
-        return None
+        return ""
 
     song = songs[0]
     url = song["url"]
 
-    return _get_lyrics_with_url_from_genius(url)
+    lyrics = _get_lyrics_with_url_from_genius(url)
+
+    if lyrics is None:
+        return ""
+
+    payload = {
+        "timed": False,
+        "lines": [{"start_ms": None, "text": text} for text in lyrics.split("\n")],
+    }
+
+    return json.dumps(payload, ensure_ascii=False)
