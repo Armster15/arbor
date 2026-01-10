@@ -51,12 +51,18 @@ struct __PlayerScreen: View {
     @State private var lyricsState: LyricsState = .idle
     @State private var currentLyricsTaskId: UUID?
     @State private var lastActiveLyricIndex: Int?
+    @State private var romanizedLyricLines: [String]?
+    @State private var translatedLyricLines: [String]?
+    @State private var isTranslatingLyrics: Bool = false
+    @State private var lyricsDisplayMode: LyricsDisplayMode = .original
+    @State private var currentTranslateTaskId: UUID?
     
     // Track last saved settings locally (not persisted to iCloud)
     @State private var savedSpeedRate: Float?
     @State private var savedPitchCents: Float?
     @State private var savedReverbMix: Float?
-    
+
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.modelContext) var modelContext
 
     private enum LyricsState: Equatable {
@@ -65,6 +71,12 @@ struct __PlayerScreen: View {
         case loaded(LyricsPayload)
         case empty
         case failed
+    }
+
+    private enum LyricsDisplayMode: String, CaseIterable {
+        case original = "Original"
+        case romanized = "Romanized"
+        case translated = "Translated"
     }
 
     private struct SheetHeightKey: PreferenceKey {
@@ -131,6 +143,11 @@ struct __PlayerScreen: View {
         let taskId = UUID()
         currentLyricsTaskId = taskId
         lyricsState = .loading
+        romanizedLyricLines = nil
+        translatedLyricLines = nil
+        lyricsDisplayMode = .original
+        isTranslatingLyrics = false
+        currentTranslateTaskId = nil
 
         LyricsCache.shared.fetchLyrics(originalUrl: libraryItem.original_url) { result in
             guard taskId == currentLyricsTaskId else { return }
@@ -146,6 +163,41 @@ struct __PlayerScreen: View {
         }
     }
 
+    private func translateLyrics(payload: LyricsPayload) {
+        guard !isTranslatingLyrics else { return }
+        isTranslatingLyrics = true
+        let taskId = UUID()
+        currentTranslateTaskId = taskId
+        LyricsCache.shared.translateLyrics(originalUrl: libraryItem.original_url, payload: payload) { result in
+            guard taskId == currentTranslateTaskId else { return }
+            isTranslatingLyrics = false
+
+            switch result {
+            case .loaded(let translationPayload):
+                romanizedLyricLines = translationPayload.romanizations
+                translatedLyricLines = translationPayload.translations
+            case .failed:
+                break
+            }
+        }
+    }
+
+    private func scrollToActiveLyric(
+        _ proxy: ScrollViewProxy,
+        activeIndex: Int?,
+        shouldAnimate: Bool
+    ) {
+        guard let activeIndex else { return }
+        lastActiveLyricIndex = activeIndex
+        if shouldAnimate {
+            withAnimation(.easeOut(duration: 0.3)) {
+                proxy.scrollTo(activeIndex, anchor: .center)
+            }
+        } else {
+            proxy.scrollTo(activeIndex, anchor: .center)
+        }
+    }
+
     private var lyricsSection: some View {
         Group {
             if case .loaded(let payload) = lyricsState, !payload.lines.isEmpty {
@@ -156,6 +208,33 @@ struct __PlayerScreen: View {
                             .foregroundColor(Color("PrimaryText"))
 
                         Spacer()
+
+                        if isTranslatingLyrics {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        }
+
+                        Menu {
+                            ForEach(LyricsDisplayMode.allCases, id: \.self) { mode in
+                                Button {
+                                    lyricsDisplayMode = mode
+                                } label: {
+                                    Label(
+                                        mode.rawValue,
+                                        systemImage: lyricsDisplayMode == mode ? "checkmark" : ""
+                                    )
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "translate")
+                                .font(.callout)
+                                .foregroundColor(lyricsDisplayMode != .original && !isTranslatingLyrics ? .blue : Color("PrimaryText"))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(colorScheme == .light ? Color("Elevated") : Color("SecondaryBg"))
+                                .clipShape(Capsule())
+                        }
+                        .disabled(isTranslatingLyrics)
                     }
 
                     let currentMs = Int(audioPlayer.currentTime * 1000)
@@ -163,15 +242,26 @@ struct __PlayerScreen: View {
                         for: payload,
                         currentTimeMs: currentMs
                     )
+                    let selectedLyricLines: [String]? = {
+                        switch lyricsDisplayMode {
+                        case .original:
+                            return nil
+                        case .romanized:
+                            return romanizedLyricLines
+                        case .translated:
+                            return translatedLyricLines
+                        }
+                    }()
                     ScrollViewReader { proxy in
                         ScrollView {
                             VStack(alignment: .leading, spacing: 10) {
                                 ForEach(payload.lines.indices, id: \.self) { index in
                                     let line = payload.lines[index]
                                     let isActive = payload.timed && index == activeIndex
+                                    let displayText = selectedLyricLines?[index] ?? line.text
                                     if payload.timed {
                                         HStack(alignment: .top, spacing: 12) {
-                                            Text(line.text.isEmpty ? " " : line.text)
+                                            Text(displayText.isEmpty ? " " : displayText)
                                                 .font(.title3)
                                                 .fontWeight(.semibold)
                                                 .foregroundColor(
@@ -182,7 +272,7 @@ struct __PlayerScreen: View {
                                         }
                                         .id(index)
                                     } else {
-                                        Text(line.text.isEmpty ? " " : line.text)
+                                        Text(displayText.isEmpty ? " " : displayText)
                                             .font(.body)
                                             .foregroundColor(Color("PrimaryText"))
                                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -198,18 +288,31 @@ struct __PlayerScreen: View {
                         .scrollIndicators(.hidden)
                         .onChange(of: activeIndex) { _, newValue in
                             guard let newValue, newValue != lastActiveLyricIndex else { return }
-                            lastActiveLyricIndex = newValue
-                            withAnimation(.easeOut(duration: 0.3)) {
-                                proxy.scrollTo(newValue, anchor: .center)
+                            scrollToActiveLyric(proxy, activeIndex: newValue, shouldAnimate: true)
+                        }
+                        .onChange(of: lyricsDisplayMode) { _, newValue in
+                            if newValue == .romanized || newValue == .translated {
+                                if romanizedLyricLines == nil || translatedLyricLines == nil {
+                                    translateLyrics(payload: payload)
+                                }
+                            }
+                            DispatchQueue.main.async {
+                                scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
+                            }
+                        }
+                        .onChange(of: romanizedLyricLines) { _, _ in
+                            DispatchQueue.main.async {
+                                scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
+                            }
+                        }
+                        .onChange(of: translatedLyricLines) { _, _ in
+                            DispatchQueue.main.async {
+                                scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                             }
                         }
                         // scroll to the active lyric on appear (e.g. when player is reopened)
                         .onAppear {
-                            guard let activeIndex else { return }
-                            lastActiveLyricIndex = activeIndex
-                            withAnimation(nil) {
-                                proxy.scrollTo(activeIndex, anchor: .center)
-                            }
+                            scrollToActiveLyric(proxy, activeIndex: activeIndex, shouldAnimate: false)
                         }
                     }
                 }
