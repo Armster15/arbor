@@ -864,10 +864,11 @@ private struct LyricsHeaderView: View, Equatable {
                     Button {
                         onSelect(mode)
                     } label: {
-                        Label(
-                            mode.rawValue,
-                            systemImage: lyricsDisplayMode == mode ? "checkmark" : ""
-                        )
+                        if lyricsDisplayMode == mode {
+                            Label(mode.rawValue, systemImage: "checkmark")
+                        } else {
+                            Text(mode.rawValue)
+                        }
                     }
                 }
             } label: {
