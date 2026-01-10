@@ -23,6 +23,18 @@ actor ScrobbleCoordinator {
         scrobbleState?.updateDuration(duration)
     }
 
+    func updateSeed(_ seed: ScrobbleSeed) {
+        self.seed = seed
+        if let scrobbleState {
+            if !scrobbleState.updateMetadata(seed) {
+                self.scrobbleState = nil
+            }
+        } else {
+            scrobbleState = ScrobbleState(seed: seed)
+            scrobbleState?.updateDuration(lastDuration)
+        }
+    }
+
     func handleProgress(
         currentTime: Double,
         isPlaying: Bool,

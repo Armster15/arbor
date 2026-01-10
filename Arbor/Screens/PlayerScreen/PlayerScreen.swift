@@ -567,6 +567,7 @@ private struct PlayerMetadataSyncView: View {
 }
 
 private struct PlayerMetadataSheet: View {
+    @EnvironmentObject var player: PlayerCoordinator
     @Bindable var libraryItem: LibraryItem
     @ObservedObject var audioPlayer: AudioPlayerWithReverb
     let onLyricsInvalidated: () -> Void
@@ -710,6 +711,7 @@ private struct PlayerMetadataSheet: View {
 
                     audioPlayer.updateMetadataTitle(decoratedTitle(for: libraryItem, audioPlayer: audioPlayer))
                     audioPlayer.updateMetadataArtist(formatArtists(libraryItem.artists))
+                    player.updateScrobbleSeed(for: libraryItem)
 
                     if previousTitle != nextTitle || previousArtists != nextArtists {
                         LyricsCache.shared.clearLyrics(originalURL: libraryItem.original_url)
