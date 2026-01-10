@@ -78,11 +78,6 @@ struct __PlayerScreen: View {
         case translated = "Translated"
     }
 
-    private struct TranslationPayload: Codable, Equatable {
-        let translations: [String]
-        let romanizations: [String?]
-    }
-
     private struct SheetHeightKey: PreferenceKey {
         static var defaultValue: CGFloat = 0
 
@@ -169,46 +164,21 @@ struct __PlayerScreen: View {
 
     private func translateLyrics(payload: LyricsPayload) {
         guard !isTranslatingLyrics else { return }
-        let texts = payload.lines.map { $0.text }
-        guard let data = try? JSONSerialization.data(withJSONObject: texts, options: []),
-              let jsonString = String(data: data, encoding: .utf8) else {
-            return
-        }
-
         isTranslatingLyrics = true
         let taskId = UUID()
         currentTranslateTaskId = taskId
-        let escaped = escapeForPythonString(jsonString)
-        let code = """
-import json
-from arbor.translate import translate
-payload = json.loads('\(escaped)')
-result = translate(payload)
-"""
-
-        pythonExecAndGetStringAsync(code.trimmingCharacters(in: .whitespacesAndNewlines), "result") { result in
+        LyricsCache.shared.translateLyrics(payload: payload) { result in
             guard taskId == currentTranslateTaskId else { return }
             isTranslatingLyrics = false
 
-            guard let output = result,
-                  let data = output.data(using: .utf8),
-                  let parsed = try? JSONDecoder().decode(TranslationPayload.self, from: data),
-                  parsed.romanizations.count == texts.count,
-                  parsed.translations.count == texts.count else {
-                return
+            switch result {
+            case .loaded(let translationPayload):
+                romanizedLyricLines = translationPayload.romanizations
+                translatedLyricLines = translationPayload.translations
+            case .failed:
+                break
             }
-
-            romanizedLyricLines = parsed.romanizations.enumerated().map { index, value in
-                value ?? texts[index]
-            }
-            translatedLyricLines = parsed.translations
         }
-    }
-
-    private func escapeForPythonString(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "'", with: "\\'")
     }
 
     private func scrollToActiveLyric(
