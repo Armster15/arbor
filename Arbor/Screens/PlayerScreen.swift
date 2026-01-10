@@ -35,17 +35,28 @@ struct PlayerScreen: View {
     }
 }
 
+private func decoratedTitle(for libraryItem: LibraryItem, audioPlayer: AudioPlayerWithReverb) -> String {
+    var tags: [String] = []
+    if audioPlayer.speedRate > 1.0 {
+        tags.append("sped up")
+    } else if audioPlayer.speedRate < 1.0 {
+        tags.append("slowed")
+    }
+    if audioPlayer.reverbMix > 0.0 {
+        tags.append("reverb")
+    }
+    guard !tags.isEmpty else { return libraryItem.title }
+    return "\(libraryItem.title) (\(tags.joined(separator: " + ")))"
+}
 
 struct __PlayerScreen: View {
     @Bindable var libraryItem: LibraryItem
-    @ObservedObject var audioPlayer: AudioPlayerWithReverb
+    let audioPlayer: AudioPlayerWithReverb
     @Binding var filePath: String
     
     @State private var isEditSheetPresented: Bool = false
     @State private var draftTitle: String = ""
     @State private var draftArtists: [String] = []
-    @State private var isScrubbing: Bool = false
-    @State private var scrubberTime: Double = 0
     @State private var editSheetHeight: CGFloat = 0
     @State private var editSheetContentHeight: CGFloat = 0
     @State private var editSheetButtonHeight: CGFloat = 0
@@ -93,38 +104,10 @@ struct __PlayerScreen: View {
         getLocalAudioFilePath(originalUrl: libraryItem.original_url) != nil
     }
     
-    private var isModified: Bool {
-        let refSpeed = savedSpeedRate ?? libraryItem.speedRate
-        let refPitch = savedPitchCents ?? libraryItem.pitchCents
-        let refReverb = savedReverbMix ?? libraryItem.reverbMix
-        
-        return audioPlayer.speedRate != refSpeed ||
-               audioPlayer.pitchCents != refPitch ||
-               audioPlayer.reverbMix != refReverb
-    }
-    
     init(libraryItem: LibraryItem, audioPlayer: AudioPlayerWithReverb, filePath: Binding<String>) {
         self.libraryItem = libraryItem
         self.audioPlayer = audioPlayer
         self._filePath = filePath
-    }
-
-    private func decoratedTitle() -> String {
-        var tags: [String] = []
-        if audioPlayer.speedRate > 1.0 {
-            tags.append("sped up")
-        } else if audioPlayer.speedRate < 1.0 {
-            tags.append("slowed")
-        }
-        if audioPlayer.reverbMix > 0.0 {
-            if tags.isEmpty {
-                tags.append("reverb")
-            } else {
-                tags.append("reverb")
-            }
-        }
-        guard !tags.isEmpty else { return libraryItem.title }
-        return "\(libraryItem.title) (\(tags.joined(separator: " + ")))"
     }
 
     private func fetchLyricsIfNeeded() {
@@ -211,313 +194,33 @@ struct __PlayerScreen: View {
                         thumbnailForceSquare: false,
                         thumbnailHasContextMenu: true
                     )
-                                        
-                    // Action buttons
-                    ZStack {
-                        // Centered main controls
-                        HStack(spacing: 16) {
-                            // Rewind
-                            Button(action: {
-                                audioPlayer.seek(to: 0)
-                                
-                            }) {
-                                Image(systemName: "backward.end.circle.fill")
-                                    .font(.system(size: 44))
-                                    .symbolRenderingMode(.palette)
-                                    .foregroundStyle(
-                                        Color("PrimaryText"),
-                                        Color("SecondaryBg")
-                                    )
-                            }
-                            
-                            // Play / Pause
-                            Button(action: {
-                                if audioPlayer.isPlaying {
-                                    audioPlayer.pause()
-                                } else {
-                                    audioPlayer.play()
-                                }
-                            }) {
-                                Image(
-                                    systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
-                                )
-                                .font(.system(size: 56))
-                                .foregroundColor(Color("PrimaryBg"))
-                            }
-                            
-                            // Stop
-                            Button(action: {
-                                audioPlayer.stop()
-                            }) {
-                                Image(systemName: "stop.circle.fill")
-                                    .font(.system(size: 44))
-                                    .foregroundStyle(
-                                        Color("PrimaryText"),
-                                        Color("SecondaryBg")
-                                    )
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        
-                        // Trailing loop button
-                        HStack {
-                            Spacer()
-                            
-                            Button(action: {
-                                audioPlayer.toggleLoop()
-                            }) {
-                                Image(
-                                    systemName: audioPlayer.isLooping ? "repeat.1.circle.fill" : "repeat.circle.fill"
-                                )
-                                .font(.system(size: 40))
-                                .foregroundStyle(
-                                    Color("PrimaryText").opacity(0.8),
-                                    // TODO: abstract away as a secondary smth color
-                                    .clear
-                                )
-                                .accessibilityLabel(
-                                    audioPlayer.isLooping ? "Disable Loop" : "Enable Loop"
-                                )
-                            }
-                        }
-                    }
                     
-                    // Scrubber
-                    Scrubber(
-                        value: $scrubberTime,
-                        inRange: 0...max(audioPlayer.duration, 0.01),
-                        activeFillColor: Color("PrimaryBg"),
-                        fillColor: Color("PrimaryBg").opacity(0.8),
-                        emptyColor: Color("PrimaryBg").opacity(0.2),
-                        height: 30,
-                        onEditingChanged: { editing in
-                            isScrubbing = editing
-                            if editing {
-                                scrubberTime = audioPlayer.currentTime
-                            }
-                            if !editing {
-                                audioPlayer.seek(to: scrubberTime)
-                            }
-                        }
-                    )
-                    .onChange(of: audioPlayer.currentTime) { _, newValue in
-                        guard !isScrubbing else { return }
-                        scrubberTime = newValue
-                    }
-                    .onAppear {
-                        scrubberTime = audioPlayer.currentTime
-                    }
+                    PlayerControlsSection(audioPlayer: audioPlayer)
                 }
                 
-                // Slider sections
-                VStack(alignment: .leading, spacing: 24) {
-                    // Speed
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Speed")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color("PrimaryText"))
-                            
-                                Button("Reset") {
-                                    audioPlayer.setSpeedRate(1.0)
-                                }
-                                .font(.caption)
-                                .buttonStyle(.bordered)
-                                .tint(Color("PrimaryBg"))
-                                .opacity(audioPlayer.speedRate == 1.0 ? 0 : 1)
-                            
-                            Spacer()
-                            
-                            Text(String(format: "%.2fx", audioPlayer.speedRate))
-                                .font(.subheadline)
-                                .foregroundColor(Color("PrimaryBg"))
-                        }
-                        
-                        HStack {
-                            Slider(
-                                value: Binding(
-                                    get: {
-                                        Double(audioPlayer.speedRate)
-                                    },
-                                    set: { newVal in
-                                        // Slider sends continuous values while dragging, so we snap to the nearest 0.05 to enforce stepping.
-                                        let snapped = (newVal / 0.05).rounded() * 0.05
-                                        audioPlayer.setSpeedRate(Float(snapped))
-                                    }
-                                ),
-                                in: 0.25...2.0,
-                                step: 0.05
-                            )
-                            .accentColor(Color("PrimaryBg"))
-                            // `flex: 1` (???)
-                            .frame(maxWidth: .infinity)
-                            
-                            Stepper(
-                                value: Binding(
-                                    get: {
-                                        Double(audioPlayer.speedRate)
-                                    },
-                                    set: { newVal in
-                                        audioPlayer.setSpeedRate(Float(newVal))
-                                    }
-                                ),
-                                in: 0.25...2.0,
-                                step: 0.01,
-                            ) {}
-                            .fixedSize()
-                        }
-                    }
-
-                    
-                    // Pitch (cents)
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Pitch")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color("PrimaryText"))
-                            
-                                Button("Reset") {
-                                    audioPlayer.setPitchByCents(0.0)
-                                }
-                                .font(.caption)
-                                .buttonStyle(.bordered)
-                                .tint(Color("PrimaryBg"))
-                                .opacity(audioPlayer.pitchCents.isZero ? 0 : 1)
-                            
-                            Spacer()
-                            
-                            Text("\(Int(audioPlayer.pitchCents)) cents")
-                                .font(.subheadline)
-                                .foregroundColor(Color("PrimaryBg"))
-                        }
-                        
-                        HStack {
-                            Slider(
-                                value: Binding(
-                                    get: {
-                                        Double(audioPlayer.pitchCents)
-                                    },
-                                    set: { newVal in
-                                        // Slider sends continuous values while dragging, so we snap to the nearest 50 to enforce stepping.
-                                        let snapped = (newVal / 50.0).rounded() * 50.0
-                                        audioPlayer.setPitchByCents(Float(snapped))
-                                    }
-                                ),
-                                in: -800.0...800.0,
-                                step: 50
-                            )
-                            .accentColor(Color("PrimaryBg"))
-                            .frame(maxWidth: .infinity)
-                            
-                            Stepper(
-                                value: Binding(
-                                    get: {
-                                        Double(audioPlayer.pitchCents)
-                                    },
-                                    set: { newVal in
-                                        audioPlayer.setPitchByCents(Float(newVal))
-                                    }
-                                ),
-                                in: -800.0...800.0,
-                                step: 10,
-                            ) {}
-                            .fixedSize()
-                        }
-                    }
-
-                    
-                    // Reverb
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Reverb")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color("PrimaryText"))
-                            
-                                Button("Reset") {
-                                    audioPlayer.setReverbMix(0.0)
-                                }
-                                .font(.caption)
-                                .buttonStyle(.bordered)
-                                .tint(Color("PrimaryBg"))
-                                .opacity(audioPlayer.reverbMix > 0 ? 1 : 0)
-                            
-                            Spacer()
-                            
-                            Text("\(Int(audioPlayer.reverbMix))%")
-                                .font(.subheadline)
-                                .foregroundColor(Color("PrimaryBg"))
-                        }
-                        
-                        HStack {
-                            Slider(
-                                value: Binding(
-                                    get: {
-                                        Double(audioPlayer.reverbMix)
-                                    },
-                                    set: { newVal in
-                                        let snapped = (newVal / 5.0).rounded() * 5.0
-                                        audioPlayer.setReverbMix(Float(snapped))
-                                    }
-                                ),
-                                in: 0.0...100.0,
-                                step: 5
-                            )
-                            .accentColor(Color("PrimaryBg"))
-                            .frame(maxWidth: .infinity)
-                            
-                            Stepper(
-                                value: Binding(
-                                    get: {
-                                        Double(audioPlayer.reverbMix)
-                                    },
-                                    set: { newVal in
-                                        audioPlayer.setReverbMix(Float(newVal))
-                                    }
-                                ),
-                                in: 0.0...100.0,
-                                step: 1,
-                            ) {}
-                            .fixedSize()
-                        }
-                    }
-                }
-
+                PlayerAdjustmentsSection(audioPlayer: audioPlayer)
                 lyricsSection
+                PlayerMetadataSyncView(libraryItem: libraryItem, audioPlayer: audioPlayer)
             }
             .padding()
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    saveToLibrary()
-                } label: {
-                    Label(
-                        "Download",
-                        systemImage: !isDownloaded ? "arrow.down.circle" :
-                                     isModified ? "arrow.down.circle.dotted" :
-                                     "checkmark.circle"
-                    )
-                }
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
+            PlayerToolbar(
+                audioPlayer: audioPlayer,
+                isDownloaded: isDownloaded,
+                libraryItemSpeedRate: libraryItem.speedRate,
+                libraryItemPitchCents: libraryItem.pitchCents,
+                libraryItemReverbMix: libraryItem.reverbMix,
+                savedSpeedRate: savedSpeedRate,
+                savedPitchCents: savedPitchCents,
+                savedReverbMix: savedReverbMix,
+                onSave: { saveToLibrary() },
+                onEdit: {
                     draftTitle = libraryItem.title
                     draftArtists = libraryItem.artists
                     isEditSheetPresented = true
-                } label: {
-                    Label("Edit Metadata", systemImage: "pencil")
                 }
-            }
-        }
-        .onChange(of: audioPlayer.speedRate) { _, _ in
-            audioPlayer.updateMetadataTitle(decoratedTitle())
-        }
-        .onChange(of: audioPlayer.reverbMix) { _, _ in
-            audioPlayer.updateMetadataTitle(decoratedTitle())
+            )
         }
         .task(id: libraryItem.original_url) {
             lyricsState = .idle
@@ -625,7 +328,7 @@ struct __PlayerScreen: View {
                         libraryItem.artists = trimmedArtists
 
                         // Update now playing metadata
-                        audioPlayer.updateMetadataTitle(decoratedTitle())
+                        audioPlayer.updateMetadataTitle(decoratedTitle(for: libraryItem, audioPlayer: audioPlayer))
                         audioPlayer.updateMetadataArtist(formatArtists(libraryItem.artists))
 
                         if previousTitle != nextTitle || previousArtists != nextArtists {
@@ -659,6 +362,338 @@ struct __PlayerScreen: View {
             .presentationBackground(BackgroundColor)
             .presentationDragIndicator(.visible)
         }
+    }
+}
+
+private struct PlayerControlsSection: View {
+    @ObservedObject var audioPlayer: AudioPlayerWithReverb
+
+    @State private var isScrubbing: Bool = false
+    @State private var scrubberTime: Double = 0
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                HStack(spacing: 16) {
+                    Button(action: {
+                        audioPlayer.seek(to: 0)
+                    }) {
+                        Image(systemName: "backward.end.circle.fill")
+                            .font(.system(size: 44))
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(
+                                Color("PrimaryText"),
+                                Color("SecondaryBg")
+                            )
+                    }
+
+                    Button(action: {
+                        if audioPlayer.isPlaying {
+                            audioPlayer.pause()
+                        } else {
+                            audioPlayer.play()
+                        }
+                    }) {
+                        Image(
+                            systemName: audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
+                        )
+                        .font(.system(size: 56))
+                        .foregroundColor(Color("PrimaryBg"))
+                    }
+
+                    Button(action: {
+                        audioPlayer.stop()
+                    }) {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundStyle(
+                                Color("PrimaryText"),
+                                Color("SecondaryBg")
+                            )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+
+                HStack {
+                    Spacer()
+
+                    Button(action: {
+                        audioPlayer.toggleLoop()
+                    }) {
+                        Image(
+                            systemName: audioPlayer.isLooping ? "repeat.1.circle.fill" : "repeat.circle.fill"
+                        )
+                        .font(.system(size: 40))
+                        .foregroundStyle(
+                            Color("PrimaryText").opacity(0.8),
+                            .clear
+                        )
+                        .accessibilityLabel(
+                            audioPlayer.isLooping ? "Disable Loop" : "Enable Loop"
+                        )
+                    }
+                }
+            }
+
+            Scrubber(
+                value: $scrubberTime,
+                inRange: 0...max(audioPlayer.duration, 0.01),
+                activeFillColor: Color("PrimaryBg"),
+                fillColor: Color("PrimaryBg").opacity(0.8),
+                emptyColor: Color("PrimaryBg").opacity(0.2),
+                height: 30,
+                onEditingChanged: { editing in
+                    isScrubbing = editing
+                    if editing {
+                        scrubberTime = audioPlayer.currentTime
+                    }
+                    if !editing {
+                        audioPlayer.seek(to: scrubberTime)
+                    }
+                }
+            )
+            .onChange(of: audioPlayer.currentTime) { _, newValue in
+                guard !isScrubbing else { return }
+                scrubberTime = newValue
+            }
+            .onAppear {
+                scrubberTime = audioPlayer.currentTime
+            }
+        }
+    }
+}
+
+private struct PlayerAdjustmentsSection: View {
+    @ObservedObject var audioPlayer: AudioPlayerWithReverb
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Speed")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color("PrimaryText"))
+
+                    Button("Reset") {
+                        audioPlayer.setSpeedRate(1.0)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .tint(Color("PrimaryBg"))
+                    .opacity(audioPlayer.speedRate == 1.0 ? 0 : 1)
+
+                    Spacer()
+
+                    Text(String(format: "%.2fx", audioPlayer.speedRate))
+                        .font(.subheadline)
+                        .foregroundColor(Color("PrimaryBg"))
+                }
+
+                HStack {
+                    Slider(
+                        value: Binding(
+                            get: {
+                                Double(audioPlayer.speedRate)
+                            },
+                            set: { newVal in
+                                let snapped = (newVal / 0.05).rounded() * 0.05
+                                audioPlayer.setSpeedRate(Float(snapped))
+                            }
+                        ),
+                        in: 0.25...2.0,
+                        step: 0.05
+                    )
+                    .accentColor(Color("PrimaryBg"))
+                    .frame(maxWidth: .infinity)
+
+                    Stepper(
+                        value: Binding(
+                            get: {
+                                Double(audioPlayer.speedRate)
+                            },
+                            set: { newVal in
+                                audioPlayer.setSpeedRate(Float(newVal))
+                            }
+                        ),
+                        in: 0.25...2.0,
+                        step: 0.01,
+                    ) {}
+                    .fixedSize()
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Pitch")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color("PrimaryText"))
+
+                    Button("Reset") {
+                        audioPlayer.setPitchByCents(0.0)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .tint(Color("PrimaryBg"))
+                    .opacity(audioPlayer.pitchCents.isZero ? 0 : 1)
+
+                    Spacer()
+
+                    Text("\(Int(audioPlayer.pitchCents)) cents")
+                        .font(.subheadline)
+                        .foregroundColor(Color("PrimaryBg"))
+                }
+
+                HStack {
+                    Slider(
+                        value: Binding(
+                            get: {
+                                Double(audioPlayer.pitchCents)
+                            },
+                            set: { newVal in
+                                let snapped = (newVal / 50.0).rounded() * 50.0
+                                audioPlayer.setPitchByCents(Float(snapped))
+                            }
+                        ),
+                        in: -800.0...800.0,
+                        step: 50
+                    )
+                    .accentColor(Color("PrimaryBg"))
+                    .frame(maxWidth: .infinity)
+
+                    Stepper(
+                        value: Binding(
+                            get: {
+                                Double(audioPlayer.pitchCents)
+                            },
+                            set: { newVal in
+                                audioPlayer.setPitchByCents(Float(newVal))
+                            }
+                        ),
+                        in: -800.0...800.0,
+                        step: 10,
+                    ) {}
+                    .fixedSize()
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Reverb")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color("PrimaryText"))
+
+                    Button("Reset") {
+                        audioPlayer.setReverbMix(0.0)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .tint(Color("PrimaryBg"))
+                    .opacity(audioPlayer.reverbMix > 0 ? 1 : 0)
+
+                    Spacer()
+
+                    Text("\(Int(audioPlayer.reverbMix))%")
+                        .font(.subheadline)
+                        .foregroundColor(Color("PrimaryBg"))
+                }
+
+                HStack {
+                    Slider(
+                        value: Binding(
+                            get: {
+                                Double(audioPlayer.reverbMix)
+                            },
+                            set: { newVal in
+                                let snapped = (newVal / 5.0).rounded() * 5.0
+                                audioPlayer.setReverbMix(Float(snapped))
+                            }
+                        ),
+                        in: 0.0...100.0,
+                        step: 5
+                    )
+                    .accentColor(Color("PrimaryBg"))
+                    .frame(maxWidth: .infinity)
+
+                    Stepper(
+                        value: Binding(
+                            get: {
+                                Double(audioPlayer.reverbMix)
+                            },
+                            set: { newVal in
+                                audioPlayer.setReverbMix(Float(newVal))
+                            }
+                        ),
+                        in: 0.0...100.0,
+                        step: 1,
+                    ) {}
+                    .fixedSize()
+                }
+            }
+        }
+    }
+}
+
+private struct PlayerToolbar: ToolbarContent {
+    @ObservedObject var audioPlayer: AudioPlayerWithReverb
+    let isDownloaded: Bool
+    let libraryItemSpeedRate: Float
+    let libraryItemPitchCents: Float
+    let libraryItemReverbMix: Float
+    let savedSpeedRate: Float?
+    let savedPitchCents: Float?
+    let savedReverbMix: Float?
+    let onSave: () -> Void
+    let onEdit: () -> Void
+
+    private var isModified: Bool {
+        let refSpeed = savedSpeedRate ?? libraryItemSpeedRate
+        let refPitch = savedPitchCents ?? libraryItemPitchCents
+        let refReverb = savedReverbMix ?? libraryItemReverbMix
+
+        return audioPlayer.speedRate != refSpeed ||
+            audioPlayer.pitchCents != refPitch ||
+            audioPlayer.reverbMix != refReverb
+    }
+
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                onSave()
+            } label: {
+                Label(
+                    "Download",
+                    systemImage: !isDownloaded ? "arrow.down.circle" :
+                        isModified ? "arrow.down.circle.dotted" :
+                        "checkmark.circle"
+                )
+            }
+        }
+
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                onEdit()
+            } label: {
+                Label("Edit Metadata", systemImage: "pencil")
+            }
+        }
+    }
+}
+
+private struct PlayerMetadataSyncView: View {
+    let libraryItem: LibraryItem
+    @ObservedObject var audioPlayer: AudioPlayerWithReverb
+
+    var body: some View {
+        EmptyView()
+            .onChange(of: audioPlayer.speedRate) { _, _ in
+                audioPlayer.updateMetadataTitle(decoratedTitle(for: libraryItem, audioPlayer: audioPlayer))
+            }
+            .onChange(of: audioPlayer.reverbMix) { _, _ in
+                audioPlayer.updateMetadataTitle(decoratedTitle(for: libraryItem, audioPlayer: audioPlayer))
+            }
     }
 }
 
