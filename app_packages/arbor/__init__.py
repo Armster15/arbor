@@ -1,4 +1,5 @@
 from .download import download
+from .genius import get_lyrics_from_genius
 from .lyrics import get_lyrics_from_youtube
 from .pip_exec import pip_exec
 from .search import search_youtube, search_soundcloud
