@@ -61,7 +61,8 @@ struct __PlayerScreen: View {
     @State private var savedSpeedRate: Float?
     @State private var savedPitchCents: Float?
     @State private var savedReverbMix: Float?
-    
+
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.modelContext) var modelContext
 
     private enum LyricsState: Equatable {
@@ -213,14 +214,26 @@ struct __PlayerScreen: View {
                                 .scaleEffect(0.7)
                         }
 
-                        Picker("", selection: $lyricsDisplayMode) {
+                        Menu {
                             ForEach(LyricsDisplayMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
+                                Button {
+                                    lyricsDisplayMode = mode
+                                } label: {
+                                    Label(
+                                        mode.rawValue,
+                                        systemImage: lyricsDisplayMode == mode ? "checkmark" : ""
+                                    )
+                                }
                             }
+                        } label: {
+                            Image(systemName: "translate")
+                                .font(.callout)
+                                .foregroundColor(lyricsDisplayMode == .original ? Color("PrimaryText") : .blue)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(colorScheme == .light ? Color("Elevated") : Color("SecondaryBg"))
+                                .clipShape(Capsule())
                         }
-                        .pickerStyle(.segmented)
-                        .tint(Color("PrimaryBg"))
-                        .frame(maxWidth: 260)
                         .disabled(isTranslatingLyrics)
                     }
 
