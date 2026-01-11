@@ -11,6 +11,7 @@ It also features:
 - **Last.fm support** for scrobbling your listens
 - **Lyrics**, including romanization and translation
 - **A Python dependency manager** with `pip` so you can update dependencies without having to rebuild the app
+- **Privacy**: Arbor is a fully client-side app with no centralized server nor analytics
 
 ## Local Setup
 
